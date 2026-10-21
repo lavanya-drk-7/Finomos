@@ -40,6 +40,8 @@ import '../../features/advisor_ecosystem/domain/advisor_models.dart';
 import '../../features/fpms_admin/presentation/fpms_admin_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/help_support/presentation/help_support_screen.dart';
+import '../../features/transaction_detection/presentation/transaction_review_screen.dart';
+import '../../features/transaction_detection/domain/detected_transaction_model.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -167,6 +169,12 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/budget-management',
       builder: (BuildContext context, GoRouterState state) => const BudgetManagementScreen(),
+    ),
+    GoRoute(
+      path: '/transaction-review',
+      builder: (BuildContext context, GoRouterState state) => TransactionReviewScreen(
+        detectedTransaction: state.extra as DetectedTransaction?,
+      ),
     ),
     GoRoute(
       path: '/dashboard',

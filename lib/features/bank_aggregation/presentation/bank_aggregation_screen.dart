@@ -2314,12 +2314,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(bankAggregationProvider);
 
-    final filteredDirectory = state.institutionDirectory.where((inst) {
-      final matchesCat = state.selectedCategoryFilter == 'All' || inst.category == state.selectedCategoryFilter;
-      final matchesSearch = inst.name.toLowerCase().contains(state.searchQuery.toLowerCase());
-      return matchesCat && matchesSearch;
-    }).toList();
-
     return Scaffold(
       backgroundColor: _bgCanvas,
       appBar: AppBar(
@@ -2351,15 +2345,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF0A2540),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'Module 2: Account Aggregation (FAA)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2401,10 +2386,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Top Title & Subtitle Card (FAA Module Overview)
-            _buildModuleTitleBanner(state),
-            const SizedBox(height: 14),
-
             // 2. SECTION 12: Aggregated Financial Position & Net Worth Hero Dashboard
             _buildAggregatedFinancialDashboard(state),
             const SizedBox(height: 14),
@@ -2445,10 +2426,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             _buildConsentManagementSection(context, state),
             const SizedBox(height: 16),
 
-            // 13. SECTION 1: Financial Institution Directory & Connect Box
-            _buildInstitutionDirectorySection(context, state, filteredDirectory),
-            const SizedBox(height: 16),
-
             // 14. Recent Ingested Transactions
             _buildRecentTransactionsSection(state),
             const SizedBox(height: 16),
@@ -2458,72 +2435,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             const SizedBox(height: 24),
           ],
         ),
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // TOP TITLE & SUBTITLE
-  // --------------------------------------------------------------------------
-
-  Widget _buildModuleTitleBanner(BankAggregationState state) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 3)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.account_balance, color: _brandBlue, size: 24),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bank Account Aggregation',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _navyDark),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Personal Financial Operating System (PFOS) • Module 2: FAA',
-                      style: TextStyle(fontSize: 11, color: _slateGrey, fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: _cardBorder),
-          const SizedBox(height: 10),
-          const Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _FeatureBadge(icon: Icons.shield_outlined, text: 'RBI AA Regulated'),
-              _FeatureBadge(icon: Icons.lock_outline, text: 'AES-256 Encrypted'),
-              _FeatureBadge(icon: Icons.verified_user_outlined, text: 'Consent Based'),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -4734,93 +4645,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // SECTION 1: FINANCIAL INSTITUTION DIRECTORY & CONNECT BOX
-  // --------------------------------------------------------------------------
-
-  Widget _buildInstitutionDirectorySection(BuildContext context, BankAggregationState state, List<InstitutionDirectoryItem> filteredDirectory) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Institution Directory & Open Banking (FAA-SEC-01)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark)),
-          const SizedBox(height: 2),
-          const Text('Search from 200+ RBI Regulated banks, NBFCs, AMCs & brokers', style: TextStyle(fontSize: 10, color: _slateGrey)),
-          const SizedBox(height: 12),
-
-          // Search Box
-          TextField(
-            controller: _searchController,
-            onChanged: (val) => ref.read(bankAggregationProvider.notifier).search(val),
-            decoration: InputDecoration(
-              hintText: 'Search Bank, UPI or NBFC...',
-              hintStyle: const TextStyle(fontSize: 12, color: _slateGrey),
-              prefixIcon: const Icon(Icons.search, size: 18, color: _slateGrey),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _cardBorder)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _cardBorder)),
-              filled: true,
-              fillColor: _bgCanvas,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Directory Grid of Institutions
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: filteredDirectory.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 2.5,
-            ),
-            itemBuilder: (ctx, idx) {
-              final inst = filteredDirectory[idx];
-              return InkWell(
-                onTap: () => _showConsentDialog(context, inst),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _bgCanvas,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _cardBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      BankLogo(bankName: inst.name, size: 28),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(inst.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _navyDark), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            Text(inst.category, style: const TextStyle(fontSize: 9, color: _slateGrey), overflow: TextOverflow.ellipsis),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.add_circle_outline, size: 14, color: _brandBlue),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
   // RECENT INGESTED TRANSACTIONS
   // --------------------------------------------------------------------------
 
@@ -4941,27 +4765,5 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     }
     buffer.write(',$last3.$dec');
     return (amount < 0 ? '-' : '') + buffer.toString();
-  }
-}
-
-class _FeatureBadge extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _FeatureBadge({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: const Color(0xFF0066FF)),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
-        ),
-      ],
-    );
   }
 }

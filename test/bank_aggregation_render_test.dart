@@ -38,7 +38,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Consent Management (FAA-SEC-11)'), findsOneWidget);
-    expect(find.text('Institution Directory & Open Banking (FAA-SEC-01)'), findsOneWidget);
     expect(find.text('Recent Ingested Transactions'), findsOneWidget);
 
     // Scroll back to top

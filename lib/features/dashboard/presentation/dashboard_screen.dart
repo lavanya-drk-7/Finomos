@@ -7,11 +7,14 @@ import '../../../core/widgets/finmos_user_avatar.dart';
 import 'widgets/profile_options_drawer.dart';
 import '../../income_tracking/providers/income_provider.dart';
 import '../../expense_tracking/providers/expense_provider.dart';
+import '../../budget_management/providers/budget_provider.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 import '../../protect/providers/protect_provider.dart';
 import '../../borrow/providers/borrow_provider.dart';
 import '../../grow/providers/grow_provider.dart';
 import '../../plan/providers/plan_provider.dart';
 import '../../comply/providers/comply_provider.dart';
+import '../../transaction_detection/presentation/widgets/in_app_transaction_alert_banner.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -20,6 +23,8 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final incomeState = ref.watch(incomeProvider);
     final expenseState = ref.watch(expenseProvider);
+    final budgetState = ref.watch(budgetProvider);
+    final bankState = ref.watch(bankAggregationProvider);
     final protectState = ref.watch(protectProvider);
     final borrowState = ref.watch(borrowProvider);
     final growState = ref.watch(growProvider);
@@ -79,9 +84,12 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // In-App Transaction Alert Banner (for detected Bank SMS)
+              const InAppTransactionAlertBanner(),
+
               // Header title
               const Text('Finomos Financial OS', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
-              const Text('AI Personal CFO Platform & 7 Financial Pillars Hub.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const Text('AI Personal CFO Platform & Financial Pillars Hub.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               const SizedBox(height: 16),
 
               // AI Personal CFO Banner Card
@@ -205,7 +213,40 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   _buildPillarTile(
                     context,
-                    title: '3. PROTECT',
+                    title: '3. BUDGET',
+                    subtitle: '${budgetState.budgets.length} Active Budgets',
+                    icon: Icons.pie_chart_outline,
+                    color: const Color(0xFFF59E0B),
+                    route: '/budget-management',
+                    amount: _formatRupees(budgetState.totalRemaining),
+                    percentage: budgetState.totalOverspent > 0
+                        ? 'Exceeded'
+                        : '${budgetState.overallUsagePercentage.toStringAsFixed(0)}% Used',
+                    badgeColor: budgetState.totalOverspent > 0
+                        ? const Color(0xFFEF4444)
+                        : (budgetState.overallUsagePercentage > 80
+                            ? const Color(0xFFF59E0B)
+                            : const Color(0xFF10B981)),
+                    percentageIcon: budgetState.totalOverspent > 0
+                        ? Icons.warning_amber_rounded
+                        : Icons.pie_chart,
+                    isPositiveTrend: budgetState.totalOverspent == 0,
+                  ),
+                  _buildPillarTile(
+                    context,
+                    title: '4. BANK FEEDS',
+                    subtitle: 'Linked Accounts',
+                    icon: Icons.account_balance,
+                    color: const Color(0xFF0284C7),
+                    route: '/bank-aggregation',
+                    amount: _formatRupees(bankState.totalBankCash),
+                    percentage: '${bankState.bankAccounts.length} Connected',
+                    badgeColor: const Color(0xFF0284C7),
+                    percentageIcon: Icons.account_balance_wallet,
+                  ),
+                  _buildPillarTile(
+                    context,
+                    title: '5. PROTECT',
                     subtitle: 'Emergency & Insurance',
                     icon: Icons.security,
                     color: const Color(0xFF0066FF),
@@ -217,7 +258,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   _buildPillarTile(
                     context,
-                    title: '4. BORROW',
+                    title: '6. BORROW',
                     subtitle: 'Debt & Repayment',
                     icon: Icons.credit_score,
                     color: const Color(0xFFF59E0B),
@@ -229,7 +270,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   _buildPillarTile(
                     context,
-                    title: '5. GROW',
+                    title: '7. GROW',
                     subtitle: 'Investments & Wealth',
                     icon: Icons.auto_graph,
                     color: const Color(0xFF8B5CF6),
@@ -241,7 +282,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   _buildPillarTile(
                     context,
-                    title: '6. PLAN',
+                    title: '8. PLAN',
                     subtitle: 'Goals & FIRE Calculator',
                     icon: Icons.flag,
                     color: const Color(0xFFEC4899),
@@ -253,7 +294,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   _buildPillarTile(
                     context,
-                    title: '7. COMPLY',
+                    title: '9. COMPLY',
                     subtitle: 'Tax & ITR Preparation',
                     icon: Icons.assignment_turned_in,
                     color: const Color(0xFF0A2540),

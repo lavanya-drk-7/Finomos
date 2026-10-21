@@ -8,6 +8,8 @@ import '../../../core/widgets/bank_logo.dart';
 import '../../document_vault/presentation/widgets/document_action_helper.dart';
 import '../domain/expense_models.dart';
 import '../providers/expense_provider.dart';
+import '../../budget_management/providers/budget_provider.dart';
+import '../../transaction_detection/presentation/widgets/in_app_transaction_alert_banner.dart';
 
 class ExpenseTrackingScreen extends ConsumerStatefulWidget {
   const ExpenseTrackingScreen({super.key});
@@ -826,6 +828,11 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                               ref
                                   .read(expenseProvider.notifier)
                                   .addExpense(newEntry);
+                              ref.read(budgetProvider.notifier).applyExpense(
+                                    category: selectedCategory,
+                                    amount: amount,
+                                    description: desc,
+                                  );
                               setState(() {
                                 _highlightedExpenseId = newId;
                               });
@@ -1335,9 +1342,17 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
               onPressed: () {
                 Navigator.pop(dialogCtx);
                 ref.read(expenseProvider.notifier).deleteExpense(item.id);
+                final remaining = ref
+                    .read(expenseProvider)
+                    .expenses
+                    .where((e) => e.id != item.id)
+                    .toList();
+                ref
+                    .read(budgetProvider.notifier)
+                    .recalculateFromExpenses(remaining);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Expense "${item.description}" deleted'),
+                    content: Text('Expense "${item.description}" deleted and budget updated'),
                     backgroundColor: const Color(0xFFEF4444),
                   ),
                 );
@@ -1476,6 +1491,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
       children: [
+        const InAppTransactionAlertBanner(),
         // Outflow & Priority Overview Card
         Container(
           padding: const EdgeInsets.all(20),
