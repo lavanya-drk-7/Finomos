@@ -828,7 +828,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                               ref
                                   .read(expenseProvider.notifier)
                                   .addExpense(newEntry);
-                              ref.read(budgetProvider.notifier).applyExpense(
+                              ref
+                                  .read(budgetProvider.notifier)
+                                  .applyExpense(
                                     category: selectedCategory,
                                     amount: amount,
                                     description: desc,
@@ -1352,7 +1354,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                     .recalculateFromExpenses(remaining);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Expense "${item.description}" deleted and budget updated'),
+                    content: Text(
+                      'Expense "${item.description}" deleted and budget updated',
+                    ),
                     backgroundColor: const Color(0xFFEF4444),
                   ),
                 );

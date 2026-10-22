@@ -11,7 +11,8 @@ class BankAggregationScreen extends ConsumerStatefulWidget {
   const BankAggregationScreen({super.key});
 
   @override
-  ConsumerState<BankAggregationScreen> createState() => _BankAggregationScreenState();
+  ConsumerState<BankAggregationScreen> createState() =>
+      _BankAggregationScreenState();
 }
 
 class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
@@ -30,7 +31,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     super.dispose();
   }
 
-  void _showConsentDialog(BuildContext context, InstitutionDirectoryItem institution) {
+  void _showConsentDialog(
+    BuildContext context,
+    InstitutionDirectoryItem institution,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -46,12 +50,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 children: [
                   Text(
                     'Connect ${institution.name}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navyDark),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _navyDark,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Text(
                     'RBI Regulated Account Aggregator (AA)',
-                    style: TextStyle(fontSize: 10, color: _slateGrey, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: _slateGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -65,7 +77,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
           children: [
             const Text(
               'Explicit User Consent Authorization (FAA-BR-010)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _navyDark),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: _navyDark,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -86,12 +102,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.lock_clock_outlined, size: 16, color: Color(0xFFD97706)),
+                  Icon(
+                    Icons.lock_clock_outlined,
+                    size: 16,
+                    color: Color(0xFFD97706),
+                  ),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'FAA-BR-001: Bank passwords or PINs are NEVER requested or stored. Account numbers are always masked.',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF92400E),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -102,43 +126,70 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: _slateGrey, fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: _slateGrey, fontWeight: FontWeight.w600),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: _brandBlue,
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             onPressed: () {
-              ref.read(bankAggregationProvider.notifier).connectBankInstitution(institution);
+              ref
+                  .read(bankAggregationProvider.notifier)
+                  .connectBankInstitution(institution);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('${institution.name} connected securely via RBI Account Aggregator!'),
+                  content: Text(
+                    '${institution.name} connected securely via RBI Account Aggregator!',
+                  ),
                   backgroundColor: _emeraldGreen,
                 ),
               );
             },
-            child: const Text('Authorize & Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Authorize & Link',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showAddBankModal(BuildContext context, {BankAccountItem? existingAccount}) {
+  void _showAddBankModal(
+    BuildContext context, {
+    BankAccountItem? existingAccount,
+  }) {
     String selectedBank = existingAccount?.bankName ?? 'State Bank of India';
-    String selectedAccountType = existingAccount?.accountType ?? 'Savings Account';
-    final initialAccNum = existingAccount != null 
+    String selectedAccountType =
+        existingAccount?.accountType ?? 'Savings Account';
+    final initialAccNum = existingAccount != null
         ? existingAccount.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')
         : '';
     final accountNumCtrl = TextEditingController(text: initialAccNum);
-    final ifscCtrl = TextEditingController(text: existingAccount?.ifscCode ?? '');
-    final holderCtrl = TextEditingController(text: existingAccount?.accountHolder ?? '');
-    final balanceCtrl = TextEditingController(text: existingAccount != null ? existingAccount.currentBalance.toStringAsFixed(0) : '');
+    final ifscCtrl = TextEditingController(
+      text: existingAccount?.ifscCode ?? '',
+    );
+    final holderCtrl = TextEditingController(
+      text: existingAccount?.accountHolder ?? '',
+    );
+    final balanceCtrl = TextEditingController(
+      text: existingAccount != null
+          ? existingAccount.currentBalance.toStringAsFixed(0)
+          : '',
+    );
     final otherBankCtrl = TextEditingController();
     final branchCtrl = TextEditingController();
 
@@ -146,13 +197,16 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       final upper = ifsc.trim().toUpperCase();
       if (upper.startsWith('SBIN')) {
         if (upper == 'SBIN0001234') return 'MG Road Main Branch, Bengaluru';
-        if (upper == 'SBIN0000691') return 'Parliament Street Branch, New Delhi';
+        if (upper == 'SBIN0000691')
+          return 'Parliament Street Branch, New Delhi';
         return 'State Bank Main Branch, Bengaluru';
       } else if (upper.startsWith('HDFC')) {
-        if (upper == 'HDFC0000567' || upper == 'HDFC0005678') return 'Fort Main Branch, Mumbai';
+        if (upper == 'HDFC0000567' || upper == 'HDFC0005678')
+          return 'Fort Main Branch, Mumbai';
         return 'HDFC Bank Corporate Branch, Mumbai';
       } else if (upper.startsWith('ICIC')) {
-        if (upper == 'ICIC0000104') return 'Bandra Kurla Complex (BKC) Branch, Mumbai';
+        if (upper == 'ICIC0000104')
+          return 'Bandra Kurla Complex (BKC) Branch, Mumbai';
         return 'ICICI Bank Towers Branch, Mumbai';
       } else if (upper.startsWith('UTIB')) {
         return 'Corporate Park Branch, Mumbai';
@@ -174,7 +228,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         return 'BKC Branch, Mumbai';
       }
 
-      final displayBank = bank == 'Others' ? (otherBankName.isNotEmpty ? otherBankName : 'Bank') : bank;
+      final displayBank = bank == 'Others'
+          ? (otherBankName.isNotEmpty ? otherBankName : 'Bank')
+          : bank;
       if (upper.length >= 4) {
         return '$displayBank Main Branch (${upper.substring(0, 4)})';
       }
@@ -196,7 +252,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       }
 
       if (acc.length >= 6 && ifsc.length >= 4) {
-        if (holderCtrl.text.trim().isEmpty || holderCtrl.text.trim() == 'Sireesha Bandaru') {
+        if (holderCtrl.text.trim().isEmpty ||
+            holderCtrl.text.trim() == 'Sireesha Bandaru') {
           holderCtrl.text = 'Sireesha Bandaru';
         }
       } else if (existingAccount == null && acc.length < 6) {
@@ -237,21 +294,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final accNumVal = accountNumCtrl.text.trim();
             final ifscVal = ifscCtrl.text.trim();
             final holderVal = holderCtrl.text.trim();
-            final bankDisplayName = selectedBank == 'Others' ? otherBankCtrl.text.trim() : selectedBank;
+            final bankDisplayName = selectedBank == 'Others'
+                ? otherBankCtrl.text.trim()
+                : selectedBank;
 
             final isAccountNumValid = accNumVal.length >= 6;
             final isIfscValid = ifscVal.length >= 4;
             final isHolderValid = holderVal.isNotEmpty;
             final isBankValid = bankDisplayName.isNotEmpty;
 
-            final isDetailsVerified = isAccountNumValid && isIfscValid && isHolderValid && isBankValid;
+            final isDetailsVerified =
+                isAccountNumValid &&
+                isIfscValid &&
+                isHolderValid &&
+                isBankValid;
 
             return SafeArea(
               child: Container(
@@ -271,7 +336,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -283,7 +351,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.account_balance, color: _brandBlue, size: 22),
+                          child: const Icon(
+                            Icons.account_balance,
+                            color: _brandBlue,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -291,12 +363,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                existingAccount != null ? 'Edit Bank Account' : 'Link Bank Account',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                                existingAccount != null
+                                    ? 'Edit Bank Account'
+                                    : 'Link Bank Account',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navyDark,
+                                ),
                               ),
                               Text(
-                                existingAccount != null ? 'Update bank details (FAA-SEC-02)' : 'Savings, Current, Salary & Deposits (FAA-SEC-02)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
+                                existingAccount != null
+                                    ? 'Update bank details (FAA-SEC-02)'
+                                    : 'Savings, Current, Salary & Deposits (FAA-SEC-02)',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _slateGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -307,7 +390,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -315,13 +399,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               isExpanded: true,
                               value: selectedBank,
                               decoration: InputDecoration(
-                                labelText: 'Select Financial Institution / Bank',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                labelText:
+                                    'Select Financial Institution / Bank',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: bankOptions.map((b) => DropdownMenuItem(
-                                value: b,
-                                child: BankNameWithLogo(bankName: b, logoSize: 22),
-                              )).toList(),
+                              items: bankOptions
+                                  .map(
+                                    (b) => DropdownMenuItem(
+                                      value: b,
+                                      child: BankNameWithLogo(
+                                        bankName: b,
+                                        logoSize: 22,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
                                 if (v != null) {
                                   setModalState(() {
@@ -335,12 +429,19 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               const SizedBox(height: 14),
                               TextField(
                                 controller: otherBankCtrl,
-                                onChanged: (_) => autoFetchDetails(setModalState),
+                                onChanged: (_) =>
+                                    autoFetchDetails(setModalState),
                                 decoration: InputDecoration(
                                   labelText: 'Other Bank Name',
-                                  hintText: 'e.g. Standard Chartered, Yes Bank, RBL Bank',
-                                  prefixIcon: const Icon(Icons.account_balance, color: _brandBlue),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  hintText:
+                                      'e.g. Standard Chartered, Yes Bank, RBL Bank',
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -350,10 +451,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedAccountType,
                               decoration: InputDecoration(
                                 labelText: 'Account Type',
-                                prefixIcon: const Icon(Icons.category_outlined, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.category_outlined,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: accountTypes.map((t) => DropdownMenuItem(value: t, child: Text(t, overflow: TextOverflow.ellipsis))).toList(),
+                              items: accountTypes
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(
+                                        t,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
                                 if (v != null) {
                                   setModalState(() => selectedAccountType = v);
@@ -368,12 +484,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Bank Account Number',
                                 hintText: 'e.g. 501004329871',
-                                prefixIcon: const Icon(Icons.pin_outlined, color: _brandBlue),
-                                helperText: 'Displayed securely with masked digits (•••• XXXX)',
-                                suffixIcon: accountNumCtrl.text.trim().length >= 6
-                                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20)
+                                prefixIcon: const Icon(
+                                  Icons.pin_outlined,
+                                  color: _brandBlue,
+                                ),
+                                helperText:
+                                    'Displayed securely with masked digits (•••• XXXX)',
+                                suffixIcon:
+                                    accountNumCtrl.text.trim().length >= 6
+                                    ? const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFF10B981),
+                                        size: 20,
+                                      )
                                     : null,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -382,24 +509,36 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 Expanded(
                                   child: TextField(
                                     controller: ifscCtrl,
-                                    textCapitalization: TextCapitalization.characters,
+                                    textCapitalization:
+                                        TextCapitalization.characters,
                                     onChanged: (val) {
                                       final upper = val.trim().toUpperCase();
-                                      if (upper.startsWith('SBIN') && selectedBank != 'State Bank of India') {
+                                      if (upper.startsWith('SBIN') &&
+                                          selectedBank !=
+                                              'State Bank of India') {
                                         selectedBank = 'State Bank of India';
-                                      } else if (upper.startsWith('HDFC') && selectedBank != 'HDFC Bank') {
+                                      } else if (upper.startsWith('HDFC') &&
+                                          selectedBank != 'HDFC Bank') {
                                         selectedBank = 'HDFC Bank';
-                                      } else if (upper.startsWith('ICIC') && selectedBank != 'ICICI Bank') {
+                                      } else if (upper.startsWith('ICIC') &&
+                                          selectedBank != 'ICICI Bank') {
                                         selectedBank = 'ICICI Bank';
-                                      } else if (upper.startsWith('UTIB') && selectedBank != 'Axis Bank') {
+                                      } else if (upper.startsWith('UTIB') &&
+                                          selectedBank != 'Axis Bank') {
                                         selectedBank = 'Axis Bank';
-                                      } else if (upper.startsWith('KKBK') && selectedBank != 'Kotak Mahindra Bank') {
+                                      } else if (upper.startsWith('KKBK') &&
+                                          selectedBank !=
+                                              'Kotak Mahindra Bank') {
                                         selectedBank = 'Kotak Mahindra Bank';
-                                      } else if (upper.startsWith('PUNB') && selectedBank != 'Punjab National Bank') {
+                                      } else if (upper.startsWith('PUNB') &&
+                                          selectedBank !=
+                                              'Punjab National Bank') {
                                         selectedBank = 'Punjab National Bank';
-                                      } else if (upper.startsWith('BARB') && selectedBank != 'Bank of Baroda') {
+                                      } else if (upper.startsWith('BARB') &&
+                                          selectedBank != 'Bank of Baroda') {
                                         selectedBank = 'Bank of Baroda';
-                                      } else if (upper.startsWith('CNRB') && selectedBank != 'Canara Bank') {
+                                      } else if (upper.startsWith('CNRB') &&
+                                          selectedBank != 'Canara Bank') {
                                         selectedBank = 'Canara Bank';
                                       }
                                       autoFetchDetails(setModalState);
@@ -407,7 +546,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Branch IFSC Code',
                                       hintText: 'e.g. SBIN0001234',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -420,7 +561,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Balance (₹)',
                                       hintText: 'e.g. 75000',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -431,16 +574,31 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               controller: branchCtrl,
                               readOnly: true,
                               decoration: InputDecoration(
-                                labelText: 'Bank Branch Location (Auto-Fetched)',
-                                helperText: '⚡ Auto-fetched based on Branch IFSC code',
-                                helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
-                                prefixIcon: const Icon(Icons.location_on_outlined, color: _brandBlue),
+                                labelText:
+                                    'Bank Branch Location (Auto-Fetched)',
+                                helperText:
+                                    '⚡ Auto-fetched based on Branch IFSC code',
+                                helperStyle: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: _brandBlue,
+                                ),
                                 suffixIcon: branchCtrl.text.isNotEmpty
-                                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 18)
+                                    ? const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFF10B981),
+                                        size: 18,
+                                      )
                                     : null,
                                 filled: true,
                                 fillColor: const Color(0xFFF8FAFC),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -448,29 +606,51 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               controller: holderCtrl,
                               onChanged: (_) => setModalState(() {}),
                               decoration: InputDecoration(
-                                labelText: 'Primary Account Holder Name (Auto-Fetched)',
+                                labelText:
+                                    'Primary Account Holder Name (Auto-Fetched)',
                                 helperText: holderCtrl.text.isNotEmpty
                                     ? '⚡ Auto-fetched from Bank Account & Penny Drop verification'
                                     : null,
-                                helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF10B981), fontWeight: FontWeight.w600),
-                                prefixIcon: const Icon(Icons.person_outline, color: _brandBlue),
+                                helperStyle: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF10B981),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.person_outline,
+                                  color: _brandBlue,
+                                ),
                                 suffixIcon: holderCtrl.text.isNotEmpty
-                                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 18)
+                                    ? const Icon(
+                                        Icons.check_circle,
+                                        color: Color(0xFF10B981),
+                                        size: 18,
+                                      )
                                     : null,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             if (isDetailsVerified) ...[
                               const SizedBox(height: 14),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF0FDF4),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
+                                  border: Border.all(
+                                    color: const Color(0xFF86EFAC),
+                                    width: 1.2,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF10B981).withOpacity(0.08),
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withOpacity(0.08),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -482,15 +662,22 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(7),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981).withOpacity(0.15),
+                                        color: const Color(
+                                          0xFF10B981,
+                                        ).withOpacity(0.15),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.verified, color: Color(0xFF10B981), size: 20),
+                                      child: const Icon(
+                                        Icons.verified,
+                                        color: Color(0xFF10B981),
+                                        size: 20,
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Row(
@@ -503,18 +690,35 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                                     fontWeight: FontWeight.bold,
                                                     color: Color(0xFF15803D),
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               const SizedBox(width: 5),
-                                              const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 15),
+                                              const Icon(
+                                                Icons.check_circle,
+                                                color: Color(0xFF10B981),
+                                                size: 15,
+                                              ),
                                               const SizedBox(width: 4),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 5,
+                                                      vertical: 1.5,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFFDCFCE7),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
+                                                  color: const Color(
+                                                    0xFFDCFCE7,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFF86EFAC,
+                                                    ),
+                                                    width: 0.8,
+                                                  ),
                                                 ),
                                                 child: const Text(
                                                   'VERIFIED',
@@ -530,7 +734,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
-                                            branchCtrl.text.isNotEmpty ? branchCtrl.text : lookupBranch(selectedBank, ifscVal, otherBankCtrl.text.trim()),
+                                            branchCtrl.text.isNotEmpty
+                                                ? branchCtrl.text
+                                                : lookupBranch(
+                                                    selectedBank,
+                                                    ifscVal,
+                                                    otherBankCtrl.text.trim(),
+                                                  ),
                                             style: const TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
@@ -556,20 +766,33 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             ] else ...[
                               const SizedBox(height: 14),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 11,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
+                                  ),
                                 ),
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.bolt, size: 18, color: Color(0xFF3B82F6)),
+                                    Icon(
+                                      Icons.bolt,
+                                      size: 18,
+                                      color: Color(0xFF3B82F6),
+                                    ),
                                     SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
                                         'Enter Account Number & Branch IFSC Code to automatically fetch Account Holder Name and Bank Branch location.',
-                                        style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -582,16 +805,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEFF6FF),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                                border: Border.all(
+                                  color: const Color(0xFFBFDBFE),
+                                ),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.verified_user_outlined, size: 16, color: _brandBlue),
+                                  Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 16,
+                                    color: _brandBlue,
+                                  ),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Regulated under RBI Account Aggregator framework. 256-bit encrypted read-only telemetry. Password/PIN is never requested.',
-                                      style: TextStyle(fontSize: 10, color: Color(0xFF1E3A8A), fontWeight: FontWeight.w500),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF1E3A8A),
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -608,11 +841,14 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brandBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           final enteredOther = otherBankCtrl.text.trim();
-                          if (selectedBank == 'Others' && enteredOther.isEmpty) {
+                          if (selectedBank == 'Others' &&
+                              enteredOther.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -629,7 +865,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please enter Bank Account Number'),
+                                content: Text(
+                                  'Please enter Bank Account Number',
+                                ),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
                             );
@@ -640,17 +878,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please enter a valid Bank Account Number (minimum 6 digits)'),
+                                content: Text(
+                                  'Please enter a valid Bank Account Number (minimum 6 digits)',
+                                ),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
                             );
                             return;
                           }
 
-                          final bankName = selectedBank == 'Others' ? enteredOther : selectedBank;
-                          final balanceVal = double.tryParse(balanceCtrl.text.trim().replaceAll(',', '')) ?? 50000.0;
-                          final ifsc = ifscCtrl.text.trim().isEmpty ? 'SBIN0001234' : ifscCtrl.text.trim().toUpperCase();
-                          final holder = holderCtrl.text.trim().isEmpty ? 'Sireesha Bandaru' : holderCtrl.text.trim();
+                          final bankName = selectedBank == 'Others'
+                              ? enteredOther
+                              : selectedBank;
+                          final balanceVal =
+                              double.tryParse(
+                                balanceCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              50000.0;
+                          final ifsc = ifscCtrl.text.trim().isEmpty
+                              ? 'SBIN0001234'
+                              : ifscCtrl.text.trim().toUpperCase();
+                          final holder = holderCtrl.text.trim().isEmpty
+                              ? 'Sireesha Bandaru'
+                              : holderCtrl.text.trim();
 
                           final masked = accNum.length >= 4
                               ? '•••• ${accNum.substring(accNum.length - 4)}'
@@ -667,17 +917,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               availableBalance: balanceVal,
                               lastSynced: 'Just now',
                             );
-                            ref.read(bankAggregationProvider.notifier).updateBankAccount(updated);
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .updateBankAccount(updated);
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedAccountType at $bankName updated successfully!'),
+                                content: Text(
+                                  '$selectedAccountType at $bankName updated successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           } else {
-                            ref.read(bankAggregationProvider.notifier).addBankAccount(
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .addBankAccount(
                                   bankName: bankName,
                                   accountType: selectedAccountType,
                                   maskedAccountNumber: masked,
@@ -689,15 +945,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedAccountType at $bankName linked successfully!'),
+                                content: Text(
+                                  '$selectedAccountType at $bankName linked successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           }
                         },
                         child: Text(
-                          existingAccount != null ? 'Update Bank Account' : 'Verify & Link Bank Account',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          existingAccount != null
+                              ? 'Update Bank Account'
+                              : 'Verify & Link Bank Account',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -711,17 +975,37 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-  void _showAddCreditCardModal(BuildContext context, {CreditCardItem? existingCard}) {
+  void _showAddCreditCardModal(
+    BuildContext context, {
+    CreditCardItem? existingCard,
+  }) {
     String selectedCard = existingCard?.cardName ?? 'HDFC Regalia Gold';
-    String selectedDueDate = existingCard?.statementDueDate ?? '15th of every month';
+    String selectedDueDate =
+        existingCard?.statementDueDate ?? '15th of every month';
     String selectedIssuedBank = existingCard?.issuedBank ?? 'HDFC Bank';
     String selectedCardType = existingCard?.cardType ?? 'Visa';
-    final holderNameCtrl = TextEditingController(text: existingCard?.cardHolderName ?? '');
-    final last4Ctrl = TextEditingController(text: existingCard?.last4Digits ?? '');
-    final expiryCtrl = TextEditingController(text: existingCard?.expiryDate ?? '');
-    final limitCtrl = TextEditingController(text: existingCard != null ? existingCard.creditLimit.toStringAsFixed(0) : '');
-    final outstandingCtrl = TextEditingController(text: existingCard != null ? existingCard.outstandingBalance.toStringAsFixed(0) : '');
-    final rewardCtrl = TextEditingController(text: existingCard != null ? existingCard.rewardPoints.toString() : '');
+    final holderNameCtrl = TextEditingController(
+      text: existingCard?.cardHolderName ?? '',
+    );
+    final last4Ctrl = TextEditingController(
+      text: existingCard?.last4Digits ?? '',
+    );
+    final expiryCtrl = TextEditingController(
+      text: existingCard?.expiryDate ?? '',
+    );
+    final limitCtrl = TextEditingController(
+      text: existingCard != null
+          ? existingCard.creditLimit.toStringAsFixed(0)
+          : '',
+    );
+    final outstandingCtrl = TextEditingController(
+      text: existingCard != null
+          ? existingCard.outstandingBalance.toStringAsFixed(0)
+          : '',
+    );
+    final rewardCtrl = TextEditingController(
+      text: existingCard != null ? existingCard.rewardPoints.toString() : '',
+    );
     final otherCardCtrl = TextEditingController();
     final otherIssuedBankCtrl = TextEditingController();
 
@@ -783,7 +1067,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -805,7 +1091,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -817,7 +1106,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.credit_card, color: _brandBlue, size: 22),
+                          child: const Icon(
+                            Icons.credit_card,
+                            color: _brandBlue,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -825,12 +1118,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                existingCard != null ? 'Edit Credit Card' : 'Add Credit Card',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                                existingCard != null
+                                    ? 'Edit Credit Card'
+                                    : 'Add Credit Card',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navyDark,
+                                ),
                               ),
                               Text(
-                                existingCard != null ? 'Update card limits & details (FAA-SEC-04)' : 'Card Limit, Statement & Dues Tracking (FAA-SEC-04)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
+                                existingCard != null
+                                    ? 'Update card limits & details (FAA-SEC-04)'
+                                    : 'Card Limit, Statement & Dues Tracking (FAA-SEC-04)',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _slateGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -841,7 +1145,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -850,10 +1155,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedCard,
                               decoration: InputDecoration(
                                 labelText: 'Credit Card Issuer & Variant',
-                                prefixIcon: const Icon(Icons.credit_card_outlined, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.credit_card_outlined,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: popularCards.map((c) => DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))).toList(),
+                              items: popularCards
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(
+                                        c,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
                                 if (v != null) {
                                   setModalState(() {
@@ -863,11 +1183,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     } else if (v.contains('ICICI')) {
                                       selectedIssuedBank = 'ICICI Bank';
                                     } else if (v.contains('SBI')) {
-                                      selectedIssuedBank = 'State Bank of India';
+                                      selectedIssuedBank =
+                                          'State Bank of India';
                                     } else if (v.contains('Axis')) {
                                       selectedIssuedBank = 'Axis Bank';
                                     } else if (v.contains('Kotak')) {
-                                      selectedIssuedBank = 'Kotak Mahindra Bank';
+                                      selectedIssuedBank =
+                                          'Kotak Mahindra Bank';
                                     } else if (v.contains('American Express')) {
                                       selectedIssuedBank = 'American Express';
                                       selectedCardType = 'American Express';
@@ -883,9 +1205,15 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 onChanged: (_) => setModalState(() {}),
                                 decoration: InputDecoration(
                                   labelText: 'Other Credit Card Name & Variant',
-                                  hintText: 'e.g. OneCard, Standard Chartered Ultimate, IndusInd',
-                                  prefixIcon: const Icon(Icons.credit_card, color: _brandBlue),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  hintText:
+                                      'e.g. OneCard, Standard Chartered Ultimate, IndusInd',
+                                  prefixIcon: const Icon(
+                                    Icons.credit_card,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -896,8 +1224,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Holder Name',
                                 hintText: 'e.g. Sireesha Bandaru',
-                                prefixIcon: const Icon(Icons.person_outline, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.person_outline,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -910,12 +1243,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     value: selectedIssuedBank,
                                     decoration: InputDecoration(
                                       labelText: 'Issued Bank',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
-                                    items: issuedBankOptions.map((b) => DropdownMenuItem(value: b, child: BankNameWithLogo(bankName: b, logoSize: 18, textStyle: const TextStyle(fontSize: 12)))).toList(),
+                                    items: issuedBankOptions
+                                        .map(
+                                          (b) => DropdownMenuItem(
+                                            value: b,
+                                            child: BankNameWithLogo(
+                                              bankName: b,
+                                              logoSize: 18,
+                                              textStyle: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
                                     onChanged: (v) {
                                       if (v != null) {
-                                        setModalState(() => selectedIssuedBank = v);
+                                        setModalState(
+                                          () => selectedIssuedBank = v,
+                                        );
                                       }
                                     },
                                   ),
@@ -928,13 +1278,34 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     value: selectedCardType,
                                     decoration: InputDecoration(
                                       labelText: 'Card Type',
-                                      prefixIcon: const Icon(Icons.payment, color: _brandBlue, size: 20),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.payment,
+                                        color: _brandBlue,
+                                        size: 20,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
-                                    items: cardTypeOptions.map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
+                                    items: cardTypeOptions
+                                        .map(
+                                          (t) => DropdownMenuItem(
+                                            value: t,
+                                            child: Text(
+                                              t,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
                                     onChanged: (v) {
                                       if (v != null) {
-                                        setModalState(() => selectedCardType = v);
+                                        setModalState(
+                                          () => selectedCardType = v,
+                                        );
                                       }
                                     },
                                   ),
@@ -949,8 +1320,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'Other Issuing Bank Name',
                                   hintText: 'e.g. Federal Bank, Yes Bank',
-                                  prefixIcon: const Icon(Icons.account_balance, color: _brandBlue),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -966,8 +1342,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                       counterText: '',
                                       labelText: 'Last 4 Digits',
                                       hintText: 'e.g. 8842',
-                                      prefixIcon: const Icon(Icons.password, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.password,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -978,9 +1359,15 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     keyboardType: TextInputType.datetime,
                                     maxLength: 5,
                                     onChanged: (val) {
-                                      if (val.length == 2 && !val.contains('/')) {
+                                      if (val.length == 2 &&
+                                          !val.contains('/')) {
                                         expiryCtrl.text = '$val/';
-                                        expiryCtrl.selection = TextSelection.fromPosition(TextPosition(offset: expiryCtrl.text.length));
+                                        expiryCtrl.selection =
+                                            TextSelection.fromPosition(
+                                              TextPosition(
+                                                offset: expiryCtrl.text.length,
+                                              ),
+                                            );
                                       }
                                       setModalState(() {});
                                     },
@@ -988,8 +1375,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                       counterText: '',
                                       labelText: 'Expiry (MM/YY)',
                                       hintText: 'MM/YY (e.g. 10/28)',
-                                      prefixIcon: const Icon(Icons.calendar_month_outlined, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.calendar_month_outlined,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1005,8 +1397,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Total Limit (₹)',
                                       hintText: 'e.g. 300000',
-                                      prefixIcon: const Icon(Icons.account_balance_wallet_outlined, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.account_balance_wallet_outlined,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1018,8 +1415,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Outstanding (₹)',
                                       hintText: 'e.g. 34500',
-                                      prefixIcon: const Icon(Icons.receipt_long_outlined, color: Color(0xFFEF4444)),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.receipt_long_outlined,
+                                        color: Color(0xFFEF4444),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1034,12 +1436,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     value: selectedDueDate,
                                     decoration: InputDecoration(
                                       labelText: 'Statement Due Date',
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
-                                    items: dueDates.map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))).toList(),
+                                    items: dueDates
+                                        .map(
+                                          (d) => DropdownMenuItem(
+                                            value: d,
+                                            child: Text(
+                                              d,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
                                     onChanged: (v) {
                                       if (v != null) {
-                                        setModalState(() => selectedDueDate = v);
+                                        setModalState(
+                                          () => selectedDueDate = v,
+                                        );
                                       }
                                     },
                                   ),
@@ -1052,8 +1471,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Reward Points (Optional)',
                                       hintText: 'e.g. 4500',
-                                      prefixIcon: const Icon(Icons.stars_outlined, color: Color(0xFFF59E0B)),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.stars_outlined,
+                                        color: Color(0xFFF59E0B),
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1065,16 +1489,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEFF6FF),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                                border: Border.all(
+                                  color: const Color(0xFFBFDBFE),
+                                ),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.shield_outlined, size: 16, color: _brandBlue),
+                                  Icon(
+                                    Icons.shield_outlined,
+                                    size: 16,
+                                    color: _brandBlue,
+                                  ),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Card data is tracked for Credit Utilization analytics and timely payment alerts. CVV and Card PIN are NEVER stored.',
-                                      style: TextStyle(fontSize: 10, color: Color(0xFF1E3A8A), fontWeight: FontWeight.w500),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF1E3A8A),
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1091,23 +1525,30 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brandBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           final enteredOther = otherCardCtrl.text.trim();
-                          if (selectedCard == 'Other Credit Card' && enteredOther.isEmpty) {
+                          if (selectedCard == 'Other Credit Card' &&
+                              enteredOther.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please enter your credit card name'),
+                                content: Text(
+                                  'Please enter your credit card name',
+                                ),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
                             );
                             return;
                           }
 
-                          final enteredOtherBank = otherIssuedBankCtrl.text.trim();
-                          if (selectedIssuedBank == 'Others' && enteredOtherBank.isEmpty) {
+                          final enteredOtherBank = otherIssuedBankCtrl.text
+                              .trim();
+                          if (selectedIssuedBank == 'Others' &&
+                              enteredOtherBank.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -1118,25 +1559,44 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             return;
                           }
 
-                          final cardName = selectedCard == 'Other Credit Card' ? enteredOther : selectedCard;
-                          final finalIssuedBank = selectedIssuedBank == 'Others' ? enteredOtherBank : selectedIssuedBank;
-                          final holder = holderNameCtrl.text.trim().isEmpty ? 'Sireesha Bandaru' : holderNameCtrl.text.trim();
-                          final expiry = expiryCtrl.text.trim().isEmpty ? '10/28' : expiryCtrl.text.trim();
+                          final cardName = selectedCard == 'Other Credit Card'
+                              ? enteredOther
+                              : selectedCard;
+                          final finalIssuedBank = selectedIssuedBank == 'Others'
+                              ? enteredOtherBank
+                              : selectedIssuedBank;
+                          final holder = holderNameCtrl.text.trim().isEmpty
+                              ? 'Sireesha Bandaru'
+                              : holderNameCtrl.text.trim();
+                          final expiry = expiryCtrl.text.trim().isEmpty
+                              ? '10/28'
+                              : expiryCtrl.text.trim();
 
                           final last4 = last4Ctrl.text.trim();
                           if (last4.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please enter the last 4 digits of your credit card'),
+                                content: Text(
+                                  'Please enter the last 4 digits of your credit card',
+                                ),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
                             );
                             return;
                           }
-                          final limitVal = double.tryParse(limitCtrl.text.trim().replaceAll(',', '')) ?? 100000.0;
-                          final outstandingVal = double.tryParse(outstandingCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final rewards = int.tryParse(rewardCtrl.text.trim()) ?? 0;
+                          final limitVal =
+                              double.tryParse(
+                                limitCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              100000.0;
+                          final outstandingVal =
+                              double.tryParse(
+                                outstandingCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final rewards =
+                              int.tryParse(rewardCtrl.text.trim()) ?? 0;
 
                           if (existingCard != null) {
                             final updated = existingCard.copyWith(
@@ -1144,32 +1604,45 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               last4Digits: last4,
                               creditLimit: limitVal,
                               outstandingBalance: outstandingVal,
-                              availableCredit: (limitVal - outstandingVal).clamp(0.0, double.infinity),
+                              availableCredit: (limitVal - outstandingVal)
+                                  .clamp(0.0, double.infinity),
                               statementDueDate: selectedDueDate,
-                              minimumDue: (outstandingVal * 0.05).clamp(0.0, double.infinity),
+                              minimumDue: (outstandingVal * 0.05).clamp(
+                                0.0,
+                                double.infinity,
+                              ),
                               rewardPoints: rewards,
                               cardHolderName: holder,
                               issuedBank: finalIssuedBank,
                               cardType: selectedCardType,
                               expiryDate: expiry,
                             );
-                            ref.read(bankAggregationProvider.notifier).updateCreditCard(updated);
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .updateCreditCard(updated);
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$cardName updated successfully!'),
+                                content: Text(
+                                  '$cardName updated successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           } else {
-                            ref.read(bankAggregationProvider.notifier).addCreditCardItem(
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .addCreditCardItem(
                                   cardName: cardName,
                                   last4Digits: last4,
                                   creditLimit: limitVal,
                                   outstandingBalance: outstandingVal,
                                   statementDueDate: selectedDueDate,
-                                  minimumDue: (outstandingVal * 0.05).clamp(0.0, double.infinity),
+                                  minimumDue: (outstandingVal * 0.05).clamp(
+                                    0.0,
+                                    double.infinity,
+                                  ),
                                   rewardPoints: rewards,
                                   holderName: holder,
                                   issuedBank: finalIssuedBank,
@@ -1180,15 +1653,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$cardName added to Credit Cards!'),
+                                content: Text(
+                                  '$cardName added to Credit Cards!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           }
                         },
                         child: Text(
-                          existingCard != null ? 'Update Credit Card' : 'Add Credit Card to Portfolio',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          existingCard != null
+                              ? 'Update Credit Card'
+                              : 'Add Credit Card to Portfolio',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -1241,7 +1722,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -1258,224 +1741,334 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 ),
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.qr_code_2,
+                              color: _brandBlue,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  existingUpi != null
+                                      ? 'Edit UPI Account'
+                                      : 'Link New UPI Account & VPA',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _navyDark,
+                                  ),
+                                ),
+                                Text(
+                                  existingUpi != null
+                                      ? 'Update UPI VPA details (FAA-SEC-03)'
+                                      : 'NPCI Unified Payments Interface Aggregation (FAA-SEC-03)',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: _slateGrey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: upiCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'UPI ID (Virtual Payment Address)',
+                          hintText: 'e.g. mobile@okhdfcbank',
+                          prefixIcon: const Icon(
+                            Icons.alternate_email,
+                            color: _brandBlue,
+                          ),
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.qr_code_2, color: _brandBlue, size: 22),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                existingUpi != null ? 'Edit UPI Account' : 'Link New UPI Account & VPA',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: selectedProvider,
+                        decoration: InputDecoration(
+                          labelText: 'UPI App Provider',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: upiProviders
+                            .map(
+                              (p) => DropdownMenuItem(
+                                value: p,
+                                child: BankNameWithLogo(
+                                  bankName: p,
+                                  logoSize: 20,
+                                ),
                               ),
-                              Text(
-                                existingUpi != null ? 'Update UPI VPA details (FAA-SEC-03)' : 'NPCI Unified Payments Interface Aggregation (FAA-SEC-03)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
-                              ),
-                            ],
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setModalState(() => selectedProvider = v);
+                          }
+                        },
+                      ),
+                      if (selectedProvider == 'Other UPI' ||
+                          selectedProvider == 'Tata Pay / Other UPI') ...[
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: otherUpiCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Other UPI App / Provider Name',
+                            hintText: 'e.g. Navi, CRED, Super.money, Tata Neu',
+                            prefixIcon: const Icon(
+                              Icons.apps_outlined,
+                              color: _brandBlue,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: upiCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'UPI ID (Virtual Payment Address)',
-                        hintText: 'e.g. mobile@okhdfcbank',
-                        prefixIcon: const Icon(Icons.alternate_email, color: _brandBlue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      value: selectedProvider,
-                      decoration: InputDecoration(
-                        labelText: 'UPI App Provider',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: upiProviders.map((p) => DropdownMenuItem(
-                        value: p,
-                        child: BankNameWithLogo(bankName: p, logoSize: 20),
-                      )).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setModalState(() => selectedProvider = v);
-                        }
-                      },
-                    ),
-                    if (selectedProvider == 'Other UPI' || selectedProvider == 'Tata Pay / Other UPI') ...[
                       const SizedBox(height: 14),
-                      TextField(
-                        controller: otherUpiCtrl,
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: selectedBank,
                         decoration: InputDecoration(
-                          labelText: 'Other UPI App / Provider Name',
-                          hintText: 'e.g. Navi, CRED, Super.money, Tata Neu',
-                          prefixIcon: const Icon(Icons.apps_outlined, color: _brandBlue),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          labelText: 'Underlying Linked Bank Account',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      value: selectedBank,
-                      decoration: InputDecoration(
-                        labelText: 'Underlying Linked Bank Account',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: bankOptions.map((b) => DropdownMenuItem(
-                        value: b,
-                        child: BankNameWithLogo(bankName: b, logoSize: 20),
-                      )).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setModalState(() => selectedBank = v);
-                        }
-                      },
-                    ),
-                    if (selectedBank == 'Others' || selectedBank == 'Other Bank') ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: otherBankCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Other Linked Bank Name',
-                          hintText: 'e.g. Standard Chartered, Yes Bank, RBL Bank',
-                          prefixIcon: const Icon(Icons.account_balance_outlined, color: _brandBlue),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _brandBlue,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          final text = upiCtrl.text.trim();
-                          if (text.isEmpty) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a valid UPI ID (e.g. name@bank)'),
-                                backgroundColor: Color(0xFFEF4444),
+                        items: bankOptions
+                            .map(
+                              (b) => DropdownMenuItem(
+                                value: b,
+                                child: BankNameWithLogo(
+                                  bankName: b,
+                                  logoSize: 20,
+                                ),
                               ),
-                            );
-                            return;
-                          }
-
-                          final isOtherUpi = selectedProvider == 'Other UPI' || selectedProvider == 'Tata Pay / Other UPI';
-                          final enteredOtherUpi = otherUpiCtrl.text.trim();
-                          if (isOtherUpi && enteredOtherUpi.isEmpty) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter your UPI app / provider name'),
-                                backgroundColor: Color(0xFFEF4444),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final isOtherBank = selectedBank == 'Others' || selectedBank == 'Other Bank';
-                          final enteredOtherBank = otherBankCtrl.text.trim();
-                          if (isOtherBank && enteredOtherBank.isEmpty) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter your linked bank name'),
-                                backgroundColor: Color(0xFFEF4444),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final providerName = isOtherUpi ? enteredOtherUpi : selectedProvider;
-                          final bankName = isOtherBank ? enteredOtherBank : selectedBank;
-
-                          if (existingUpi != null) {
-                            final updated = existingUpi.copyWith(
-                              upiId: text,
-                              provider: providerName,
-                              linkedBank: bankName,
-                            );
-                            ref.read(bankAggregationProvider.notifier).updateUpiAccount(updated);
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('UPI account $text updated successfully!'),
-                                backgroundColor: _emeraldGreen,
-                              ),
-                            );
-                          } else {
-                            ref.read(bankAggregationProvider.notifier).addUpiAccount(
-                                  text,
-                                  providerName,
-                                  bankName,
-                                );
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('UPI account $text linked successfully!'),
-                                backgroundColor: _emeraldGreen,
-                              ),
-                            );
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setModalState(() => selectedBank = v);
                           }
                         },
-                        child: Text(
-                          existingUpi != null ? 'Update UPI ID' : 'Verify & Link UPI ID',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      if (selectedBank == 'Others' ||
+                          selectedBank == 'Other Bank') ...[
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: otherBankCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Other Linked Bank Name',
+                            hintText:
+                                'e.g. Standard Chartered, Yes Bank, RBL Bank',
+                            prefixIcon: const Icon(
+                              Icons.account_balance_outlined,
+                              color: _brandBlue,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _brandBlue,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            final text = upiCtrl.text.trim();
+                            if (text.isEmpty) {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter a valid UPI ID (e.g. name@bank)',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final isOtherUpi =
+                                selectedProvider == 'Other UPI' ||
+                                selectedProvider == 'Tata Pay / Other UPI';
+                            final enteredOtherUpi = otherUpiCtrl.text.trim();
+                            if (isOtherUpi && enteredOtherUpi.isEmpty) {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter your UPI app / provider name',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final isOtherBank =
+                                selectedBank == 'Others' ||
+                                selectedBank == 'Other Bank';
+                            final enteredOtherBank = otherBankCtrl.text.trim();
+                            if (isOtherBank && enteredOtherBank.isEmpty) {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter your linked bank name',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final providerName = isOtherUpi
+                                ? enteredOtherUpi
+                                : selectedProvider;
+                            final bankName = isOtherBank
+                                ? enteredOtherBank
+                                : selectedBank;
+
+                            if (existingUpi != null) {
+                              final updated = existingUpi.copyWith(
+                                upiId: text,
+                                provider: providerName,
+                                linkedBank: bankName,
+                              );
+                              ref
+                                  .read(bankAggregationProvider.notifier)
+                                  .updateUpiAccount(updated);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'UPI account $text updated successfully!',
+                                  ),
+                                  backgroundColor: _emeraldGreen,
+                                ),
+                              );
+                            } else {
+                              ref
+                                  .read(bankAggregationProvider.notifier)
+                                  .addUpiAccount(text, providerName, bankName);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'UPI account $text linked successfully!',
+                                  ),
+                                  backgroundColor: _emeraldGreen,
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            existingUpi != null
+                                ? 'Update UPI ID'
+                                : 'Verify & Link UPI ID',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
         );
       },
     );
   }
 
-  void _showAddLoanModal(BuildContext context, {LoanAccountItem? existingLoan}) {
+  void _showAddLoanModal(
+    BuildContext context, {
+    LoanAccountItem? existingLoan,
+  }) {
     String selectedLoanType = existingLoan?.loanType ?? 'Home Loan';
     String selectedLender = existingLoan?.lender ?? 'State Bank of India';
-    final principalCtrl = TextEditingController(text: existingLoan != null ? existingLoan.outstandingPrincipal.toStringAsFixed(0) : '');
-    final roiCtrl = TextEditingController(text: existingLoan != null ? existingLoan.interestRate.toString() : '');
-    final emiCtrl = TextEditingController(text: existingLoan != null ? existingLoan.monthlyEmi.toStringAsFixed(0) : '');
-    final tenureCtrl = TextEditingController(text: existingLoan != null ? existingLoan.tenureRemainingMonths.toString() : '');
-    final dueDateCtrl = TextEditingController(text: existingLoan?.nextDueDate ?? '');
+    final principalCtrl = TextEditingController(
+      text: existingLoan != null
+          ? existingLoan.outstandingPrincipal.toStringAsFixed(0)
+          : '',
+    );
+    final roiCtrl = TextEditingController(
+      text: existingLoan != null ? existingLoan.interestRate.toString() : '',
+    );
+    final emiCtrl = TextEditingController(
+      text: existingLoan != null
+          ? existingLoan.monthlyEmi.toStringAsFixed(0)
+          : '',
+    );
+    final tenureCtrl = TextEditingController(
+      text: existingLoan != null
+          ? existingLoan.tenureRemainingMonths.toString()
+          : '',
+    );
+    final dueDateCtrl = TextEditingController(
+      text: existingLoan?.nextDueDate ?? '',
+    );
     final otherLenderCtrl = TextEditingController();
 
     final loanTypes = [
@@ -1508,7 +2101,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -1530,7 +2125,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -1542,7 +2140,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.real_estate_agent_outlined, color: _brandBlue, size: 22),
+                          child: const Icon(
+                            Icons.real_estate_agent_outlined,
+                            color: _brandBlue,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1550,12 +2152,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                existingLoan != null ? 'Edit Loan Account' : 'Add Loan Account',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                                existingLoan != null
+                                    ? 'Edit Loan Account'
+                                    : 'Add Loan Account',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navyDark,
+                                ),
                               ),
                               Text(
-                                existingLoan != null ? 'Update loan balance & EMI details (FAA-SEC-05)' : 'Track EMI, interest rate & principal (FAA-SEC-05)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
+                                existingLoan != null
+                                    ? 'Update loan balance & EMI details (FAA-SEC-05)'
+                                    : 'Track EMI, interest rate & principal (FAA-SEC-05)',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _slateGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -1566,7 +2179,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1575,12 +2189,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedLoanType,
                               decoration: InputDecoration(
                                 labelText: 'Loan Category',
-                                prefixIcon: const Icon(Icons.category_outlined, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.category_outlined,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: loanTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                              items: loanTypes
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(t),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
-                                if (v != null) setModalState(() => selectedLoanType = v);
+                                if (v != null)
+                                  setModalState(() => selectedLoanType = v);
                               },
                             ),
                             const SizedBox(height: 14),
@@ -1589,14 +2216,24 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedLender,
                               decoration: InputDecoration(
                                 labelText: 'Lender / Institution',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: lenderOptions.map((b) => DropdownMenuItem(
-                                value: b,
-                                child: BankNameWithLogo(bankName: b, logoSize: 20),
-                              )).toList(),
+                              items: lenderOptions
+                                  .map(
+                                    (b) => DropdownMenuItem(
+                                      value: b,
+                                      child: BankNameWithLogo(
+                                        bankName: b,
+                                        logoSize: 20,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
-                                if (v != null) setModalState(() => selectedLender = v);
+                                if (v != null)
+                                  setModalState(() => selectedLender = v);
                               },
                             ),
                             if (selectedLender == 'Others') ...[
@@ -1605,9 +2242,15 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 controller: otherLenderCtrl,
                                 decoration: InputDecoration(
                                   labelText: 'Other Lender / Bank Name',
-                                  hintText: 'e.g. IDFC FIRST Bank, LIC Housing Finance',
-                                  prefixIcon: const Icon(Icons.account_balance, color: _brandBlue),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  hintText:
+                                      'e.g. IDFC FIRST Bank, LIC Housing Finance',
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1618,8 +2261,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Outstanding Principal (₹)',
                                 hintText: 'e.g. 2450000',
-                                prefixIcon: const Icon(Icons.currency_rupee, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.currency_rupee,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -1628,12 +2276,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 Expanded(
                                   child: TextField(
                                     controller: roiCtrl,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     decoration: InputDecoration(
                                       labelText: 'Interest Rate (% p.a.)',
                                       hintText: 'e.g. 8.55',
-                                      prefixIcon: const Icon(Icons.percent, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.percent,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1645,8 +2301,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Monthly EMI (₹)',
                                       hintText: 'e.g. 23450',
-                                      prefixIcon: const Icon(Icons.calendar_today, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.calendar_today,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1662,8 +2323,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Tenure Left (Months)',
                                       hintText: 'e.g. 168',
-                                      prefixIcon: const Icon(Icons.timelapse, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.timelapse,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1674,8 +2340,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Next Due Date',
                                       hintText: 'e.g. 05 Nov 2026',
-                                      prefixIcon: const Icon(Icons.event, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.event,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1692,17 +2363,33 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brandBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           final lenderName = selectedLender == 'Others'
-                              ? (otherLenderCtrl.text.trim().isEmpty ? 'Private Lender' : otherLenderCtrl.text.trim())
+                              ? (otherLenderCtrl.text.trim().isEmpty
+                                    ? 'Private Lender'
+                                    : otherLenderCtrl.text.trim())
                               : selectedLender;
-                          final principalVal = double.tryParse(principalCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final roiVal = double.tryParse(roiCtrl.text.trim()) ?? 8.5;
-                          final emiVal = double.tryParse(emiCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final tenureVal = int.tryParse(tenureCtrl.text.trim()) ?? 12;
-                          final dueVal = dueDateCtrl.text.trim().isEmpty ? 'Next month' : dueDateCtrl.text.trim();
+                          final principalVal =
+                              double.tryParse(
+                                principalCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final roiVal =
+                              double.tryParse(roiCtrl.text.trim()) ?? 8.5;
+                          final emiVal =
+                              double.tryParse(
+                                emiCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final tenureVal =
+                              int.tryParse(tenureCtrl.text.trim()) ?? 12;
+                          final dueVal = dueDateCtrl.text.trim().isEmpty
+                              ? 'Next month'
+                              : dueDateCtrl.text.trim();
 
                           if (existingLoan != null) {
                             final updated = existingLoan.copyWith(
@@ -1714,16 +2401,22 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               tenureRemainingMonths: tenureVal,
                               nextDueDate: dueVal,
                             );
-                            ref.read(bankAggregationProvider.notifier).updateLoanAccount(updated);
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .updateLoanAccount(updated);
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$lenderName $selectedLoanType updated successfully!'),
+                                content: Text(
+                                  '$lenderName $selectedLoanType updated successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           } else {
-                            ref.read(bankAggregationProvider.notifier).addLoanAccount(
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .addLoanAccount(
                                   loanType: selectedLoanType,
                                   lender: lenderName,
                                   outstandingPrincipal: principalVal,
@@ -1735,15 +2428,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedLoanType at $lenderName linked successfully!'),
+                                content: Text(
+                                  '$selectedLoanType at $lenderName linked successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           }
                         },
                         child: Text(
-                          existingLoan != null ? 'Update Loan Account' : 'Add Loan Account to Liabilities',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          existingLoan != null
+                              ? 'Update Loan Account'
+                              : 'Add Loan Account to Liabilities',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -1757,12 +2458,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-  void _showAddInvestmentModal(BuildContext context, {InvestmentHoldingItem? existingInvestment}) {
+  void _showAddInvestmentModal(
+    BuildContext context, {
+    InvestmentHoldingItem? existingInvestment,
+  }) {
     String selectedAssetType = existingInvestment?.assetType ?? 'Mutual Funds';
-    final institutionCtrl = TextEditingController(text: existingInvestment?.institution ?? '');
-    final currentValCtrl = TextEditingController(text: existingInvestment != null ? existingInvestment.currentValue.toStringAsFixed(0) : '');
-    final investedValCtrl = TextEditingController(text: existingInvestment != null ? existingInvestment.investedValue.toStringAsFixed(0) : '');
-    final returnPercentCtrl = TextEditingController(text: existingInvestment != null ? existingInvestment.returnPercentage.toString() : '');
+    final institutionCtrl = TextEditingController(
+      text: existingInvestment?.institution ?? '',
+    );
+    final currentValCtrl = TextEditingController(
+      text: existingInvestment != null
+          ? existingInvestment.currentValue.toStringAsFixed(0)
+          : '',
+    );
+    final investedValCtrl = TextEditingController(
+      text: existingInvestment != null
+          ? existingInvestment.investedValue.toStringAsFixed(0)
+          : '',
+    );
+    final returnPercentCtrl = TextEditingController(
+      text: existingInvestment != null
+          ? existingInvestment.returnPercentage.toString()
+          : '',
+    );
     bool isPositive = existingInvestment?.isPositive ?? true;
 
     final assetTypes = [
@@ -1780,7 +2498,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -1802,7 +2522,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -1814,7 +2537,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.trending_up, color: _brandBlue, size: 22),
+                          child: const Icon(
+                            Icons.trending_up,
+                            color: _brandBlue,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1822,12 +2549,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                existingInvestment != null ? 'Edit Investment' : 'Add Investment Holding',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                                existingInvestment != null
+                                    ? 'Edit Investment'
+                                    : 'Add Investment Holding',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navyDark,
+                                ),
                               ),
                               Text(
-                                existingInvestment != null ? 'Update holding portfolio values (FAA-SEC-06)' : 'Track MFs, Stocks, FDs, Gold & EPF (FAA-SEC-06)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
+                                existingInvestment != null
+                                    ? 'Update holding portfolio values (FAA-SEC-06)'
+                                    : 'Track MFs, Stocks, FDs, Gold & EPF (FAA-SEC-06)',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _slateGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -1838,7 +2576,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1847,12 +2586,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedAssetType,
                               decoration: InputDecoration(
                                 labelText: 'Asset Category',
-                                prefixIcon: const Icon(Icons.pie_chart_outline, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.pie_chart_outline,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: assetTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                              items: assetTypes
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(t),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
-                                if (v != null) setModalState(() => selectedAssetType = v);
+                                if (v != null)
+                                  setModalState(() => selectedAssetType = v);
                               },
                             ),
                             const SizedBox(height: 14),
@@ -1860,9 +2612,15 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               controller: institutionCtrl,
                               decoration: InputDecoration(
                                 labelText: 'Institution / Platform / Fund Name',
-                                hintText: 'e.g. Zerodha Kite, Groww, HDFC AMC, EPFO',
-                                prefixIcon: const Icon(Icons.business, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                hintText:
+                                    'e.g. Zerodha Kite, Groww, HDFC AMC, EPFO',
+                                prefixIcon: const Icon(
+                                  Icons.business,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -1875,8 +2633,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Current Market Value (₹)',
                                       hintText: 'e.g. 500000',
-                                      prefixIcon: const Icon(Icons.currency_rupee, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.currency_rupee,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1888,8 +2651,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Invested Amount (₹)',
                                       hintText: 'e.g. 400000',
-                                      prefixIcon: const Icon(Icons.account_balance_wallet_outlined, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.account_balance_wallet_outlined,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1901,35 +2669,71 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 Expanded(
                                   child: TextField(
                                     controller: returnPercentCtrl,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     decoration: InputDecoration(
                                       labelText: 'Returns (%)',
                                       hintText: 'e.g. 25.0',
-                                      prefixIcon: const Icon(Icons.percent, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.percent,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: InkWell(
-                                    onTap: () => setModalState(() => isPositive = !isPositive),
+                                    onTap: () => setModalState(
+                                      () => isPositive = !isPositive,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 14,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                                        color: isPositive
+                                            ? const Color(0xFFECFDF5)
+                                            : const Color(0xFFFEF2F2),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: isPositive ? _emeraldGreen : const Color(0xFFEF4444)),
+                                        border: Border.all(
+                                          color: isPositive
+                                              ? _emeraldGreen
+                                              : const Color(0xFFEF4444),
+                                        ),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, size: 16, color: isPositive ? _emeraldGreen : const Color(0xFFEF4444)),
+                                          Icon(
+                                            isPositive
+                                                ? Icons.arrow_upward
+                                                : Icons.arrow_downward,
+                                            size: 16,
+                                            color: isPositive
+                                                ? _emeraldGreen
+                                                : const Color(0xFFEF4444),
+                                          ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            isPositive ? 'Gain / Profit' : 'Loss / Negative',
-                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isPositive ? _emeraldGreen : const Color(0xFFEF4444)),
+                                            isPositive
+                                                ? 'Gain / Profit'
+                                                : 'Loss / Negative',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isPositive
+                                                  ? _emeraldGreen
+                                                  : const Color(0xFFEF4444),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -1949,13 +2753,27 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brandBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
-                          final instName = institutionCtrl.text.trim().isEmpty ? 'Portfolio Holding' : institutionCtrl.text.trim();
-                          final currentVal = double.tryParse(currentValCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final investedVal = double.tryParse(investedValCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final returnVal = double.tryParse(returnPercentCtrl.text.trim()) ?? 0.0;
+                          final instName = institutionCtrl.text.trim().isEmpty
+                              ? 'Portfolio Holding'
+                              : institutionCtrl.text.trim();
+                          final currentVal =
+                              double.tryParse(
+                                currentValCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final investedVal =
+                              double.tryParse(
+                                investedValCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final returnVal =
+                              double.tryParse(returnPercentCtrl.text.trim()) ??
+                              0.0;
 
                           if (existingInvestment != null) {
                             final updated = existingInvestment.copyWith(
@@ -1966,16 +2784,22 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               returnPercentage: returnVal,
                               isPositive: isPositive,
                             );
-                            ref.read(bankAggregationProvider.notifier).updateInvestmentHolding(updated);
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .updateInvestmentHolding(updated);
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedAssetType updated successfully!'),
+                                content: Text(
+                                  '$selectedAssetType updated successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           } else {
-                            ref.read(bankAggregationProvider.notifier).addInvestmentHolding(
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .addInvestmentHolding(
                                   assetType: selectedAssetType,
                                   institution: instName,
                                   currentValue: currentVal,
@@ -1986,15 +2810,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedAssetType holding added successfully!'),
+                                content: Text(
+                                  '$selectedAssetType holding added successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           }
                         },
                         child: Text(
-                          existingInvestment != null ? 'Update Investment' : 'Add Investment to Portfolio',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          existingInvestment != null
+                              ? 'Update Investment'
+                              : 'Add Investment to Portfolio',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -2008,14 +2840,33 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-  void _showAddInsuranceModal(BuildContext context, {InsurancePolicyItem? existingPolicy}) {
-    String selectedPolicyType = existingPolicy?.policyType ?? 'Health Insurance';
-    String selectedProvider = existingPolicy?.provider ?? 'HDFC ERGO Optima Secure';
-    final policyNumCtrl = TextEditingController(text: existingPolicy?.policyNumberMasked ?? '');
-    final coverageCtrl = TextEditingController(text: existingPolicy != null ? existingPolicy.coverageAmount.toStringAsFixed(0) : '');
-    final premiumCtrl = TextEditingController(text: existingPolicy != null ? existingPolicy.premiumAmount.toStringAsFixed(0) : '');
-    final renewalCtrl = TextEditingController(text: existingPolicy?.renewalDate ?? '');
-    final nomineeCtrl = TextEditingController(text: existingPolicy?.nominee ?? '');
+  void _showAddInsuranceModal(
+    BuildContext context, {
+    InsurancePolicyItem? existingPolicy,
+  }) {
+    String selectedPolicyType =
+        existingPolicy?.policyType ?? 'Health Insurance';
+    String selectedProvider =
+        existingPolicy?.provider ?? 'HDFC ERGO Optima Secure';
+    final policyNumCtrl = TextEditingController(
+      text: existingPolicy?.policyNumberMasked ?? '',
+    );
+    final coverageCtrl = TextEditingController(
+      text: existingPolicy != null
+          ? existingPolicy.coverageAmount.toStringAsFixed(0)
+          : '',
+    );
+    final premiumCtrl = TextEditingController(
+      text: existingPolicy != null
+          ? existingPolicy.premiumAmount.toStringAsFixed(0)
+          : '',
+    );
+    final renewalCtrl = TextEditingController(
+      text: existingPolicy?.renewalDate ?? '',
+    );
+    final nomineeCtrl = TextEditingController(
+      text: existingPolicy?.nominee ?? '',
+    );
     final otherProviderCtrl = TextEditingController();
 
     final policyTypes = [
@@ -2047,7 +2898,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
@@ -2069,7 +2922,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -2081,7 +2937,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.health_and_safety_outlined, color: _brandBlue, size: 22),
+                          child: const Icon(
+                            Icons.health_and_safety_outlined,
+                            color: _brandBlue,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2089,12 +2949,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                existingPolicy != null ? 'Edit Insurance Policy' : 'Add Insurance Policy',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark),
+                                existingPolicy != null
+                                    ? 'Edit Insurance Policy'
+                                    : 'Add Insurance Policy',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _navyDark,
+                                ),
                               ),
                               Text(
-                                existingPolicy != null ? 'Update policy sum insured & renewal (FAA-SEC-07)' : 'Track health, life & vehicle coverage (FAA-SEC-07)',
-                                style: const TextStyle(fontSize: 11, color: _slateGrey),
+                                existingPolicy != null
+                                    ? 'Update policy sum insured & renewal (FAA-SEC-07)'
+                                    : 'Track health, life & vehicle coverage (FAA-SEC-07)',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _slateGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -2105,7 +2976,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2114,12 +2986,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedPolicyType,
                               decoration: InputDecoration(
                                 labelText: 'Policy Category',
-                                prefixIcon: const Icon(Icons.security, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.security,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: policyTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                              items: policyTypes
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(t),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
-                                if (v != null) setModalState(() => selectedPolicyType = v);
+                                if (v != null)
+                                  setModalState(() => selectedPolicyType = v);
                               },
                             ),
                             const SizedBox(height: 14),
@@ -2128,14 +3013,24 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               value: selectedProvider,
                               decoration: InputDecoration(
                                 labelText: 'Insurance Provider',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                              items: providers.map((b) => DropdownMenuItem(
-                                value: b,
-                                child: BankNameWithLogo(bankName: b, logoSize: 20),
-                              )).toList(),
+                              items: providers
+                                  .map(
+                                    (b) => DropdownMenuItem(
+                                      value: b,
+                                      child: BankNameWithLogo(
+                                        bankName: b,
+                                        logoSize: 20,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (v) {
-                                if (v != null) setModalState(() => selectedProvider = v);
+                                if (v != null)
+                                  setModalState(() => selectedProvider = v);
                               },
                             ),
                             if (selectedProvider == 'Others') ...[
@@ -2145,8 +3040,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'Other Provider Name',
                                   hintText: 'e.g. Niva Bupa, Digit Insurance',
-                                  prefixIcon: const Icon(Icons.business, color: _brandBlue),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  prefixIcon: const Icon(
+                                    Icons.business,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -2156,8 +3056,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Policy Number',
                                 hintText: 'e.g. POL-XXXX-9842',
-                                prefixIcon: const Icon(Icons.pin, color: _brandBlue),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                prefixIcon: const Icon(
+                                  Icons.pin,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -2170,8 +3075,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Sum Insured (₹)',
                                       hintText: 'e.g. 1500000',
-                                      prefixIcon: const Icon(Icons.verified, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.verified,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2183,8 +3093,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Premium / Year (₹)',
                                       hintText: 'e.g. 14500',
-                                      prefixIcon: const Icon(Icons.currency_rupee, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.currency_rupee,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2199,8 +3114,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Renewal Date',
                                       hintText: 'e.g. 14 Jul 2027',
-                                      prefixIcon: const Icon(Icons.event_repeat, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.event_repeat,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2211,8 +3131,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     decoration: InputDecoration(
                                       labelText: 'Nominee',
                                       hintText: 'e.g. Spouse, Parents',
-                                      prefixIcon: const Icon(Icons.person_pin, color: _brandBlue),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      prefixIcon: const Icon(
+                                        Icons.person_pin,
+                                        color: _brandBlue,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2229,17 +3154,35 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _brandBlue,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           final providerName = selectedProvider == 'Others'
-                              ? (otherProviderCtrl.text.trim().isEmpty ? 'Insurance Provider' : otherProviderCtrl.text.trim())
+                              ? (otherProviderCtrl.text.trim().isEmpty
+                                    ? 'Insurance Provider'
+                                    : otherProviderCtrl.text.trim())
                               : selectedProvider;
-                          final coverageVal = double.tryParse(coverageCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final premiumVal = double.tryParse(premiumCtrl.text.trim().replaceAll(',', '')) ?? 0.0;
-                          final polNum = policyNumCtrl.text.trim().isEmpty ? 'POL-XXXX-0001' : policyNumCtrl.text.trim();
-                          final renewalVal = renewalCtrl.text.trim().isEmpty ? 'Annual Renewal' : renewalCtrl.text.trim();
-                          final nomineeVal = nomineeCtrl.text.trim().isEmpty ? 'Self' : nomineeCtrl.text.trim();
+                          final coverageVal =
+                              double.tryParse(
+                                coverageCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final premiumVal =
+                              double.tryParse(
+                                premiumCtrl.text.trim().replaceAll(',', ''),
+                              ) ??
+                              0.0;
+                          final polNum = policyNumCtrl.text.trim().isEmpty
+                              ? 'POL-XXXX-0001'
+                              : policyNumCtrl.text.trim();
+                          final renewalVal = renewalCtrl.text.trim().isEmpty
+                              ? 'Annual Renewal'
+                              : renewalCtrl.text.trim();
+                          final nomineeVal = nomineeCtrl.text.trim().isEmpty
+                              ? 'Self'
+                              : nomineeCtrl.text.trim();
 
                           if (existingPolicy != null) {
                             final updated = existingPolicy.copyWith(
@@ -2251,16 +3194,22 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               renewalDate: renewalVal,
                               nominee: nomineeVal,
                             );
-                            ref.read(bankAggregationProvider.notifier).updateInsurancePolicy(updated);
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .updateInsurancePolicy(updated);
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedPolicyType ($providerName) updated successfully!'),
+                                content: Text(
+                                  '$selectedPolicyType ($providerName) updated successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           } else {
-                            ref.read(bankAggregationProvider.notifier).addInsurancePolicy(
+                            ref
+                                .read(bankAggregationProvider.notifier)
+                                .addInsurancePolicy(
                                   policyType: selectedPolicyType,
                                   policyNumberMasked: polNum,
                                   provider: providerName,
@@ -2272,15 +3221,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('$selectedPolicyType policy added successfully!'),
+                                content: Text(
+                                  '$selectedPolicyType policy added successfully!',
+                                ),
                                 backgroundColor: _emeraldGreen,
                               ),
                             );
                           }
                         },
                         child: Text(
-                          existingPolicy != null ? 'Update Insurance Policy' : 'Add Policy to Protection Portfolio',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          existingPolicy != null
+                              ? 'Update Insurance Policy'
+                              : 'Add Policy to Protection Portfolio',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -2300,10 +3257,17 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, size: 14, color: _emeraldGreen),
+          const Icon(
+            Icons.check_circle_outline,
+            size: 14,
+            color: _emeraldGreen,
+          ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text, style: const TextStyle(fontSize: 11, color: Color(0xFF334155))),
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
+            ),
           ),
         ],
       ),
@@ -2359,17 +3323,24 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0066FF)),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF0066FF),
+                    ),
                   )
                 : const Icon(Icons.sync, color: Color(0xFF0066FF)),
             tooltip: 'Sync All Accounts (Real-Time)',
             onPressed: state.isSyncing
                 ? null
                 : () {
-                    ref.read(bankAggregationProvider.notifier).syncAllAccounts();
+                    ref
+                        .read(bankAggregationProvider.notifier)
+                        .syncAllAccounts();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Synchronizing bank accounts, UPI, cards & investments...'),
+                        content: Text(
+                          'Synchronizing bank accounts, UPI, cards & investments...',
+                        ),
                         backgroundColor: _brandBlue,
                         duration: Duration(milliseconds: 1500),
                       ),
@@ -2460,7 +3431,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(color: Color(0x260066FF), blurRadius: 14, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x260066FF),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
@@ -2468,12 +3443,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.pie_chart_outline, color: Color(0xFF93C5FD), size: 16),
+              const Icon(
+                Icons.pie_chart_outline,
+                color: Color(0xFF93C5FD),
+                size: 16,
+              ),
               const SizedBox(width: 6),
               const Expanded(
                 child: Text(
                   'CONSOLIDATED FINANCIAL NET WORTH',
-                  style: TextStyle(fontSize: 10, color: Color(0xFFBFDBFE), fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFFBFDBFE),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -2484,14 +3468,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                   color: Colors.white.withOpacity(0.18),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text('Unified Portfolio', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'Unified Portfolio',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             '₹ ${_formatCurrency(netWorth)}',
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5),
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
@@ -2546,7 +3542,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                   label: 'Insurance Cover',
                   value: '₹ ${_formatCurrency(totalIns)}',
                   icon: Icons.health_and_safety_rounded,
-                  accentColor: const Color(0xFFF59E0B), // Insurance Logo Amber/Gold
+                  accentColor: const Color(
+                    0xFFF59E0B,
+                  ), // Insurance Logo Amber/Gold
                   labelColor: const Color(0xFFFDE68A),
                 ),
               ),
@@ -2621,8 +3619,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-
-
   // --------------------------------------------------------------------------
   // QUICK CATEGORY FILTER TABS
   // --------------------------------------------------------------------------
@@ -2652,17 +3648,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: InkWell(
-              onTap: () => ref.read(bankAggregationProvider.notifier).selectTab(idx),
+              onTap: () =>
+                  ref.read(bankAggregationProvider.notifier).selectTab(idx),
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected ? _brandBlue : Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isSelected ? _brandBlue : _cardBorder),
+                  border: Border.all(
+                    color: isSelected ? _brandBlue : _cardBorder,
+                  ),
                   boxShadow: isSelected
-                      ? [BoxShadow(color: _brandBlue.withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2))]
+                      ? [
+                          BoxShadow(
+                            color: _brandBlue.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
                       : null,
                 ),
                 child: Text(
@@ -2703,13 +3711,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 color: const Color(0xFFFEE2E2),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 22),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFEF4444),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navyDark),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _navyDark,
+                ),
               ),
             ),
           ],
@@ -2721,27 +3737,44 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dlgCtx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               elevation: 0,
             ),
             onPressed: () {
               Navigator.pop(dlgCtx);
               onDelete();
             },
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon, {bool isHighlight = false, Color? highlightColor}) {
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    IconData icon, {
+    bool isHighlight = false,
+    Color? highlightColor,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 18, color: const Color(0xFF64748B)),
@@ -2772,7 +3805,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -2786,7 +3821,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -2798,13 +3836,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(acc.bankName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text('${acc.accountType} • ${acc.maskedAccountNumber}', style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              acc.bankName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              '${acc.accountType} • ${acc.maskedAccountNumber}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
@@ -2812,9 +3866,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle, size: 12, color: _emeraldGreen),
+                            Icon(
+                              Icons.check_circle,
+                              size: 12,
+                              color: _emeraldGreen,
+                            ),
                             SizedBox(width: 4),
-                            Text('Synced', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _emeraldGreen)),
+                            Text(
+                              'Synced',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: _emeraldGreen,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -2830,17 +3895,42 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('Account Holder', acc.accountHolder, Icons.person_outline),
+                        _buildDetailRow(
+                          'Account Holder',
+                          acc.accountHolder,
+                          Icons.person_outline,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Account Type', acc.accountType, Icons.account_balance_wallet_outlined),
+                        _buildDetailRow(
+                          'Account Type',
+                          acc.accountType,
+                          Icons.account_balance_wallet_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Account Number', acc.maskedAccountNumber, Icons.pin_outlined),
+                        _buildDetailRow(
+                          'Account Number',
+                          acc.maskedAccountNumber,
+                          Icons.pin_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('IFSC Code', acc.ifscCode, Icons.business_outlined),
+                        _buildDetailRow(
+                          'IFSC Code',
+                          acc.ifscCode,
+                          Icons.business_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Available Balance', '₹ ${_formatCurrency(acc.availableBalance)}', Icons.currency_rupee, isHighlight: true),
+                        _buildDetailRow(
+                          'Available Balance',
+                          '₹ ${_formatCurrency(acc.availableBalance)}',
+                          Icons.currency_rupee,
+                          isHighlight: true,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Last Synced', acc.lastSynced, Icons.sync),
+                        _buildDetailRow(
+                          'Last Synced',
+                          acc.lastSynced,
+                          Icons.sync,
+                        ),
                       ],
                     ),
                   ),
@@ -2854,19 +3944,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete Bank Account?',
-                              message: 'Are you sure you want to remove ${acc.bankName} (${acc.maskedAccountNumber}) from your connected accounts?',
+                              message:
+                                  'Are you sure you want to remove ${acc.bankName} (${acc.maskedAccountNumber}) from your connected accounts?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteBankAccount(acc.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteBankAccount(acc.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${acc.bankName} account deleted successfully'),
+                                    content: Text(
+                                      '${acc.bankName} account deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -2874,7 +3971,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2885,7 +3988,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
@@ -2893,7 +3998,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             _showAddBankModal(context, existingAccount: acc);
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -2912,7 +4023,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -2926,30 +4039,61 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      BankLogo(bankName: upi.provider.isNotEmpty ? upi.provider : upi.linkedBank, size: 40),
+                      BankLogo(
+                        bankName: upi.provider.isNotEmpty
+                            ? upi.provider
+                            : upi.linkedBank,
+                        size: 40,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(upi.upiId, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text('${upi.provider} • Linked: ${upi.linkedBank}', style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              upi.upiId,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              '${upi.provider} • Linked: ${upi.linkedBank}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('Active', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _emeraldGreen)),
+                        child: const Text(
+                          'Active',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _emeraldGreen,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -2963,15 +4107,36 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('UPI Virtual Address', upi.upiId, Icons.alternate_email),
+                        _buildDetailRow(
+                          'UPI Virtual Address',
+                          upi.upiId,
+                          Icons.alternate_email,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('App Provider', upi.provider, Icons.apps_outlined),
+                        _buildDetailRow(
+                          'App Provider',
+                          upi.provider,
+                          Icons.apps_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Underlying Linked Bank', upi.linkedBank, Icons.account_balance_outlined),
+                        _buildDetailRow(
+                          'Underlying Linked Bank',
+                          upi.linkedBank,
+                          Icons.account_balance_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Primary UPI ID', upi.isPrimary ? 'Yes (Default Mandate)' : 'No', Icons.star_outline),
+                        _buildDetailRow(
+                          'Primary UPI ID',
+                          upi.isPrimary ? 'Yes (Default Mandate)' : 'No',
+                          Icons.star_outline,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Account Status', upi.status, Icons.verified_outlined, isHighlight: true),
+                        _buildDetailRow(
+                          'Account Status',
+                          upi.status,
+                          Icons.verified_outlined,
+                          isHighlight: true,
+                        ),
                       ],
                     ),
                   ),
@@ -2985,19 +4150,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete UPI Account?',
-                              message: 'Are you sure you want to remove ${upi.upiId} from linked UPI handles?',
+                              message:
+                                  'Are you sure you want to remove ${upi.upiId} from linked UPI handles?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteUpiAccount(upi.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteUpiAccount(upi.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('UPI account ${upi.upiId} deleted successfully'),
+                                    content: Text(
+                                      'UPI account ${upi.upiId} deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -3005,7 +4177,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3016,7 +4194,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
@@ -3024,7 +4204,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             _showAddUpiModal(context, existingUpi: upi);
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3043,7 +4229,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -3057,20 +4245,39 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      BankLogo(bankName: card.issuedBank ?? card.cardName, size: 40),
+                      BankLogo(
+                        bankName: card.issuedBank ?? card.cardName,
+                        size: 40,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(card.cardName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text('•••• ${card.last4Digits} • ${card.cardType ?? "Credit Card"}${card.expiryDate != null ? " • Exp: ${card.expiryDate}" : ""}', style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              card.cardName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              '•••• ${card.last4Digits} • ${card.cardType ?? "Credit Card"}${card.expiryDate != null ? " • Exp: ${card.expiryDate}" : ""}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -3087,24 +4294,58 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Column(
                       children: [
                         if (card.cardHolderName != null) ...[
-                          _buildDetailRow('Cardholder Name', card.cardHolderName!, Icons.person_outline),
+                          _buildDetailRow(
+                            'Cardholder Name',
+                            card.cardHolderName!,
+                            Icons.person_outline,
+                          ),
                           const Divider(height: 20, color: Color(0xFFE2E8F0)),
                         ],
                         if (card.issuedBank != null) ...[
-                          _buildDetailRow('Issuing Bank', card.issuedBank!, Icons.account_balance_outlined),
+                          _buildDetailRow(
+                            'Issuing Bank',
+                            card.issuedBank!,
+                            Icons.account_balance_outlined,
+                          ),
                           const Divider(height: 20, color: Color(0xFFE2E8F0)),
                         ],
-                        _buildDetailRow('Credit Limit', '₹ ${_formatCurrency(card.creditLimit)}', Icons.credit_score_outlined),
+                        _buildDetailRow(
+                          'Credit Limit',
+                          '₹ ${_formatCurrency(card.creditLimit)}',
+                          Icons.credit_score_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Outstanding Due', '₹ ${_formatCurrency(card.outstandingBalance)}', Icons.payment_outlined, isHighlight: true, highlightColor: const Color(0xFFEF4444)),
+                        _buildDetailRow(
+                          'Outstanding Due',
+                          '₹ ${_formatCurrency(card.outstandingBalance)}',
+                          Icons.payment_outlined,
+                          isHighlight: true,
+                          highlightColor: const Color(0xFFEF4444),
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Available Credit', '₹ ${_formatCurrency(card.availableCredit)}', Icons.account_balance_wallet_outlined),
+                        _buildDetailRow(
+                          'Available Credit',
+                          '₹ ${_formatCurrency(card.availableCredit)}',
+                          Icons.account_balance_wallet_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Statement Due Date', card.statementDueDate, Icons.calendar_today_outlined),
+                        _buildDetailRow(
+                          'Statement Due Date',
+                          card.statementDueDate,
+                          Icons.calendar_today_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Minimum Amount Due', '₹ ${_formatCurrency(card.minimumDue)}', Icons.warning_amber_outlined),
+                        _buildDetailRow(
+                          'Minimum Amount Due',
+                          '₹ ${_formatCurrency(card.minimumDue)}',
+                          Icons.warning_amber_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Reward Points', '${card.rewardPoints} Pts', Icons.stars_outlined),
+                        _buildDetailRow(
+                          'Reward Points',
+                          '${card.rewardPoints} Pts',
+                          Icons.stars_outlined,
+                        ),
                       ],
                     ),
                   ),
@@ -3118,19 +4359,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete Credit Card?',
-                              message: 'Are you sure you want to remove ${card.cardName} (•••• ${card.last4Digits}) from your credit portfolio?',
+                              message:
+                                  'Are you sure you want to remove ${card.cardName} (•••• ${card.last4Digits}) from your credit portfolio?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteCreditCard(card.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteCreditCard(card.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${card.cardName} deleted successfully'),
+                                    content: Text(
+                                      '${card.cardName} deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -3138,7 +4386,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3149,15 +4403,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
-                            _showAddCreditCardModal(context, existingCard: card);
+                            _showAddCreditCardModal(
+                              context,
+                              existingCard: card,
+                            );
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3176,7 +4441,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -3190,7 +4457,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -3202,8 +4472,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${loan.lender} • ${loan.loanType}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text('ROI: ${loan.interestRate}% p.a. • EMI: ₹ ${_formatCurrency(loan.monthlyEmi)}', style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              '${loan.lender} • ${loan.loanType}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              'ROI: ${loan.interestRate}% p.a. • EMI: ₹ ${_formatCurrency(loan.monthlyEmi)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -3219,19 +4502,49 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('Lender Institution', loan.lender, Icons.account_balance_outlined),
+                        _buildDetailRow(
+                          'Lender Institution',
+                          loan.lender,
+                          Icons.account_balance_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Loan Category', loan.loanType, Icons.category_outlined),
+                        _buildDetailRow(
+                          'Loan Category',
+                          loan.loanType,
+                          Icons.category_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Outstanding Principal', '₹ ${_formatCurrency(loan.outstandingPrincipal)}', Icons.currency_rupee, isHighlight: true, highlightColor: const Color(0xFFB45309)),
+                        _buildDetailRow(
+                          'Outstanding Principal',
+                          '₹ ${_formatCurrency(loan.outstandingPrincipal)}',
+                          Icons.currency_rupee,
+                          isHighlight: true,
+                          highlightColor: const Color(0xFFB45309),
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Interest Rate (ROI)', '${loan.interestRate}% p.a.', Icons.percent),
+                        _buildDetailRow(
+                          'Interest Rate (ROI)',
+                          '${loan.interestRate}% p.a.',
+                          Icons.percent,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Monthly EMI Amount', '₹ ${_formatCurrency(loan.monthlyEmi)}', Icons.payment_outlined),
+                        _buildDetailRow(
+                          'Monthly EMI Amount',
+                          '₹ ${_formatCurrency(loan.monthlyEmi)}',
+                          Icons.payment_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Tenure Remaining', '${loan.tenureRemainingMonths} Months', Icons.timelapse_outlined),
+                        _buildDetailRow(
+                          'Tenure Remaining',
+                          '${loan.tenureRemainingMonths} Months',
+                          Icons.timelapse_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Next EMI Due Date', loan.nextDueDate, Icons.calendar_today_outlined),
+                        _buildDetailRow(
+                          'Next EMI Due Date',
+                          loan.nextDueDate,
+                          Icons.calendar_today_outlined,
+                        ),
                       ],
                     ),
                   ),
@@ -3245,19 +4558,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete Loan Account?',
-                              message: 'Are you sure you want to remove ${loan.lender} ${loan.loanType} from your liabilities?',
+                              message:
+                                  'Are you sure you want to remove ${loan.lender} ${loan.loanType} from your liabilities?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteLoanAccount(loan.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteLoanAccount(loan.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${loan.lender} ${loan.loanType} deleted successfully'),
+                                    content: Text(
+                                      '${loan.lender} ${loan.loanType} deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -3265,7 +4585,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3276,7 +4602,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
@@ -3284,7 +4612,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             _showAddLoanModal(context, existingLoan: loan);
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3303,7 +4637,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -3317,7 +4653,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -3330,10 +4669,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           inv.assetType.contains('Mutual')
                               ? Icons.donut_large
                               : inv.assetType.contains('Stock')
-                                  ? Icons.show_chart
-                                  : inv.assetType.contains('Gold')
-                                      ? Icons.monetization_on
-                                      : Icons.savings,
+                              ? Icons.show_chart
+                              : inv.assetType.contains('Gold')
+                              ? Icons.monetization_on
+                              : Icons.savings,
                           size: 22,
                           color: _brandBlue,
                         ),
@@ -3343,8 +4682,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(inv.assetType, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text(inv.institution, style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              inv.assetType,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              inv.institution,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -3360,20 +4712,40 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('Asset Category', inv.assetType, Icons.pie_chart_outline),
+                        _buildDetailRow(
+                          'Asset Category',
+                          inv.assetType,
+                          Icons.pie_chart_outline,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Platform / Institution', inv.institution, Icons.business_outlined),
+                        _buildDetailRow(
+                          'Platform / Institution',
+                          inv.institution,
+                          Icons.business_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Current Market Value', '₹ ${_formatCurrency(inv.currentValue)}', Icons.currency_rupee, isHighlight: true, highlightColor: _brandBlue),
+                        _buildDetailRow(
+                          'Current Market Value',
+                          '₹ ${_formatCurrency(inv.currentValue)}',
+                          Icons.currency_rupee,
+                          isHighlight: true,
+                          highlightColor: _brandBlue,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Invested Amount', '₹ ${_formatCurrency(inv.investedValue)}', Icons.account_balance_wallet_outlined),
+                        _buildDetailRow(
+                          'Invested Amount',
+                          '₹ ${_formatCurrency(inv.investedValue)}',
+                          Icons.account_balance_wallet_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
                         _buildDetailRow(
                           'Overall Returns',
                           '${inv.isPositive ? '+' : '-'}${inv.returnPercentage}%',
                           Icons.trending_up,
                           isHighlight: true,
-                          highlightColor: inv.isPositive ? _emeraldGreen : const Color(0xFFEF4444),
+                          highlightColor: inv.isPositive
+                              ? _emeraldGreen
+                              : const Color(0xFFEF4444),
                         ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
                         _buildDetailRow(
@@ -3381,7 +4753,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           '${inv.currentValue >= inv.investedValue ? '+' : '-'} ₹ ${_formatCurrency((inv.currentValue - inv.investedValue).abs())}',
                           Icons.insights,
                           isHighlight: true,
-                          highlightColor: inv.currentValue >= inv.investedValue ? _emeraldGreen : const Color(0xFFEF4444),
+                          highlightColor: inv.currentValue >= inv.investedValue
+                              ? _emeraldGreen
+                              : const Color(0xFFEF4444),
                         ),
                       ],
                     ),
@@ -3396,19 +4770,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete Investment Holding?',
-                              message: 'Are you sure you want to remove ${inv.assetType} (${inv.institution}) from your investment portfolio?',
+                              message:
+                                  'Are you sure you want to remove ${inv.assetType} (${inv.institution}) from your investment portfolio?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteInvestmentHolding(inv.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteInvestmentHolding(inv.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${inv.assetType} holding deleted successfully'),
+                                    content: Text(
+                                      '${inv.assetType} holding deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -3416,7 +4797,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3427,15 +4814,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
-                            _showAddInvestmentModal(context, existingInvestment: inv);
+                            _showAddInvestmentModal(
+                              context,
+                              existingInvestment: inv,
+                            );
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3454,7 +4852,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
@@ -3468,7 +4868,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     child: Container(
                       width: 40,
                       height: 4,
-                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -3481,8 +4884,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           pol.policyType.contains('Health')
                               ? Icons.local_hospital
                               : pol.policyType.contains('Life')
-                                  ? Icons.favorite
-                                  : Icons.directions_car,
+                              ? Icons.favorite
+                              : Icons.directions_car,
                           size: 22,
                           color: _brandBlue,
                         ),
@@ -3492,8 +4895,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(pol.policyType, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navyDark)),
-                            Text(pol.provider, style: const TextStyle(fontSize: 12, color: _slateGrey)),
+                            Text(
+                              pol.policyType,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                            ),
+                            Text(
+                              pol.provider,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _slateGrey,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -3509,19 +4925,49 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildDetailRow('Policy Category', pol.policyType, Icons.health_and_safety_outlined),
+                        _buildDetailRow(
+                          'Policy Category',
+                          pol.policyType,
+                          Icons.health_and_safety_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Insurance Provider', pol.provider, Icons.business_outlined),
+                        _buildDetailRow(
+                          'Insurance Provider',
+                          pol.provider,
+                          Icons.business_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Policy Number', pol.policyNumberMasked, Icons.pin_outlined),
+                        _buildDetailRow(
+                          'Policy Number',
+                          pol.policyNumberMasked,
+                          Icons.pin_outlined,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Sum Insured Coverage', '₹ ${_formatCurrency(pol.coverageAmount)}', Icons.security, isHighlight: true, highlightColor: _emeraldGreen),
+                        _buildDetailRow(
+                          'Sum Insured Coverage',
+                          '₹ ${_formatCurrency(pol.coverageAmount)}',
+                          Icons.security,
+                          isHighlight: true,
+                          highlightColor: _emeraldGreen,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Annual Premium', '₹ ${_formatCurrency(pol.premiumAmount)} / yr', Icons.currency_rupee),
+                        _buildDetailRow(
+                          'Annual Premium',
+                          '₹ ${_formatCurrency(pol.premiumAmount)} / yr',
+                          Icons.currency_rupee,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Next Renewal Date', pol.renewalDate, Icons.event_repeat),
+                        _buildDetailRow(
+                          'Next Renewal Date',
+                          pol.renewalDate,
+                          Icons.event_repeat,
+                        ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow('Registered Nominee', pol.nominee, Icons.person_pin_outlined),
+                        _buildDetailRow(
+                          'Registered Nominee',
+                          pol.nominee,
+                          Icons.person_pin_outlined,
+                        ),
                       ],
                     ),
                   ),
@@ -3535,19 +4981,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             foregroundColor: const Color(0xFFEF4444),
                             side: const BorderSide(color: Color(0xFFFCA5A5)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () {
                             _confirmDelete(
                               context: context,
                               title: 'Delete Insurance Policy?',
-                              message: 'Are you sure you want to remove ${pol.policyType} (${pol.provider}) from your insurance portfolio?',
+                              message:
+                                  'Are you sure you want to remove ${pol.policyType} (${pol.provider}) from your insurance portfolio?',
                               onDelete: () {
                                 Navigator.pop(ctx);
-                                ref.read(bankAggregationProvider.notifier).deleteInsurancePolicy(pol.id);
+                                ref
+                                    .read(bankAggregationProvider.notifier)
+                                    .deleteInsurancePolicy(pol.id);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${pol.policyType} policy deleted successfully'),
+                                    content: Text(
+                                      '${pol.policyType} policy deleted successfully',
+                                    ),
                                     backgroundColor: const Color(0xFFEF4444),
                                   ),
                                 );
@@ -3555,7 +5008,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             );
                           },
                           icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -3566,15 +5025,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             backgroundColor: _brandBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
-                            _showAddInsuranceModal(context, existingPolicy: pol);
+                            _showAddInsuranceModal(
+                              context,
+                              existingPolicy: pol,
+                            );
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          label: const Text(
+                            'Edit Details',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3592,7 +5062,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 2: CONNECTED BANK ACCOUNTS
   // --------------------------------------------------------------------------
 
-  Widget _buildBankAccountsSection(BuildContext context, BankAggregationState state) {
+  Widget _buildBankAccountsSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 1) {
       return const SizedBox.shrink();
     }
@@ -3603,7 +5076,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3615,9 +5094,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Connected Accounts', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Connected Accounts',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('Savings & Current Bank Accounts (FAA-SEC-02)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Savings & Current Bank Accounts (FAA-SEC-02)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -3625,13 +5116,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddBankModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Link Bank', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Link Bank',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -3641,7 +5144,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.bankAccounts.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -3650,9 +5156,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.account_balance_outlined, color: _slateGrey, size: 28),
+                          Icon(
+                            Icons.account_balance_outlined,
+                            color: _slateGrey,
+                            size: 28,
+                          ),
                           SizedBox(height: 6),
-                          Text('No bank accounts connected yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No bank accounts connected yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -3679,12 +5196,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(acc.bankName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                        Text(
+                                          acc.bankName,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         Text(
                                           '${acc.accountType} • ${acc.maskedAccountNumber}',
-                                          style: const TextStyle(fontSize: 10, color: _slateGrey, fontWeight: FontWeight.w500),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: _slateGrey,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
@@ -3692,22 +5222,42 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981).withOpacity(0.15),
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.check_circle, size: 10, color: _emeraldGreen),
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 10,
+                                          color: _emeraldGreen,
+                                        ),
                                         SizedBox(width: 4),
-                                        Text('Synced', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: _emeraldGreen)),
+                                        Text(
+                                          'Synced',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: _emeraldGreen,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    size: 16,
+                                    color: _slateGrey,
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 10),
@@ -3717,29 +5267,69 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Text('Account Holder', style: TextStyle(fontSize: 9, color: _slateGrey)),
-                                        Text(acc.accountHolder, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                        const Text(
+                                          'Account Holder',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: _slateGrey,
+                                          ),
+                                        ),
+                                        Text(
+                                          acc.accountHolder,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Text('IFSC Code', style: TextStyle(fontSize: 9, color: _slateGrey)),
-                                        Text(acc.ifscCode, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                        const Text(
+                                          'IFSC Code',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: _slateGrey,
+                                          ),
+                                        ),
+                                        Text(
+                                          acc.ifscCode,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Available Balance', style: TextStyle(fontSize: 9, color: _slateGrey)),
+                                      const Text(
+                                        'Available Balance',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: _slateGrey,
+                                        ),
+                                      ),
                                       Text(
                                         '₹ ${_formatCurrency(acc.currentBalance)}',
-                                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _brandBlue),
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: _brandBlue,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -3761,7 +5351,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 3: UPI ACCOUNT AGGREGATION
   // --------------------------------------------------------------------------
 
-  Widget _buildUpiAccountsSection(BuildContext context, BankAggregationState state) {
+  Widget _buildUpiAccountsSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 2) {
       return const SizedBox.shrink();
     }
@@ -3772,7 +5365,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3784,9 +5383,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('UPI Accounts & Mandates', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'UPI Accounts & Mandates',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('GPay, PhonePe, Paytm & BHIM (FAA-SEC-03)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'GPay, PhonePe, Paytm & BHIM (FAA-SEC-03)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -3794,13 +5405,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddUpiModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Add UPI', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add UPI',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -3810,7 +5433,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.upiAccounts.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -3819,9 +5445,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.qr_code_2_outlined, color: _slateGrey, size: 28),
+                          Icon(
+                            Icons.qr_code_2_outlined,
+                            color: _slateGrey,
+                            size: 28,
+                          ),
                           SizedBox(height: 6),
-                          Text('No UPI accounts linked yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No UPI accounts linked yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -3842,7 +5479,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           ),
                           child: Row(
                             children: [
-                              BankLogo(bankName: upi.provider.isNotEmpty ? upi.provider : upi.linkedBank, size: 32),
+                              BankLogo(
+                                bankName: upi.provider.isNotEmpty
+                                    ? upi.provider
+                                    : upi.linkedBank,
+                                size: 32,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -3851,37 +5493,81 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     Row(
                                       children: [
                                         Flexible(
-                                          child: Text(upi.upiId, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                          child: Text(
+                                            upi.upiId,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: _navyDark,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                         if (upi.isPrimary) ...[
                                           const SizedBox(width: 6),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                            decoration: BoxDecoration(
-                                              color: _brandBlue.withOpacity(0.12),
-                                              borderRadius: BorderRadius.circular(4),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 5,
+                                              vertical: 1,
                                             ),
-                                            child: const Text('Primary', style: TextStyle(fontSize: 8, color: _brandBlue, fontWeight: FontWeight.bold)),
+                                            decoration: BoxDecoration(
+                                              color: _brandBlue.withOpacity(
+                                                0.12,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'Primary',
+                                              style: TextStyle(
+                                                fontSize: 8,
+                                                color: _brandBlue,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ],
                                     ),
                                     const SizedBox(height: 2),
-                                    Text('${upi.provider} • Linked: ${upi.linkedBank}', style: const TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                                    Text(
+                                      '${upi.provider} • Linked: ${upi.linkedBank}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: _slateGrey,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withOpacity(0.15),
+                                  color: const Color(
+                                    0xFF10B981,
+                                  ).withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text('Active', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: _emeraldGreen)),
+                                child: const Text(
+                                  'Active',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: _emeraldGreen,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: _slateGrey,
+                              ),
                             ],
                           ),
                         ),
@@ -3898,7 +5584,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 4: CREDIT CARD LIABILITIES
   // --------------------------------------------------------------------------
 
-  Widget _buildCreditCardsSection(BuildContext context, BankAggregationState state) {
+  Widget _buildCreditCardsSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 3) {
       return const SizedBox.shrink();
     }
@@ -3909,7 +5598,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3921,9 +5616,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Credit Cards & Limits', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Credit Cards & Limits',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('Credit Line Tracking & Due Dates (FAA-SEC-04)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Credit Line Tracking & Due Dates (FAA-SEC-04)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -3931,13 +5638,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddCreditCardModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Add Card', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add Card',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -3947,7 +5666,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.creditCards.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -3956,9 +5678,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.credit_card_outlined, color: _slateGrey, size: 28),
+                          Icon(
+                            Icons.credit_card_outlined,
+                            color: _slateGrey,
+                            size: 28,
+                          ),
                           SizedBox(height: 6),
-                          Text('No credit cards added yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No credit cards added yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -3982,16 +5715,32 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             children: [
                               Row(
                                 children: [
-                                  BankLogo(bankName: card.issuedBank ?? card.cardName, size: 36),
+                                  BankLogo(
+                                    bankName: card.issuedBank ?? card.cardName,
+                                    size: 36,
+                                  ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(card.cardName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                        Text(
+                                          card.cardName,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                         Text(
                                           '•••• ${card.last4Digits}${card.cardType != null ? ' • ${card.cardType}' : ''}',
-                                          style: const TextStyle(fontSize: 10, color: _slateGrey, fontWeight: FontWeight.w500),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: _slateGrey,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
@@ -4001,15 +5750,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Outstanding Due', style: TextStyle(fontSize: 9, color: _slateGrey)),
+                                      const Text(
+                                        'Outstanding Due',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: _slateGrey,
+                                        ),
+                                      ),
                                       Text(
                                         '₹ ${_formatCurrency(card.outstandingBalance)}',
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFEF4444),
+                                        ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    size: 16,
+                                    color: _slateGrey,
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 10),
@@ -4019,29 +5782,69 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Text('Total Limit', style: TextStyle(fontSize: 9, color: _slateGrey)),
-                                        Text('₹ ${_formatCurrency(card.creditLimit)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                        const Text(
+                                          'Total Limit',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: _slateGrey,
+                                          ),
+                                        ),
+                                        Text(
+                                          '₹ ${_formatCurrency(card.creditLimit)}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        const Text('Available Credit', style: TextStyle(fontSize: 9, color: _slateGrey)),
-                                        Text('₹ ${_formatCurrency(card.availableCredit)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _emeraldGreen), overflow: TextOverflow.ellipsis),
+                                        const Text(
+                                          'Available Credit',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: _slateGrey,
+                                          ),
+                                        ),
+                                        Text(
+                                          '₹ ${_formatCurrency(card.availableCredit)}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: _emeraldGreen,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Payment Due', style: TextStyle(fontSize: 9, color: _slateGrey)),
+                                      const Text(
+                                        'Payment Due',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: _slateGrey,
+                                        ),
+                                      ),
                                       Text(
                                         card.statementDueDate,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFD97706),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -4074,7 +5877,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4086,9 +5895,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Loan Accounts & Liabilities', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Loan Accounts & Liabilities',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('Home, Vehicle & Personal Loans (FAA-SEC-05)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Home, Vehicle & Personal Loans (FAA-SEC-05)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -4096,13 +5917,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddLoanModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Add Loan', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add Loan',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -4112,7 +5945,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.loans.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -4121,9 +5957,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.real_estate_agent_outlined, color: _slateGrey, size: 28),
+                          Icon(
+                            Icons.real_estate_agent_outlined,
+                            color: _slateGrey,
+                            size: 28,
+                          ),
                           SizedBox(height: 6),
-                          Text('No loan accounts added yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No loan accounts added yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -4150,10 +5997,26 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('${loan.lender} • ${loan.loanType}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
-                                        Text('ROI: ${loan.interestRate}% p.a. • Next: ${loan.nextDueDate}', style: const TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                                        Text(
+                                          '${loan.lender} • ${loan.loanType}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: _navyDark,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'ROI: ${loan.interestRate}% p.a. • Next: ${loan.nextDueDate}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: _slateGrey,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -4161,22 +6024,53 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Monthly EMI', style: TextStyle(fontSize: 9, color: _slateGrey)),
-                                      Text('₹ ${_formatCurrency(loan.monthlyEmi)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark)),
+                                      const Text(
+                                        'Monthly EMI',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: _slateGrey,
+                                        ),
+                                      ),
+                                      Text(
+                                        '₹ ${_formatCurrency(loan.monthlyEmi)}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: _navyDark,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    size: 16,
+                                    color: _slateGrey,
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 10),
                               const Divider(height: 1, color: _cardBorder),
                               const SizedBox(height: 8),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Principal Balance: ₹ ${_formatCurrency(loan.outstandingPrincipal)}', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
-                                  Text('${loan.tenureRemainingMonths} Months Remaining', style: const TextStyle(fontSize: 10, color: _slateGrey)),
+                                  Text(
+                                    'Principal Balance: ₹ ${_formatCurrency(loan.outstandingPrincipal)}',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFB45309),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${loan.tenureRemainingMonths} Months Remaining',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: _slateGrey,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -4195,7 +6089,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 6 & 9: INVESTMENTS & RETIREMENT AGGREGATION
   // --------------------------------------------------------------------------
 
-  Widget _buildInvestmentsSection(BuildContext context, BankAggregationState state) {
+  Widget _buildInvestmentsSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 5) {
       return const SizedBox.shrink();
     }
@@ -4206,7 +6103,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4218,9 +6121,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Investment & Retirement Portfolio', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Investment & Retirement Portfolio',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('MFs, Stocks, FDs, Gold & EPF/PPF (FAA-SEC-06 & 09)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'MFs, Stocks, FDs, Gold & EPF/PPF (FAA-SEC-06 & 09)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -4228,13 +6143,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddInvestmentModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Add Investment', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add Investment',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -4244,7 +6171,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.investments.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -4255,7 +6185,14 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         children: [
                           Icon(Icons.trending_up, color: _slateGrey, size: 28),
                           SizedBox(height: 6),
-                          Text('No investments added yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No investments added yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -4283,10 +6220,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   inv.assetType.contains('Mutual')
                                       ? Icons.donut_large
                                       : inv.assetType.contains('Stock')
-                                          ? Icons.show_chart
-                                          : inv.assetType.contains('Gold')
-                                              ? Icons.monetization_on
-                                              : Icons.savings,
+                                      ? Icons.show_chart
+                                      : inv.assetType.contains('Gold')
+                                      ? Icons.monetization_on
+                                      : Icons.savings,
                                   size: 16,
                                   color: _brandBlue,
                                 ),
@@ -4296,8 +6233,24 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(inv.assetType, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
-                                    Text(inv.institution, style: const TextStyle(fontSize: 10, color: _slateGrey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    Text(
+                                      inv.assetType,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _navyDark,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      inv.institution,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: _slateGrey,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -4305,12 +6258,32 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text('₹ ${_formatCurrency(inv.currentValue)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark)),
-                                  Text('${inv.isPositive ? '+' : '-'}${inv.returnPercentage}% Returns', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: inv.isPositive ? _emeraldGreen : const Color(0xFFEF4444))),
+                                  Text(
+                                    '₹ ${_formatCurrency(inv.currentValue)}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: _navyDark,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${inv.isPositive ? '+' : '-'}${inv.returnPercentage}% Returns',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: inv.isPositive
+                                          ? _emeraldGreen
+                                          : const Color(0xFFEF4444),
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: _slateGrey,
+                              ),
                             ],
                           ),
                         ),
@@ -4327,7 +6300,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 7: INSURANCE POLICY AGGREGATION
   // --------------------------------------------------------------------------
 
-  Widget _buildInsuranceSection(BuildContext context, BankAggregationState state) {
+  Widget _buildInsuranceSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 6) {
       return const SizedBox.shrink();
     }
@@ -4338,7 +6314,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4350,9 +6332,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Insurance Protection Coverage', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Insurance Protection Coverage',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('Health, Life & Asset Protection (FAA-SEC-07)', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Health, Life & Asset Protection (FAA-SEC-07)',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -4360,13 +6354,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showAddInsuranceModal(context),
                 icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text('Add Policy', style: TextStyle(fontSize: 11, color: _brandBlue, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Add Policy',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _brandBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ],
@@ -4376,7 +6382,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
             children: state.insurancePolicies.isEmpty
                 ? [
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _bgCanvas,
@@ -4385,9 +6394,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.health_and_safety_outlined, color: _slateGrey, size: 28),
+                          Icon(
+                            Icons.health_and_safety_outlined,
+                            color: _slateGrey,
+                            size: 28,
+                          ),
                           SizedBox(height: 6),
-                          Text('No insurance policies added yet.', style: TextStyle(fontSize: 12, color: _slateGrey, fontWeight: FontWeight.w500)),
+                          Text(
+                            'No insurance policies added yet.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _slateGrey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -4415,8 +6435,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   pol.policyType.contains('Health')
                                       ? Icons.local_hospital
                                       : pol.policyType.contains('Life')
-                                          ? Icons.favorite
-                                          : Icons.directions_car,
+                                      ? Icons.favorite
+                                      : Icons.directions_car,
                                   size: 16,
                                   color: _brandBlue,
                                 ),
@@ -4426,8 +6446,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('${pol.policyType} (${pol.provider})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
-                                    Text('Sum Insured: ₹ ${_formatCurrency(pol.coverageAmount)}  •  Renewal: ${pol.renewalDate}', style: const TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                                    Text(
+                                      '${pol.policyType} (${pol.provider})',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _navyDark,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'Sum Insured: ₹ ${_formatCurrency(pol.coverageAmount)}  •  Renewal: ${pol.renewalDate}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: _slateGrey,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -4435,12 +6470,29 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text('₹ ${_formatCurrency(pol.premiumAmount)}/yr', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _brandBlue)),
-                                  Text('Nominee: ${pol.nominee}', style: const TextStyle(fontSize: 9, color: _slateGrey)),
+                                  Text(
+                                    '₹ ${_formatCurrency(pol.premiumAmount)}/yr',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _brandBlue,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Nominee: ${pol.nominee}',
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: _slateGrey,
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.chevron_right, size: 16, color: _slateGrey),
+                              const Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: _slateGrey,
+                              ),
                             ],
                           ),
                         ),
@@ -4468,12 +6520,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Digital Wallets & Cash Position (FAA-SEC-08)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark)),
+          const Text(
+            'Digital Wallets & Cash Position (FAA-SEC-08)',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: _navyDark,
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             children: state.wallets.asMap().entries.map((entry) {
@@ -4497,13 +6562,32 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(w.walletName, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                            child: Text(
+                              w.walletName,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _navyDark,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const Icon(Icons.account_balance_wallet, size: 14, color: _brandBlue),
+                          const Icon(
+                            Icons.account_balance_wallet,
+                            size: 14,
+                            color: _brandBlue,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('₹ ${_formatCurrency(w.balance)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _brandBlue)),
+                      Text(
+                        '₹ ${_formatCurrency(w.balance)}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _brandBlue,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -4519,7 +6603,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // SECTION 11: CONSENT MANAGEMENT
   // --------------------------------------------------------------------------
 
-  Widget _buildConsentManagementSection(BuildContext context, BankAggregationState state) {
+  Widget _buildConsentManagementSection(
+    BuildContext context,
+    BankAggregationState state,
+  ) {
     if (state.selectedTabIndex != 0 && state.selectedTabIndex != 8) {
       return const SizedBox.shrink();
     }
@@ -4530,7 +6617,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4542,9 +6635,21 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Consent Management (FAA-SEC-11)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'Consent Management (FAA-SEC-11)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _navyDark,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     SizedBox(height: 2),
-                    Text('RBI Regulated Account Aggregator Lifecycle', style: TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'RBI Regulated Account Aggregator Lifecycle',
+                      style: TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -4576,15 +6681,28 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               BankLogo(bankName: consent.institution, size: 20),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(consent.institution, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark), overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  consent.institution,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: _navyDark,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: isActive ? _emeraldGreen.withOpacity(0.15) : const Color(0xFFEF4444).withOpacity(0.15),
+                            color: isActive
+                                ? _emeraldGreen.withOpacity(0.15)
+                                : const Color(0xFFEF4444).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -4592,15 +6710,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
-                              color: isActive ? _emeraldGreen : const Color(0xFFEF4444),
+                              color: isActive
+                                  ? _emeraldGreen
+                                  : const Color(0xFFEF4444),
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('ID: ${consent.consentId} • Scope: ${consent.consentType}', style: const TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
-                    Text('Valid until: ${consent.expiryDate}', style: const TextStyle(fontSize: 10, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                    Text(
+                      'ID: ${consent.consentId} • Scope: ${consent.consentType}',
+                      style: const TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Valid until: ${consent.expiryDate}',
+                      style: const TextStyle(fontSize: 10, color: _slateGrey),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -4608,28 +6736,59 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         if (isActive) ...[
                           TextButton(
                             onPressed: () {
-                              ref.read(bankAggregationProvider.notifier).revokeConsent(consent.consentId);
+                              ref
+                                  .read(bankAggregationProvider.notifier)
+                                  .revokeConsent(consent.consentId);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Consent revoked for ${consent.institution} (FAA-BR-011)'), backgroundColor: const Color(0xFFEF4444)),
+                                SnackBar(
+                                  content: Text(
+                                    'Consent revoked for ${consent.institution} (FAA-BR-011)',
+                                  ),
+                                  backgroundColor: const Color(0xFFEF4444),
+                                ),
                               );
                             },
-                            child: const Text('Revoke Consent', style: TextStyle(fontSize: 10, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Revoke Consent',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ] else ...[
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _brandBlue,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             onPressed: () {
-                              ref.read(bankAggregationProvider.notifier).renewConsent(consent.consentId);
+                              ref
+                                  .read(bankAggregationProvider.notifier)
+                                  .renewConsent(consent.consentId);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Consent renewed for ${consent.institution}!'), backgroundColor: _emeraldGreen),
+                                SnackBar(
+                                  content: Text(
+                                    'Consent renewed for ${consent.institution}!',
+                                  ),
+                                  backgroundColor: _emeraldGreen,
+                                ),
                               );
                             },
-                            child: const Text('Renew Consent', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Renew Consent',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ],
@@ -4655,12 +6814,25 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _cardBorder),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Recent Ingested Transactions', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark)),
+          const Text(
+            'Recent Ingested Transactions',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: _navyDark,
+            ),
+          ),
           const SizedBox(height: 10),
           Column(
             children: state.recentTransactions.map((tx) {
@@ -4671,7 +6843,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                   children: [
                     CircleAvatar(
                       radius: 15,
-                      backgroundColor: isCredit ? _emeraldGreen.withOpacity(0.15) : _brandBlue.withOpacity(0.12),
+                      backgroundColor: isCredit
+                          ? _emeraldGreen.withOpacity(0.15)
+                          : _brandBlue.withOpacity(0.12),
                       child: Icon(
                         isCredit ? Icons.arrow_downward : Icons.arrow_upward,
                         size: 14,
@@ -4683,8 +6857,24 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tx.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navyDark), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          Text('${tx.institution} • ${tx.date}', style: const TextStyle(fontSize: 9, color: _slateGrey), overflow: TextOverflow.ellipsis),
+                          Text(
+                            tx.title,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _navyDark,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${tx.institution} • ${tx.date}',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: _slateGrey,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
@@ -4694,7 +6884,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: isCredit ? _emeraldGreen : const Color(0xFFEF4444),
+                        color: isCredit
+                            ? _emeraldGreen
+                            : const Color(0xFFEF4444),
                       ),
                     ),
                   ],
@@ -4730,7 +6922,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
               children: [
                 Text(
                   'RBI Account Aggregator Framework & End-to-End Encryption',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: _navyDark),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    color: _navyDark,
+                  ),
                 ),
                 SizedBox(height: 2),
                 Text(

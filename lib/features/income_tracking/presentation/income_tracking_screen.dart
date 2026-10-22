@@ -378,7 +378,10 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
-                                child: BankNameWithLogo(bankName: b, logoSize: 20),
+                                child: BankNameWithLogo(
+                                  bankName: b,
+                                  logoSize: 20,
+                                ),
                               ),
                             )
                             .toList(),
