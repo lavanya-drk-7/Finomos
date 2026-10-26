@@ -32,6 +32,15 @@ void main() {
     expect(find.text('Branch IFSC Code'), findsOneWidget);
     expect(find.text('Verify & Link Bank Account'), findsOneWidget);
 
+    // Enter matching bank account numbers and IFSC code
+    final accNumField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Bank Account Number');
+    final reEnterField = find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText == 'Re-Enter Bank Account Number' || w.decoration?.labelText == 'Re-Enter Account Number'));
+    await tester.enterText(accNumField, '501004329871');
+    await tester.enterText(reEnterField, '501004329871');
+    final ifscField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Branch IFSC Code');
+    await tester.enterText(ifscField, 'SBIN0001234');
+    await tester.pumpAndSettle();
+
     // Tap Verify & Link Bank Account
     await tester.tap(find.text('Verify & Link Bank Account'));
     await tester.pumpAndSettle();
@@ -320,11 +329,17 @@ void main() {
 
     // Verify both account number fields are present
     final accNumField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Bank Account Number');
-    final reEnterField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Re-Enter Account Number');
+    final reEnterField = find.byWidgetPredicate((w) => w is TextField && (w.decoration?.labelText == 'Re-Enter Bank Account Number' || w.decoration?.labelText == 'Re-Enter Account Number'));
     expect(accNumField, findsOneWidget);
     expect(reEnterField, findsOneWidget);
 
-    // Initially with matching account numbers (501004329871), IFSC and holder, Verified Branch card is shown
+    // Enter matching account numbers (501004329871), IFSC and verify branch card
+    await tester.enterText(accNumField, '501004329871');
+    await tester.enterText(reEnterField, '501004329871');
+    final ifscField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.labelText == 'Branch IFSC Code');
+    await tester.enterText(ifscField, 'SBIN0001234');
+    await tester.pumpAndSettle();
+
     expect(find.text('VERIFIED'), findsOneWidget);
     expect(find.textContaining('Branch Verified'), findsNothing); // Checks label
     expect(find.textContaining('State Bank of India Branch'), findsOneWidget);

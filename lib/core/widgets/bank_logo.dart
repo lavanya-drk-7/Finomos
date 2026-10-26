@@ -302,7 +302,7 @@ class BankNameWithLogo extends StatelessWidget {
       children: [
         logo,
         SizedBox(width: spacing),
-        text,
+        Flexible(child: text),
       ],
     );
   }

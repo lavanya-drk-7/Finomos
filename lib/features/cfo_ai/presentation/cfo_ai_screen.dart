@@ -50,21 +50,21 @@ class _CfoAiScreenState extends ConsumerState<CfoAiScreen>
     final cfoNotifier = ref.read(cfoProvider.notifier);
 
     return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 1),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 1.0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF0A2540)),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/dashboard');
-              }
-            },
-          ),
+      backgroundColor: const Color(0xFFF8FAFC),
+      bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 1),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1.0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0A2540)),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
         title: Row(
           children: [
             const FinmosLogo(size: 32, showTitle: false, showTagline: false),

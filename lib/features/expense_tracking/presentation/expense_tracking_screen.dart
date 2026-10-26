@@ -265,14 +265,17 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            existingEntry != null
-                                ? 'Edit Expense Record'
-                                : 'Record New Expense',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0A2540),
+                          Expanded(
+                            child: Text(
+                              existingEntry != null
+                                  ? 'Edit Expense Record'
+                                  : 'Record New Expense',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0A2540),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           IconButton(
@@ -473,9 +476,10 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
+                              isExpanded: true,
                               value: selectedPaymentMode,
                               decoration: InputDecoration(
-                                labelText: 'Payment Channel',
+                                labelText: 'Mode of Payment',
                                 prefixIcon: const Icon(
                                   Icons.payment,
                                   size: 18,

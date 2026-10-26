@@ -35,12 +35,20 @@ class DashboardScreen extends ConsumerWidget {
         ? incomeState.totalMonthlyIncome
         : incomeState.entries.fold(0.0, (sum, e) => sum + e.amount);
     final totalSpend = expenseState.totalExpenses;
-    final spendRatio = totalEarn > 0 ? ((totalSpend / totalEarn) * 100).toStringAsFixed(1) : '39.9';
+    final spendRatio = totalEarn > 0
+        ? ((totalSpend / totalEarn) * 100).toStringAsFixed(1)
+        : '39.9';
     final borrowDti = totalEarn > 0
         ? ((borrowState.totalMonthlyEmi / totalEarn) * 100).toStringAsFixed(1)
         : '18.9';
-    final planGoalsTotal = planState.goals.fold(0.0, (s, g) => s + g.currentCorpus);
-    final complyDeductions = complyState.deductions.fold(0.0, (s, d) => s + d.utilized);
+    final planGoalsTotal = planState.goals.fold(
+      0.0,
+      (s, g) => s + g.currentCorpus,
+    );
+    final complyDeductions = complyState.deductions.fold(
+      0.0,
+      (s, d) => s + d.utilized,
+    );
 
     return Scaffold(
       endDrawerEnableOpenDragGesture: false,
@@ -50,20 +58,18 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF0066FF)),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/profile');
-            }
-          },
+        automaticallyImplyLeading: false,
+        title: const FinmosLogo(
+          size: 26,
+          showTagline: false,
+          isHorizontal: true,
         ),
-        title: const FinmosLogo(size: 26, showTagline: false, isHorizontal: true),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: Color(0xFF0066FF)),
+            icon: const Icon(
+              Icons.notifications_none_outlined,
+              color: Color(0xFF0066FF),
+            ),
             tooltip: 'Notifications',
             onPressed: () => context.push('/notifications'),
           ),
@@ -88,8 +94,18 @@ class DashboardScreen extends ConsumerWidget {
               const InAppTransactionAlertBanner(),
 
               // Header title
-              const Text('Finomos Financial OS', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
-              const Text('AI Personal CFO Platform & Financial Pillars Hub.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const Text(
+                'Finomos Financial OS',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0A2540),
+                ),
+              ),
+              const Text(
+                'AI Personal CFO Platform & Financial Pillars Hub.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
               const SizedBox(height: 16),
 
               // AI Personal CFO Banner Card
@@ -121,42 +137,87 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.psychology, color: Color(0xFF10B981), size: 26),
+                              Icon(
+                                Icons.psychology,
+                                color: Color(0xFF10B981),
+                                size: 26,
+                              ),
                               SizedBox(width: 8),
-                              Text('AI PERSONAL CFO', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text(
+                                'AI PERSONAL CFO',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF10B981).withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text('HEALTH: 88/100', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'HEALTH: 88/100',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Text('Virtual Digital Twin & Autopilot Active', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                      const Text(
+                        'Virtual Digital Twin & Autopilot Active',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       const Text(
                         'Net Worth: ₹33.4L  |  Runway: 8.5 Mos  |  FIRE Freedom: 1.15x',
-                        style: TextStyle(color: Color(0xFFE2E8F0), fontSize: 12),
+                        style: TextStyle(
+                          color: Color(0xFFE2E8F0),
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(height: 14),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF10B981),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
                               children: [
-                                Text('Launch AI CFO Copilot', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Launch AI CFO Copilot',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 SizedBox(width: 4),
-                                Icon(Icons.arrow_forward, color: Colors.white, size: 14),
+                                Icon(
+                                  Icons.arrow_forward,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
                               ],
                             ),
                           ),
@@ -172,8 +233,22 @@ class DashboardScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('7 Financial Pillars', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
-                  Text('Enterprise PFOS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                  Text(
+                    '7 Financial Pillars',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0A2540),
+                    ),
+                  ),
+                  Text(
+                    'Enterprise PFOS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -225,8 +300,8 @@ class DashboardScreen extends ConsumerWidget {
                     badgeColor: budgetState.totalOverspent > 0
                         ? const Color(0xFFEF4444)
                         : (budgetState.overallUsagePercentage > 80
-                            ? const Color(0xFFF59E0B)
-                            : const Color(0xFF10B981)),
+                              ? const Color(0xFFF59E0B)
+                              : const Color(0xFF10B981)),
                     percentageIcon: budgetState.totalOverspent > 0
                         ? Icons.warning_amber_rounded
                         : Icons.pie_chart,
@@ -251,8 +326,11 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.security,
                     color: const Color(0xFF0066FF),
                     route: '/protect',
-                    amount: _formatRupees(protectState.emergencyFund.currentAmount),
-                    percentage: '${protectState.emergencyFund.readinessScore.toStringAsFixed(0)}%',
+                    amount: _formatRupees(
+                      protectState.emergencyFund.currentAmount,
+                    ),
+                    percentage:
+                        '${protectState.emergencyFund.readinessScore.toStringAsFixed(0)}%',
                     badgeColor: const Color(0xFF0066FF),
                     percentageIcon: Icons.shield,
                   ),
@@ -288,7 +366,8 @@ class DashboardScreen extends ConsumerWidget {
                     color: const Color(0xFFEC4899),
                     route: '/plan',
                     amount: _formatRupees(planGoalsTotal),
-                    percentage: '${planState.retirementPlan.fireReadinessScore.toStringAsFixed(0)}%',
+                    percentage:
+                        '${planState.retirementPlan.fireReadinessScore.toStringAsFixed(0)}%',
                     badgeColor: const Color(0xFFEC4899),
                     percentageIcon: Icons.flag,
                   ),
@@ -300,7 +379,8 @@ class DashboardScreen extends ConsumerWidget {
                     color: const Color(0xFF0A2540),
                     route: '/comply',
                     amount: _formatRupees(complyDeductions),
-                    percentage: '${complyState.itrReadinessScore.toStringAsFixed(0)}%',
+                    percentage:
+                        '${complyState.itrReadinessScore.toStringAsFixed(0)}%',
                     badgeColor: const Color(0xFF0A2540),
                     percentageIcon: Icons.verified,
                   ),
@@ -331,7 +411,14 @@ class DashboardScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Platform Governance & System Tools', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
+                    const Text(
+                      'Platform Governance & System Tools',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A2540),
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     GridView.count(
                       shrinkWrap: true,
@@ -341,10 +428,34 @@ class DashboardScreen extends ConsumerWidget {
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
                       children: [
-                        _buildNavModule(context, Icons.account_balance, 'Bank Aggregation', '/bank-aggregation', const Color(0xFF0066FF)),
-                        _buildNavModule(context, Icons.pie_chart, 'Budget Engine', '/budget-management', const Color(0xFFF59E0B)),
-                        _buildNavModule(context, Icons.folder_special, 'Document Vault', '/document-vault', const Color(0xFF8B5CF6)),
-                        _buildNavModule(context, Icons.help_outline, 'Help & Support', '/help-support', const Color(0xFF0284C7)),
+                        _buildNavModule(
+                          context,
+                          Icons.account_balance,
+                          'Bank Aggregation',
+                          '/bank-aggregation',
+                          const Color(0xFF0066FF),
+                        ),
+                        _buildNavModule(
+                          context,
+                          Icons.pie_chart,
+                          'Budget Engine',
+                          '/budget-management',
+                          const Color(0xFFF59E0B),
+                        ),
+                        _buildNavModule(
+                          context,
+                          Icons.folder_special,
+                          'Document Vault',
+                          '/document-vault',
+                          const Color(0xFF8B5CF6),
+                        ),
+                        _buildNavModule(
+                          context,
+                          Icons.help_outline,
+                          'Help & Support',
+                          '/help-support',
+                          const Color(0xFF0284C7),
+                        ),
                       ],
                     ),
                   ],
@@ -388,8 +499,12 @@ class DashboardScreen extends ConsumerWidget {
     Color? badgeColor,
     bool isPositiveTrend = true,
   }) {
-    final effectiveBadgeColor = badgeColor ?? (isPositiveTrend ? const Color(0xFF10B981) : const Color(0xFFEF4444));
-    final effectivePercentageIcon = percentageIcon ?? (isPositiveTrend ? Icons.trending_up : Icons.trending_down);
+    final effectiveBadgeColor =
+        badgeColor ??
+        (isPositiveTrend ? const Color(0xFF10B981) : const Color(0xFFEF4444));
+    final effectivePercentageIcon =
+        percentageIcon ??
+        (isPositiveTrend ? Icons.trending_up : Icons.trending_down);
 
     return InkWell(
       onTap: () => context.push(route),
@@ -468,7 +583,10 @@ class DashboardScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: effectiveBadgeColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: effectiveBadgeColor.withOpacity(0.25), width: 0.8),
+                border: Border.all(
+                  color: effectiveBadgeColor.withOpacity(0.25),
+                  width: 0.8,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -496,7 +614,13 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNavModule(BuildContext context, IconData icon, String label, String route, Color color) {
+  Widget _buildNavModule(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String route,
+    Color color,
+  ) {
     return InkWell(
       onTap: () => context.push(route),
       borderRadius: BorderRadius.circular(14),

@@ -179,6 +179,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         ? existingAccount.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')
         : '';
     final accountNumCtrl = TextEditingController(text: initialAccNum);
+    final reEnterAccountNumCtrl = TextEditingController(text: initialAccNum);
     final ifscCtrl = TextEditingController(
       text: existingAccount?.ifscCode ?? '',
     );
@@ -243,6 +244,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
 
     void autoFetchDetails(StateSetter setModalState) {
       final acc = accountNumCtrl.text.trim();
+      final reEnter = reEnterAccountNumCtrl.text.trim();
       final ifsc = ifscCtrl.text.trim().toUpperCase();
 
       if (ifsc.length >= 4) {
@@ -251,12 +253,15 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         branchCtrl.text = '';
       }
 
-      if (acc.length >= 6 && ifsc.length >= 4) {
+      final bool isAccMatch =
+          acc.isNotEmpty && reEnter.isNotEmpty && acc == reEnter && acc.length >= 6;
+
+      if (isAccMatch && ifsc.length >= 4) {
         if (holderCtrl.text.trim().isEmpty ||
             holderCtrl.text.trim() == 'Sireesha Bandaru') {
           holderCtrl.text = 'Sireesha Bandaru';
         }
-      } else if (existingAccount == null && acc.length < 6) {
+      } else if (existingAccount == null && (!isAccMatch || ifsc.length < 4)) {
         if (holderCtrl.text == 'Sireesha Bandaru') {
           holderCtrl.text = '';
         }
@@ -301,13 +306,17 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final accNumVal = accountNumCtrl.text.trim();
+            final reEnterNumVal = reEnterAccountNumCtrl.text.trim();
             final ifscVal = ifscCtrl.text.trim();
             final holderVal = holderCtrl.text.trim();
             final bankDisplayName = selectedBank == 'Others'
                 ? otherBankCtrl.text.trim()
                 : selectedBank;
 
-            final isAccountNumValid = accNumVal.length >= 6;
+            final isAccMatch = accNumVal.isNotEmpty &&
+                reEnterNumVal.isNotEmpty &&
+                accNumVal == reEnterNumVal;
+            final isAccountNumValid = isAccMatch && accNumVal.length >= 6;
             final isIfscValid = ifscVal.length >= 4;
             final isHolderValid = holderVal.isNotEmpty;
             final isBankValid = bankDisplayName.isNotEmpty;
@@ -477,29 +486,101 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               },
                             ),
                             const SizedBox(height: 14),
-                            TextField(
-                              controller: accountNumCtrl,
-                              keyboardType: TextInputType.number,
-                              onChanged: (_) => autoFetchDetails(setModalState),
-                              decoration: InputDecoration(
-                                labelText: 'Bank Account Number',
-                                hintText: 'e.g. 501004329871',
-                                prefixIcon: const Icon(
-                                  Icons.pin_outlined,
-                                  color: _brandBlue,
+                            Actions(
+                              actions: <Type, Action<Intent>>{
+                                CopySelectionTextIntent: DoNothingAction(),
+                              },
+                              child: TextField(
+                                controller: accountNumCtrl,
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) => autoFetchDetails(setModalState),
+                                contextMenuBuilder: (context, editableTextState) {
+                                  final items = editableTextState.contextMenuButtonItems
+                                      .where((item) =>
+                                          item.type != ContextMenuButtonType.copy &&
+                                          item.type != ContextMenuButtonType.cut)
+                                      .toList();
+                                  return AdaptiveTextSelectionToolbar.buttonItems(
+                                    anchors: editableTextState.contextMenuAnchors,
+                                    buttonItems: items,
+                                  );
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Bank Account Number',
+                                  hintText: 'e.g. 501004329871',
+                                  prefixIcon: const Icon(
+                                    Icons.pin_outlined,
+                                    color: _brandBlue,
+                                  ),
+                                  helperText:
+                                      'Displayed securely with masked digits (•••• XXXX)',
+                                  suffixIcon:
+                                      accountNumCtrl.text.trim().length >= 6
+                                          ? const Icon(
+                                              Icons.check_circle,
+                                              color: Color(0xFF10B981),
+                                              size: 20,
+                                            )
+                                          : null,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                                helperText:
-                                    'Displayed securely with masked digits (•••• XXXX)',
-                                suffixIcon:
-                                    accountNumCtrl.text.trim().length >= 6
-                                    ? const Icon(
-                                        Icons.check_circle,
-                                        color: Color(0xFF10B981),
-                                        size: 20,
-                                      )
-                                    : null,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Actions(
+                              actions: <Type, Action<Intent>>{
+                                PasteTextIntent: DoNothingAction(),
+                              },
+                              child: TextField(
+                                controller: reEnterAccountNumCtrl,
+                                keyboardType: TextInputType.number,
+                                onChanged: (_) => autoFetchDetails(setModalState),
+                                contextMenuBuilder: (context, editableTextState) {
+                                  final items = editableTextState.contextMenuButtonItems
+                                      .where((item) => item.type != ContextMenuButtonType.paste)
+                                      .toList();
+                                  return AdaptiveTextSelectionToolbar.buttonItems(
+                                    anchors: editableTextState.contextMenuAnchors,
+                                    buttonItems: items,
+                                  );
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'Re-Enter Bank Account Number',
+                                  hintText: 'Re-enter same account number manually',
+                                  prefixIcon: const Icon(
+                                    Icons.pin_outlined,
+                                    color: _brandBlue,
+                                  ),
+                                  helperText: isAccountNumValid
+                                      ? 'Account numbers matched successfully'
+                                      : 'Manual entry required (pasting is disabled)',
+                                  helperStyle: TextStyle(
+                                    fontSize: 11,
+                                    color: isAccountNumValid
+                                        ? const Color(0xFF10B981)
+                                        : _slateGrey,
+                                  ),
+                                  errorText: (reEnterNumVal.isNotEmpty && accNumVal != reEnterNumVal)
+                                      ? 'Account Number Mismatch Enter Correctly!'
+                                      : null,
+                                  suffixIcon: isAccountNumValid
+                                      ? const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF10B981),
+                                          size: 20,
+                                        )
+                                      : (reEnterNumVal.isNotEmpty && accNumVal != reEnterNumVal)
+                                          ? const Icon(
+                                              Icons.cancel,
+                                              color: Color(0xFFEF4444),
+                                              size: 20,
+                                            )
+                                          : null,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
@@ -860,6 +941,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           }
 
                           final accNum = accountNumCtrl.text.trim();
+                          final reEnterNum = reEnterAccountNumCtrl.text.trim();
 
                           if (accNum.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -880,6 +962,33 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               const SnackBar(
                                 content: Text(
                                   'Please enter a valid Bank Account Number (minimum 6 digits)',
+                                ),
+                                backgroundColor: Color(0xFFEF4444),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (reEnterNum.isEmpty) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please re-enter Bank Account Number to verify',
+                                ),
+                                backgroundColor: Color(0xFFEF4444),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (accNum != reEnterNum) {
+                            setModalState(() {});
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Account Number Mismatch Enter Correctly!',
                                 ),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
@@ -6056,14 +6165,18 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Principal Balance: ₹ ${_formatCurrency(loan.outstandingPrincipal)}',
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFB45309),
+                                  Flexible(
+                                    child: Text(
+                                      'Principal Balance: ₹ ${_formatCurrency(loan.outstandingPrincipal)}',
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFB45309),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     '${loan.tenureRemainingMonths} Months Remaining',
                                     style: const TextStyle(

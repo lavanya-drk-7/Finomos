@@ -16,7 +16,8 @@ class BudgetManagementScreen extends ConsumerStatefulWidget {
   const BudgetManagementScreen({super.key});
 
   @override
-  ConsumerState<BudgetManagementScreen> createState() => _BudgetManagementScreenState();
+  ConsumerState<BudgetManagementScreen> createState() =>
+      _BudgetManagementScreenState();
 }
 
 class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
@@ -84,11 +85,15 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
 
   IconData _getCategoryIcon(String category) {
     final cat = category.toLowerCase();
-    if (cat.contains('food') || cat.contains('dining') || cat.contains('restaurant')) {
+    if (cat.contains('food') ||
+        cat.contains('dining') ||
+        cat.contains('restaurant')) {
       return Icons.restaurant;
     } else if (cat.contains('grocer')) {
       return Icons.local_grocery_store;
-    } else if (cat.contains('transport') || cat.contains('travel') || cat.contains('fuel')) {
+    } else if (cat.contains('transport') ||
+        cat.contains('travel') ||
+        cat.contains('fuel')) {
       return Icons.directions_car;
     } else if (cat.contains('shopping') || cat.contains('retail')) {
       return Icons.shopping_bag_outlined;
@@ -108,7 +113,8 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
     final cat = category.toLowerCase();
     if (cat.contains('food')) return const Color(0xFFF97316);
     if (cat.contains('grocer')) return const Color(0xFF10B981);
-    if (cat.contains('transport') || cat.contains('travel')) return const Color(0xFF0066FF);
+    if (cat.contains('transport') || cat.contains('travel'))
+      return const Color(0xFF0066FF);
     if (cat.contains('shopping')) return const Color(0xFF8B5CF6);
     if (cat.contains('utilit')) return const Color(0xFFEAB308);
     if (cat.contains('rent')) return const Color(0xFF0EA5E9);
@@ -246,13 +252,19 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                           backgroundColor: Colors.white,
                           labelStyle: TextStyle(
                             fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? Colors.white
+                                : const Color(0xFF334155),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                             side: BorderSide(
-                              color: isSel ? const Color(0xFF0066FF) : const Color(0xFFCBD5E1),
+                              color: isSel
+                                  ? const Color(0xFF0066FF)
+                                  : const Color(0xFFCBD5E1),
                             ),
                           ),
                           showCheckmark: false,
@@ -274,8 +286,12 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ['All Categories', ..._categoryOptions].map((cat) {
-                        final isSel = (cat == 'All Categories' && tempCategory == 'All') ||
+                      children: ['All Categories', ..._categoryOptions].map((
+                        cat,
+                      ) {
+                        final isSel =
+                            (cat == 'All Categories' &&
+                                tempCategory == 'All') ||
                             tempCategory.toLowerCase() == cat.toLowerCase();
                         final icon = cat == 'All Categories'
                             ? Icons.apps
@@ -305,13 +321,19 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                           backgroundColor: Colors.white,
                           labelStyle: TextStyle(
                             fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: isSel
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSel
+                                ? Colors.white
+                                : const Color(0xFF334155),
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                             side: BorderSide(
-                              color: isSel ? const Color(0xFF0066FF) : const Color(0xFFCBD5E1),
+                              color: isSel
+                                  ? const Color(0xFF0066FF)
+                                  : const Color(0xFFCBD5E1),
                             ),
                           ),
                           showCheckmark: false,
@@ -333,37 +355,44 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [
-                        'Default',
-                        'Highest Budget',
-                        'Highest Spent',
-                        'Utilization %',
-                      ].map((sort) {
-                        final isSel = tempSort == sort;
-                        return ChoiceChip(
-                          label: Text(sort),
-                          selected: isSel,
-                          onSelected: (selected) {
-                            setSheetState(() {
-                              tempSort = selected ? sort : 'Default';
-                            });
-                          },
-                          selectedColor: const Color(0xFF0A2540),
-                          backgroundColor: Colors.white,
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                            color: isSel ? Colors.white : const Color(0xFF334155),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: isSel ? const Color(0xFF0A2540) : const Color(0xFFCBD5E1),
-                            ),
-                          ),
-                          showCheckmark: false,
-                        );
-                      }).toList(),
+                      children:
+                          [
+                            'Default',
+                            'Highest Budget',
+                            'Highest Spent',
+                            'Utilization %',
+                          ].map((sort) {
+                            final isSel = tempSort == sort;
+                            return ChoiceChip(
+                              label: Text(sort),
+                              selected: isSel,
+                              onSelected: (selected) {
+                                setSheetState(() {
+                                  tempSort = selected ? sort : 'Default';
+                                });
+                              },
+                              selectedColor: const Color(0xFF0A2540),
+                              backgroundColor: Colors.white,
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSel
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                color: isSel
+                                    ? Colors.white
+                                    : const Color(0xFF334155),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSel
+                                      ? const Color(0xFF0A2540)
+                                      : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              showCheckmark: false,
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 24),
 
@@ -435,10 +464,15 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
     );
   }
 
-  void _showCreateBudgetSheet(BuildContext context, {BudgetItem? existingBudget}) {
+  void _showCreateBudgetSheet(
+    BuildContext context, {
+    BudgetItem? existingBudget,
+  }) {
     final nameCtrl = TextEditingController(text: existingBudget?.name ?? '');
     final amountCtrl = TextEditingController(
-      text: existingBudget != null ? existingBudget.amount.toStringAsFixed(0) : '',
+      text: existingBudget != null
+          ? existingBudget.amount.toStringAsFixed(0)
+          : '',
     );
     String selectedType = existingBudget?.type ?? 'Category-wise Budget';
     String selectedCategory = existingBudget?.category ?? 'Food & Dining';
@@ -476,7 +510,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      existingBudget != null ? 'Edit Budget' : 'Create Budget Limit',
+                      existingBudget != null
+                          ? 'Edit Budget'
+                          : 'Create Budget Limit',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -490,7 +526,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         labelText: 'Budget Name',
                         hintText: 'e.g. Monthly Dining Out',
                         prefixIcon: const Icon(Icons.pie_chart_outline),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -499,12 +537,17 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       decoration: InputDecoration(
                         labelText: 'Budget Type',
                         prefixIcon: const Icon(Icons.category),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      items: ['Monthly Budget', 'Category-wise Budget'].map((t) {
+                      items: ['Monthly Budget', 'Category-wise Budget'].map((
+                        t,
+                      ) {
                         return DropdownMenuItem(value: t, child: Text(t));
                       }).toList(),
-                      onChanged: (val) => setSheetState(() => selectedType = val!),
+                      onChanged: (val) =>
+                          setSheetState(() => selectedType = val!),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -512,12 +555,15 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       decoration: InputDecoration(
                         labelText: 'Target Category',
                         prefixIcon: const Icon(Icons.folder_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       items: _categoryOptions.map((c) {
                         return DropdownMenuItem(value: c, child: Text(c));
                       }).toList(),
-                      onChanged: (val) => setSheetState(() => selectedCategory = val!),
+                      onChanged: (val) =>
+                          setSheetState(() => selectedCategory = val!),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -526,7 +572,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       decoration: InputDecoration(
                         labelText: 'Monthly Limit Amount (₹)',
                         prefixIcon: const Icon(Icons.currency_rupee),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -536,13 +584,20 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0066FF),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
-                          final parsedAmount = double.tryParse(amountCtrl.text) ?? 0.0;
+                          final parsedAmount =
+                              double.tryParse(amountCtrl.text) ?? 0.0;
                           if (parsedAmount <= 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter a valid budget amount > 0')),
+                              const SnackBar(
+                                content: Text(
+                                  'Please enter a valid budget amount > 0',
+                                ),
+                              ),
                             );
                             return;
                           }
@@ -552,14 +607,16 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                               : nameCtrl.text.trim();
 
                           if (existingBudget != null) {
-                            ref.read(budgetProvider.notifier).updateBudget(
-                              existingBudget.copyWith(
-                                name: budgetName,
-                                type: selectedType,
-                                category: selectedCategory,
-                                amount: parsedAmount,
-                              ),
-                            );
+                            ref
+                                .read(budgetProvider.notifier)
+                                .updateBudget(
+                                  existingBudget.copyWith(
+                                    name: budgetName,
+                                    type: selectedType,
+                                    category: selectedCategory,
+                                    amount: parsedAmount,
+                                  ),
+                                );
                           } else {
                             final newBudget = BudgetItem(
                               id: 'budget_${DateTime.now().millisecondsSinceEpoch}',
@@ -572,7 +629,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                               endDate: '31/10/2026',
                               period: 'October 2026',
                             );
-                            ref.read(budgetProvider.notifier).addBudget(newBudget);
+                            ref
+                                .read(budgetProvider.notifier)
+                                .addBudget(newBudget);
                           }
 
                           Navigator.pop(sheetCtx);
@@ -588,7 +647,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                           );
                         },
                         child: Text(
-                          existingBudget != null ? 'Save Changes' : 'Create Budget',
+                          existingBudget != null
+                              ? 'Save Changes'
+                              : 'Create Budget',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -620,10 +681,15 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
             onPressed: () {
               ref.read(budgetProvider.notifier).deleteBudget(budget.id);
               Navigator.pop(ctx);
@@ -695,7 +761,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                 decoration: InputDecoration(
                   labelText: 'Amount (₹)',
                   prefixIcon: const Icon(Icons.currency_rupee),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -705,7 +773,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   labelText: 'Description / Merchant',
                   hintText: 'e.g. Swiggy Lunch',
                   prefixIcon: const Icon(Icons.description_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -715,25 +785,33 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0066FF),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     final amt = double.tryParse(amountCtrl.text) ?? 0.0;
                     if (amt <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter an amount > 0')),
+                        const SnackBar(
+                          content: Text('Please enter an amount > 0'),
+                        ),
                       );
                       return;
                     }
 
-                    final desc = descCtrl.text.trim().isEmpty ? budget.category : descCtrl.text.trim();
+                    final desc = descCtrl.text.trim().isEmpty
+                        ? budget.category
+                        : descCtrl.text.trim();
 
                     // Apply directly to budget provider and expense provider
-                    final alert = ref.read(budgetProvider.notifier).applyExpense(
-                      category: budget.category,
-                      amount: amt,
-                      description: desc,
-                    );
+                    final alert = ref
+                        .read(budgetProvider.notifier)
+                        .applyExpense(
+                          category: budget.category,
+                          amount: amt,
+                          description: desc,
+                        );
 
                     final newExpense = ExpenseEntry(
                       id: 'exp_${DateTime.now().millisecondsSinceEpoch}',
@@ -749,12 +827,15 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
 
                     Navigator.pop(sheetCtx);
 
-                    if (alert != null && alert.level == BudgetAlertLevel.exceeded) {
+                    if (alert != null &&
+                        alert.level == BudgetAlertLevel.exceeded) {
                       _showExceededAlert(context, alert.budget);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('₹${amt.toStringAsFixed(0)} recorded in ${budget.category}'),
+                          content: Text(
+                            '₹${amt.toStringAsFixed(0)} recorded in ${budget.category}',
+                          ),
                           backgroundColor: const Color(0xFF10B981),
                         ),
                       );
@@ -762,7 +843,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   },
                   child: const Text(
                     'Record Expense',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -781,7 +865,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFEF4444),
+              size: 28,
+            ),
             SizedBox(width: 8),
             Text(
               'Budget Exceeded Alert',
@@ -799,12 +887,20 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
           children: [
             Text(
               'Budget Exceeded! You have spent ${_formatRupees(budget.spent)} on ${budget.category} against your monthly budget of ${_formatRupees(budget.amount)}.',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF0A2540),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'You exceeded your budget by ${_formatRupees(budget.overspentAmount)} (${budget.utilizationPercentage.toStringAsFixed(1)}% utilized).',
-              style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600, fontSize: 12),
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -823,15 +919,23 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Dismiss', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text(
+              'Dismiss',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0066FF)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0066FF),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               context.push('/expense-tracking');
             },
-            child: const Text('View Expenses', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'View Expenses',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -888,7 +992,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.mark_chat_unread_outlined, color: Color(0xFF0066FF)),
+                icon: const Icon(
+                  Icons.mark_chat_unread_outlined,
+                  color: Color(0xFF0066FF),
+                ),
                 tooltip: 'Detected SMS Transactions',
                 onPressed: () => PendingTransactionsSheet.show(context),
               ),
@@ -902,7 +1009,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       color: Color(0xFFEF4444),
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     child: Text(
                       '${detectionState.pendingCount}',
                       style: const TextStyle(
@@ -922,7 +1032,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             onPressed: () => SmsSimulatorDialog.show(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF0066FF)),
+            icon: const Icon(
+              Icons.add_circle_outline,
+              color: Color(0xFF0066FF),
+            ),
             tooltip: 'Create Budget',
             onPressed: () => _showCreateBudgetSheet(context),
           ),
@@ -952,10 +1065,7 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildCategoriesTab(state),
-          _buildAnalyticsTab(state),
-        ],
+        children: [_buildCategoriesTab(state), _buildAnalyticsTab(state)],
       ),
     );
   }
@@ -965,11 +1075,13 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
     final warningList = state.warningBudgets;
 
     final filteredBudgets = state.budgets.where((b) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           b.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           b.category.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      final matchesCategory = _selectedCategoryFilter == 'All' ||
+      final matchesCategory =
+          _selectedCategoryFilter == 'All' ||
           b.category.toLowerCase() == _selectedCategoryFilter.toLowerCase();
 
       bool matchesStatus = true;
@@ -989,13 +1101,17 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
     } else if (_selectedSortBy == 'Highest Spent') {
       filteredBudgets.sort((a, b) => b.spent.compareTo(a.spent));
     } else if (_selectedSortBy == 'Utilization %') {
-      filteredBudgets.sort((a, b) => b.utilizationPercentage.compareTo(a.utilizationPercentage));
+      filteredBudgets.sort(
+        (a, b) => b.utilizationPercentage.compareTo(a.utilizationPercentage),
+      );
     }
 
-    final hasActiveFilters = _selectedStatusFilter != 'All' ||
+    final hasActiveFilters =
+        _selectedStatusFilter != 'All' ||
         _selectedCategoryFilter != 'All' ||
         _selectedSortBy != 'Default';
-    final activeFilterCount = (_selectedStatusFilter != 'All' ? 1 : 0) +
+    final activeFilterCount =
+        (_selectedStatusFilter != 'All' ? 1 : 0) +
         (_selectedCategoryFilter != 'All' ? 1 : 0) +
         (_selectedSortBy != 'Default' ? 1 : 0);
 
@@ -1041,7 +1157,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(10),
@@ -1072,7 +1191,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -1082,7 +1204,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         children: [
                           const Text(
                             'Total Spent',
-                            style: TextStyle(color: Colors.white70, fontSize: 11),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -1100,7 +1225,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: state.totalOverspent > 0
                             ? const Color(0xFFEF4444).withOpacity(0.3)
@@ -1111,7 +1239,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            state.totalOverspent > 0 ? 'Overspent' : 'Remaining',
+                            state.totalOverspent > 0
+                                ? 'Overspent'
+                                : 'Remaining',
                             style: TextStyle(
                               color: state.totalOverspent > 0
                                   ? const Color(0xFFFECACA)
@@ -1148,8 +1278,8 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   color: state.totalOverspent > 0
                       ? const Color(0xFFEF4444)
                       : (state.overallUsagePercentage > 80
-                          ? const Color(0xFFFBBF24)
-                          : const Color(0xFF10B981)),
+                            ? const Color(0xFFFBBF24)
+                            : const Color(0xFF10B981)),
                 ),
               ),
               const SizedBox(height: 6),
@@ -1232,7 +1362,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       color: const Color(0xFFEF4444).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 22),
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Color(0xFFEF4444),
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1249,7 +1383,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         ),
                         Text(
                           'Exceeded by ${_formatRupees(exceeded.overspentAmount)} on ${exceeded.category} (${exceeded.utilizationPercentage.toStringAsFixed(0)}% used)',
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFFB91C1C)),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFFB91C1C),
+                          ),
                         ),
                       ],
                     ),
@@ -1257,12 +1394,18 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEF4444),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: () => _showExceededAlert(context, exceeded),
-                    child: const Text('Review', style: TextStyle(color: Colors.white, fontSize: 11)),
+                    child: const Text(
+                      'Review',
+                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    ),
                   ),
                 ],
               ),
@@ -1279,12 +1422,20 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 20),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Warning: ${warn.utilizationPercentage.toStringAsFixed(0)}% of your ${warn.category} budget used (${_formatRupees(warn.spent)} / ${_formatRupees(warn.amount)}).',
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF92400E),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -1314,11 +1465,22 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   onChanged: (val) => setState(() => _searchQuery = val),
                   decoration: InputDecoration(
                     hintText: 'Search budgets by name or category...',
-                    hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B), size: 20),
+                    hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF64748B),
+                      size: 20,
+                    ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18, color: Color(0xFF64748B)),
+                            icon: const Icon(
+                              Icons.clear,
+                              size: 18,
+                              color: Color(0xFF64748B),
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _searchQuery = '');
@@ -1326,7 +1488,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -1336,12 +1501,19 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               onTap: () => _showFilterSheet(context),
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: hasActiveFilters ? const Color(0xFF0066FF) : Colors.white,
+                  color: hasActiveFilters
+                      ? const Color(0xFF0066FF)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: hasActiveFilters ? const Color(0xFF0066FF) : const Color(0xFFCBD5E1),
+                    color: hasActiveFilters
+                        ? const Color(0xFF0066FF)
+                        : const Color(0xFFCBD5E1),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -1359,7 +1531,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     Icon(
                       Icons.tune_rounded,
                       size: 18,
-                      color: hasActiveFilters ? Colors.white : const Color(0xFF0066FF),
+                      color: hasActiveFilters
+                          ? Colors.white
+                          : const Color(0xFF0066FF),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -1367,13 +1541,18 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: hasActiveFilters ? Colors.white : const Color(0xFF0A2540),
+                        color: hasActiveFilters
+                            ? Colors.white
+                            : const Color(0xFF0A2540),
                       ),
                     ),
                     if (activeFilterCount > 0) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
@@ -1414,7 +1593,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Icon(Icons.filter_alt, size: 16, color: Color(0xFF0066FF)),
+                      const Icon(
+                        Icons.filter_alt,
+                        size: 16,
+                        color: Color(0xFF0066FF),
+                      ),
                       Text(
                         '${filteredBudgets.length} of ${state.budgets.length} shown',
                         style: const TextStyle(
@@ -1428,9 +1611,12 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                           setState(() => _selectedStatusFilter = 'All');
                         }),
                       if (_selectedCategoryFilter != 'All')
-                        _buildFilterBadge('Category: $_selectedCategoryFilter', () {
-                          setState(() => _selectedCategoryFilter = 'All');
-                        }),
+                        _buildFilterBadge(
+                          'Category: $_selectedCategoryFilter',
+                          () {
+                            setState(() => _selectedCategoryFilter = 'All');
+                          },
+                        ),
                       if (_selectedSortBy != 'Default')
                         _buildFilterBadge('Sort: $_selectedSortBy', () {
                           setState(() => _selectedSortBy = 'Default');
@@ -1484,7 +1670,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(10),
@@ -1506,7 +1695,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               onTap: () => _showCreateBudgetSheet(context),
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0066FF),
                   borderRadius: BorderRadius.circular(8),
@@ -1542,11 +1734,19 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             ),
             child: Column(
               children: [
-                const Icon(Icons.pie_chart_outline, size: 44, color: Color(0xFF94A3B8)),
+                const Icon(
+                  Icons.pie_chart_outline,
+                  size: 44,
+                  color: Color(0xFF94A3B8),
+                ),
                 const SizedBox(height: 10),
                 const Text(
                   'No matching budgets found',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Color(0xFF0A2540),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -1559,7 +1759,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   onPressed: () => _showCreateBudgetSheet(context),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Create Budget'),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0066FF)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0066FF),
+                  ),
                 ),
               ],
             ),
@@ -1641,31 +1843,48 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         ),
                         if (isExceeded)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEF4444),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               'EXCEEDED',
-                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           )
                         else if (isWarn)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF59E0B),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
                               '80% REACHED',
-                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           )
                         else
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF10B981).withOpacity(0.15),
                               borderRadius: BorderRadius.circular(4),
@@ -1684,7 +1903,10 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     const SizedBox(height: 2),
                     Text(
                       b.category,
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
@@ -1711,7 +1933,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             children: [
               Text(
                 'Spent: ${_formatRupees(b.spent)} of ${_formatRupees(b.amount)}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0A2540)),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0A2540),
+                ),
               ),
               Text(
                 '${b.utilizationPercentage.toStringAsFixed(1)}% utilized',
@@ -1720,7 +1946,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   fontWeight: FontWeight.bold,
                   color: isExceeded
                       ? const Color(0xFFEF4444)
-                      : (isWarn ? const Color(0xFFD97706) : const Color(0xFF64748B)),
+                      : (isWarn
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFF64748B)),
                 ),
               ),
             ],
@@ -1735,7 +1963,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.bold,
-              color: isExceeded ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+              color: isExceeded
+                  ? const Color(0xFFEF4444)
+                  : const Color(0xFF10B981),
             ),
           ),
           const Divider(height: 20, color: Color(0xFFF1F5F9)),
@@ -1748,14 +1978,25 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                 onTap: () => _showAddExpenseToBudgetSheet(context, b),
                 borderRadius: BorderRadius.circular(6),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 2,
+                  ),
                   child: Row(
                     children: const [
-                      Icon(Icons.add_circle, size: 14, color: Color(0xFF0066FF)),
+                      Icon(
+                        Icons.add_circle,
+                        size: 14,
+                        color: Color(0xFF0066FF),
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'Record Expense',
-                        style: TextStyle(fontSize: 11.5, color: Color(0xFF0066FF), fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF0066FF),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -1764,13 +2005,18 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               Row(
                 children: [
                   InkWell(
-                    onTap: () => _showCreateBudgetSheet(context, existingBudget: b),
+                    onTap: () =>
+                        _showCreateBudgetSheet(context, existingBudget: b),
                     borderRadius: BorderRadius.circular(6),
                     child: const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Text(
                         'Edit',
-                        style: TextStyle(fontSize: 11.5, color: Color(0xFF0066FF), fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF0066FF),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -1781,7 +2027,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Text(
                         'Delete',
-                        style: TextStyle(fontSize: 11.5, color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFFEF4444),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -1861,7 +2111,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             children: [
               const Text(
                 'Category Budget Utilization',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0A2540),
+                ),
               ),
               const SizedBox(height: 4),
               const Text(
@@ -1875,11 +2129,19 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   children: [
                     Row(
                       children: [
-                        Icon(_getCategoryIcon(b.category), size: 16, color: _getCategoryColor(b.category)),
+                        Icon(
+                          _getCategoryIcon(b.category),
+                          size: 16,
+                          color: _getCategoryColor(b.category),
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           b.category,
-                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0A2540),
+                          ),
                         ),
                       ],
                     ),
@@ -1890,7 +2152,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                         fontWeight: FontWeight.bold,
                         color: b.isExceeded
                             ? const Color(0xFFEF4444)
-                            : (b.isApproachingLimit ? const Color(0xFFF59E0B) : const Color(0xFF64748B)),
+                            : (b.isApproachingLimit
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF64748B)),
                       ),
                     ),
                   ],
@@ -1904,7 +2168,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                     backgroundColor: const Color(0xFFF1F5F9),
                     color: b.isExceeded
                         ? const Color(0xFFEF4444)
-                        : (b.isApproachingLimit ? const Color(0xFFF59E0B) : _getCategoryColor(b.category)),
+                        : (b.isApproachingLimit
+                              ? const Color(0xFFF59E0B)
+                              : _getCategoryColor(b.category)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1927,13 +2193,23 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             children: [
               const Text(
                 'Smart Guardrail Automation',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0A2540),
+                ),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Bank SMS Expense Deduction', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Automatically deduct confirmed bank SMS debits from category budgets', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                title: const Text(
+                  'Bank SMS Expense Deduction',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Automatically deduct confirmed bank SMS debits from category budgets',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
                 value: true,
                 activeColor: const Color(0xFF0066FF),
                 onChanged: (val) {},
@@ -1941,17 +2217,30 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               const Divider(height: 10),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Prominent Overspending Alerts', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Display high-visibility red warning banners when a category crosses 100%', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                title: const Text(
+                  'Prominent Overspending Alerts',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Display high-visibility red warning banners when a category crosses 100%',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
                 value: state.alertEnabled,
                 activeColor: const Color(0xFFEF4444),
-                onChanged: (val) => ref.read(budgetProvider.notifier).toggleAlert(val),
+                onChanged: (val) =>
+                    ref.read(budgetProvider.notifier).toggleAlert(val),
               ),
               const Divider(height: 10),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('80% Threshold Early Warning', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Notify when expenses reach 80% of monthly allocation', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                title: const Text(
+                  '80% Threshold Early Warning',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Notify when expenses reach 80% of monthly allocation',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
                 value: true,
                 activeColor: const Color(0xFFF59E0B),
                 onChanged: (val) {},
@@ -1984,17 +2273,31 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               Icon(icon, size: 18, color: color),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
           const SizedBox(height: 2),
-          Text(subtitle, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+          ),
         ],
       ),
     );

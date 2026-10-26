@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,10 +12,13 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
+  late AnimationController _timelineController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  Timer? _navigationTimer;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -22,6 +26,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
+    );
+
+    _timelineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
     );
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
@@ -33,175 +42,173 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     );
 
     _controller.forward();
+    _timelineController.forward();
+
+    // 3-second timeline after which navigate to login screen
+    _navigationTimer = Timer(const Duration(seconds: 3), () {
+      _navigateToLogin();
+    });
+  }
+
+  void _navigateToLogin() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+    _navigationTimer?.cancel();
+    ref.read(authKycProvider.notifier).setIsExistingUser(true);
+    ref.read(authKycProvider.notifier).updateStep(1);
+    context.go('/login');
   }
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _controller.dispose();
+    _timelineController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0A2540), Color(0xFF003B95), Color(0xFF0066FF)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      body: GestureDetector(
+        onTap: _navigateToLogin,
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0A2540), Color(0xFF003B95), Color(0xFF0066FF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Container(
-                    width: 110,
-                    height: 110,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF10B981).withOpacity(0.3),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const FinmosLogo(
-                      size: 86,
-                      showTitle: false,
-                      showTagline: false,
-                      showFooter: false,
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 3),
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withOpacity(0.3),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const FinmosLogo(
+                        size: 86,
+                        showTitle: false,
+                        showTagline: false,
+                        showFooter: false,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    const Text(
-                      'FINOMOS',
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 4.0,
-                        color: Colors.white,
+                const SizedBox(height: 28),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'FINOMOS',
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 4.0,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(width: 20, height: 1, color: Colors.white38),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'YOUR AI PERSONAL ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const Text(
+                            'CFO',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(width: 20, height: 1, color: Colors.white38),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'INTELLIGENT  •  TRUSTED  •  SECURE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white54,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(flex: 3),
+
+                // 3-second timeline progress bar indicator
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 52, vertical: 36),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(width: 20, height: 1, color: Colors.white38),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'YOUR AI PERSONAL ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                            color: Colors.white70,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: AnimatedBuilder(
+                            animation: _timelineController,
+                            builder: (context, child) {
+                              return LinearProgressIndicator(
+                                value: _timelineController.value,
+                                minHeight: 3.5,
+                                backgroundColor: Colors.white.withOpacity(0.18),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                              );
+                            },
                           ),
                         ),
+                        const SizedBox(height: 12),
                         const Text(
-                          'CFO',
+                          'INITIALIZING SECURE SESSION...',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                            color: Color(0xFF10B981),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.4,
+                            color: Colors.white60,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(width: 20, height: 1, color: Colors.white38),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'INTELLIGENT  •  TRUSTED  •  SECURE',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white54,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const Spacer(),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: Column(
-                  children: [
-                    // Login Button for Existing Registered Users
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        onPressed: () {
-                          ref.read(authKycProvider.notifier).setIsExistingUser(true);
-                          ref.read(authKycProvider.notifier).updateStep(2);
-                          context.go('/login');
-                        },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Login (Registered User)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                            SizedBox(width: 8),
-                            Icon(Icons.login, color: Colors.white, size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // First Time Register Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        onPressed: () {
-                          ref.read(authKycProvider.notifier).setIsExistingUser(false);
-                          ref.read(authKycProvider.notifier).updateStep(1);
-                          context.go('/signup');
-                        },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('New User Registration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                            SizedBox(width: 8),
-                            Icon(Icons.person_add_alt_1, color: Colors.white, size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
