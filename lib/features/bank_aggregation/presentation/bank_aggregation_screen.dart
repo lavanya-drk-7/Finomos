@@ -31,142 +31,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     super.dispose();
   }
 
-  void _showConsentDialog(
-    BuildContext context,
-    InstitutionDirectoryItem institution,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            BankLogo(bankName: institution.name, size: 38),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Connect ${institution.name}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _navyDark,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Text(
-                    'RBI Regulated Account Aggregator (AA)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _slateGrey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Explicit User Consent Authorization (FAA-BR-010)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: _navyDark,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'By connecting via Account Aggregator, you authorize Finomos OS to periodically acquire encrypted read-only financial data:',
-              style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
-            ),
-            const SizedBox(height: 10),
-            _buildConsentBullet('Account Details, Types & Real-Time Balances'),
-            _buildConsentBullet('Transaction History & Credit/Debit Ledger'),
-            _buildConsentBullet('Auto-Categorization & AI CFO Cash Flow Feed'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFDE68A)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.lock_clock_outlined,
-                    size: 16,
-                    color: Color(0xFFD97706),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'FAA-BR-001: Bank passwords or PINs are NEVER requested or stored. Account numbers are always masked.',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF92400E),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: _slateGrey, fontWeight: FontWeight.w600),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _brandBlue,
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-            onPressed: () {
-              ref
-                  .read(bankAggregationProvider.notifier)
-                  .connectBankInstitution(institution);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '${institution.name} connected securely via RBI Account Aggregator!',
-                  ),
-                  backgroundColor: _emeraldGreen,
-                ),
-              );
-            },
-            child: const Text(
-              'Authorize & Link',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showAddBankModal(
     BuildContext context, {
@@ -198,16 +62,19 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       final upper = ifsc.trim().toUpperCase();
       if (upper.startsWith('SBIN')) {
         if (upper == 'SBIN0001234') return 'MG Road Main Branch, Bengaluru';
-        if (upper == 'SBIN0000691')
+        if (upper == 'SBIN0000691') {
           return 'Parliament Street Branch, New Delhi';
+        }
         return 'State Bank Main Branch, Bengaluru';
       } else if (upper.startsWith('HDFC')) {
-        if (upper == 'HDFC0000567' || upper == 'HDFC0005678')
+        if (upper == 'HDFC0000567' || upper == 'HDFC0005678') {
           return 'Fort Main Branch, Mumbai';
+        }
         return 'HDFC Bank Corporate Branch, Mumbai';
       } else if (upper.startsWith('ICIC')) {
-        if (upper == 'ICIC0000104')
+        if (upper == 'ICIC0000104') {
           return 'Bandra Kurla Complex (BKC) Branch, Mumbai';
+        }
         return 'ICICI Bank Towers Branch, Mumbai';
       } else if (upper.startsWith('UTIB')) {
         return 'Corporate Park Branch, Mumbai';
@@ -254,7 +121,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       }
 
       final bool isAccMatch =
-          acc.isNotEmpty && reEnter.isNotEmpty && acc == reEnter && acc.length >= 6;
+          acc.isNotEmpty &&
+          reEnter.isNotEmpty &&
+          acc == reEnter &&
+          acc.length >= 6;
 
       if (isAccMatch && ifsc.length >= 4) {
         if (holderCtrl.text.trim().isEmpty ||
@@ -313,7 +183,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 ? otherBankCtrl.text.trim()
                 : selectedBank;
 
-            final isAccMatch = accNumVal.isNotEmpty &&
+            final isAccMatch =
+                accNumVal.isNotEmpty &&
                 reEnterNumVal.isNotEmpty &&
                 accNumVal == reEnterNumVal;
             final isAccountNumValid = isAccMatch && accNumVal.length >= 6;
@@ -493,15 +364,22 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               child: TextField(
                                 controller: accountNumCtrl,
                                 keyboardType: TextInputType.number,
-                                onChanged: (_) => autoFetchDetails(setModalState),
+                                onChanged: (_) =>
+                                    autoFetchDetails(setModalState),
                                 contextMenuBuilder: (context, editableTextState) {
-                                  final items = editableTextState.contextMenuButtonItems
-                                      .where((item) =>
-                                          item.type != ContextMenuButtonType.copy &&
-                                          item.type != ContextMenuButtonType.cut)
+                                  final items = editableTextState
+                                      .contextMenuButtonItems
+                                      .where(
+                                        (item) =>
+                                            item.type !=
+                                                ContextMenuButtonType.copy &&
+                                            item.type !=
+                                                ContextMenuButtonType.cut,
+                                      )
                                       .toList();
                                   return AdaptiveTextSelectionToolbar.buttonItems(
-                                    anchors: editableTextState.contextMenuAnchors,
+                                    anchors:
+                                        editableTextState.contextMenuAnchors,
                                     buttonItems: items,
                                   );
                                 },
@@ -516,12 +394,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                       'Displayed securely with masked digits (•••• XXXX)',
                                   suffixIcon:
                                       accountNumCtrl.text.trim().length >= 6
-                                          ? const Icon(
-                                              Icons.check_circle,
-                                              color: Color(0xFF10B981),
-                                              size: 20,
-                                            )
-                                          : null,
+                                      ? const Icon(
+                                          Icons.check_circle,
+                                          color: Color(0xFF10B981),
+                                          size: 20,
+                                        )
+                                      : null,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -536,19 +414,27 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               child: TextField(
                                 controller: reEnterAccountNumCtrl,
                                 keyboardType: TextInputType.number,
-                                onChanged: (_) => autoFetchDetails(setModalState),
+                                onChanged: (_) =>
+                                    autoFetchDetails(setModalState),
                                 contextMenuBuilder: (context, editableTextState) {
-                                  final items = editableTextState.contextMenuButtonItems
-                                      .where((item) => item.type != ContextMenuButtonType.paste)
+                                  final items = editableTextState
+                                      .contextMenuButtonItems
+                                      .where(
+                                        (item) =>
+                                            item.type !=
+                                            ContextMenuButtonType.paste,
+                                      )
                                       .toList();
                                   return AdaptiveTextSelectionToolbar.buttonItems(
-                                    anchors: editableTextState.contextMenuAnchors,
+                                    anchors:
+                                        editableTextState.contextMenuAnchors,
                                     buttonItems: items,
                                   );
                                 },
                                 decoration: InputDecoration(
                                   labelText: 'Re-Enter Bank Account Number',
-                                  hintText: 'Re-enter same account number manually',
+                                  hintText:
+                                      'Re-enter same account number manually',
                                   prefixIcon: const Icon(
                                     Icons.pin_outlined,
                                     color: _brandBlue,
@@ -562,7 +448,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                         ? const Color(0xFF10B981)
                                         : _slateGrey,
                                   ),
-                                  errorText: (reEnterNumVal.isNotEmpty && accNumVal != reEnterNumVal)
+                                  errorText:
+                                      (reEnterNumVal.isNotEmpty &&
+                                          accNumVal != reEnterNumVal)
                                       ? 'Account Number Mismatch Enter Correctly!'
                                       : null,
                                   suffixIcon: isAccountNumValid
@@ -571,13 +459,14 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                           color: Color(0xFF10B981),
                                           size: 20,
                                         )
-                                      : (reEnterNumVal.isNotEmpty && accNumVal != reEnterNumVal)
-                                          ? const Icon(
-                                              Icons.cancel,
-                                              color: Color(0xFFEF4444),
-                                              size: 20,
-                                            )
-                                          : null,
+                                      : (reEnterNumVal.isNotEmpty &&
+                                            accNumVal != reEnterNumVal)
+                                      ? const Icon(
+                                          Icons.cancel,
+                                          color: Color(0xFFEF4444),
+                                          size: 20,
+                                        )
+                                      : null,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1087,12 +976,36 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   void _showAddCreditCardModal(
     BuildContext context, {
     CreditCardItem? existingCard,
+    bool initialIsDebit = false,
   }) {
-    String selectedCard = existingCard?.cardName ?? 'HDFC Regalia Gold';
+    bool isDebit = existingCard?.isDebit ?? initialIsDebit;
+    String? selectedCard = (!isDebit && existingCard != null)
+        ? existingCard.cardName
+        : null;
+    String? selectedDebitCard = (isDebit && existingCard != null)
+        ? existingCard.cardName
+        : null;
     String selectedDueDate =
         existingCard?.statementDueDate ?? '15th of every month';
-    String selectedIssuedBank = existingCard?.issuedBank ?? 'HDFC Bank';
-    String selectedCardType = existingCard?.cardType ?? 'Visa';
+    String? selectedIssuedBank = existingCard?.issuedBank;
+    String? selectedCardType = existingCard?.cardType;
+    String selectedLinkedAccount =
+        existingCard?.linkedAccount ?? 'Primary Savings A/C (••••6789)';
+
+    final cardSearchCtrl = TextEditingController();
+    final bankSearchCtrl = TextEditingController();
+    final bankScrollCtrl = ScrollController();
+    final cardNumberCtrl = TextEditingController(
+      text: existingCard?.cardNumber ??
+          (existingCard != null
+              ? (existingCard.last4Digits.length >= 12
+                  ? existingCard.last4Digits
+                  : '5010 4329 ${existingCard.last4Digits}')
+              : ''),
+    );
+    final cvvCtrl = TextEditingController(
+      text: existingCard?.cvv ?? (existingCard != null ? '884' : ''),
+    );
     final holderNameCtrl = TextEditingController(
       text: existingCard?.cardHolderName ?? '',
     );
@@ -1102,23 +1015,13 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     final expiryCtrl = TextEditingController(
       text: existingCard?.expiryDate ?? '',
     );
-    final limitCtrl = TextEditingController(
-      text: existingCard != null
-          ? existingCard.creditLimit.toStringAsFixed(0)
-          : '',
-    );
-    final outstandingCtrl = TextEditingController(
-      text: existingCard != null
-          ? existingCard.outstandingBalance.toStringAsFixed(0)
-          : '',
-    );
-    final rewardCtrl = TextEditingController(
-      text: existingCard != null ? existingCard.rewardPoints.toString() : '',
-    );
     final otherCardCtrl = TextEditingController();
+    final otherDebitCardCtrl = TextEditingController();
     final otherIssuedBankCtrl = TextEditingController();
+    final otherLinkedAccountCtrl = TextEditingController();
+    final dropdownScrollCtrl = ScrollController();
 
-    final popularCards = [
+    final popularCreditCards = [
       'HDFC Regalia Gold',
       'HDFC Millennia',
       'HDFC Infinia Metal',
@@ -1135,7 +1038,30 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       'Kotak White',
       'Tata Neu Infinity HDFC',
       'American Express MRCC',
+      'Standard Chartered Ultimate',
+      'IndusInd Legend',
+      'RBL World Safari',
+      'IDFC FIRST Wealth',
       'Other Credit Card',
+    ];
+
+    final popularDebitCards = [
+      'HDFC Millennia Debit Card',
+      'HDFC EasyShop Platinum Debit Card',
+      'SBI Global International Contactless Debit Card',
+      'SBI IOCL Global Contactless Debit Card',
+      'ICICI Sapphiro Debit Card',
+      'ICICI Coral Debit Card',
+      'ICICI Expressions Debit Card',
+      'Axis Liberty Debit Card',
+      'Axis Burgundy Debit Card',
+      'Kotak Privy League Signature Debit Card',
+      'Kotak Everyday Platinum Debit Card',
+      'Bank of Baroda RuPay Platinum Debit Card',
+      'PNB RuPay Platinum Debit Card',
+      'IDFC FIRST Visa Signature Debit Card',
+      'Canara Bank Classic / Platinum Debit Card',
+      'Other Debit Card',
     ];
 
     final issuedBankOptions = [
@@ -1163,14 +1089,208 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       'Diners Club',
     ];
 
-    final dueDates = [
-      '5th of every month',
-      '10th of every month',
-      '15th of every month',
-      '20th of every month',
-      '25th of every month',
-      '28th of every month',
+    final linkedAccountOptions = [
+      'Primary Savings A/C (••••6789)',
+      'Salary Account (••••1234)',
+      'Current Account (••••4567)',
+      'Fixed Deposit / Overdraft Account',
+      'Other Linked Account',
     ];
+
+    void autoFillCardDetails(String? name, bool isDebitCard) {
+      if (name == null) return;
+      if (name.contains('HDFC')) {
+        selectedIssuedBank = 'HDFC Bank';
+        selectedCardType = 'Visa';
+      } else if (name.contains('ICICI')) {
+        selectedIssuedBank = 'ICICI Bank';
+        selectedCardType = name.contains('Amazon') ? 'Mastercard' : 'Visa';
+      } else if (name.contains('SBI')) {
+        selectedIssuedBank = 'State Bank of India';
+        selectedCardType = isDebitCard ? 'RuPay' : 'Visa';
+      } else if (name.contains('Axis')) {
+        selectedIssuedBank = 'Axis Bank';
+        selectedCardType = 'Visa';
+      } else if (name.contains('Kotak')) {
+        selectedIssuedBank = 'Kotak Mahindra Bank';
+        selectedCardType = 'Visa';
+      } else if (name.contains('American Express') || name.contains('Amex')) {
+        selectedIssuedBank = 'American Express';
+        selectedCardType = 'American Express';
+      } else if (name.contains('Baroda')) {
+        selectedIssuedBank = 'Bank of Baroda';
+        selectedCardType = 'RuPay';
+      } else if (name.contains('PNB')) {
+        selectedIssuedBank = 'Punjab National Bank';
+        selectedCardType = 'RuPay';
+      } else if (name.contains('IDFC')) {
+        selectedIssuedBank = 'IDFC FIRST Bank';
+        selectedCardType = 'Visa';
+      } else if (name.contains('Canara')) {
+        selectedIssuedBank = 'Canara Bank';
+        selectedCardType = 'RuPay';
+      } else if (name.contains('Standard Chartered')) {
+        selectedIssuedBank = 'Standard Chartered';
+        selectedCardType = 'Visa';
+      } else if (name.contains('IndusInd')) {
+        selectedIssuedBank = 'IndusInd Bank';
+        selectedCardType = 'Mastercard';
+      } else if (name.contains('RBL')) {
+        selectedIssuedBank = 'RBL Bank';
+        selectedCardType = 'Mastercard';
+      }
+    }
+
+    bool isCardDropdownOpen = false;
+    bool isBankDropdownOpen = false;
+
+    String getBankSubtitle(String bank) {
+      if (bank == 'Others') {
+        return 'Custom bank or financial institution';
+      }
+      if (bank == 'American Express') {
+        return 'Global Card Network • RBI Regulated';
+      }
+      if (bank == 'State Bank of India' ||
+          bank == 'Punjab National Bank' ||
+          bank == 'Bank of Baroda' ||
+          bank == 'Canara Bank') {
+        return 'Public Sector Bank • RBI Regulated';
+      }
+      if (bank == 'Standard Chartered') {
+        return 'Foreign Scheduled Bank • RBI Regulated';
+      }
+      return 'Private Scheduled Bank • RBI Regulated';
+    }
+
+    String getCardIssuerSub(String cardName, bool isDebitCard) {
+      final category = isDebitCard ? 'Debit Card' : 'Credit Card';
+      if (cardName.contains('HDFC')) {
+        return 'HDFC Bank • RBI Regulated Scheduled Bank ($category)';
+      }
+      if (cardName.contains('SBI')) {
+        return 'State Bank of India • RBI Regulated Bank ($category)';
+      }
+      if (cardName.contains('ICICI')) {
+        return 'ICICI Bank • RBI Regulated Scheduled Bank ($category)';
+      }
+      if (cardName.contains('Axis') || cardName.contains('Flipkart')) {
+        return 'Axis Bank • RBI Regulated Scheduled Bank ($category)';
+      }
+      if (cardName.contains('Kotak')) {
+        return 'Kotak Mahindra Bank • RBI Regulated Bank ($category)';
+      }
+      if (cardName.contains('Amex') || cardName.contains('American Express')) {
+        return 'American Express • RBI Regulated Network ($category)';
+      }
+      if (cardName.contains('Baroda')) {
+        return 'Bank of Baroda • RBI Regulated Public Bank ($category)';
+      }
+      if (cardName.contains('PNB')) {
+        return 'Punjab National Bank • RBI Regulated Public Bank ($category)';
+      }
+      if (cardName.contains('Canara')) {
+        return 'Canara Bank • RBI Regulated Public Bank ($category)';
+      }
+      if (cardName.contains('IDFC')) {
+        return 'IDFC FIRST Bank • RBI Regulated Bank ($category)';
+      }
+      if (cardName.contains('IndusInd')) {
+        return 'IndusInd Bank • RBI Regulated Bank ($category)';
+      }
+      if (cardName.contains('RBL')) {
+        return 'RBL Bank • RBI Regulated Bank ($category)';
+      }
+      if (cardName.contains('Standard Chartered')) {
+        return 'Standard Chartered • RBI Regulated Bank ($category)';
+      }
+      if (cardName.startsWith('Other')) {
+        return 'Custom RBI / SEBI Approved $category';
+      }
+      return 'RBI & SEBI Approved Regulated Issuer ($category)';
+    }
+
+    Widget getCardIssuerLogo(String cardName) {
+      Color bg = _brandBlue;
+      String text = 'CARD';
+      if (cardName.contains('HDFC')) {
+        bg = const Color(0xFF004C8F);
+        text = 'HDFC';
+      } else if (cardName.contains('SBI')) {
+        bg = const Color(0xFF280071);
+        text = 'SBI';
+      } else if (cardName.contains('ICICI')) {
+        bg = const Color(0xFFB3282D);
+        text = 'ICICI';
+      } else if (cardName.contains('Axis') || cardName.contains('Flipkart')) {
+        bg = const Color(0xFF97144D);
+        text = 'AXIS';
+      } else if (cardName.contains('Kotak')) {
+        bg = const Color(0xFFEE2E24);
+        text = 'KOTAK';
+      } else if (cardName.contains('Amex') || cardName.contains('American Express')) {
+        bg = const Color(0xFF007BC1);
+        text = 'AMEX';
+      } else if (cardName.contains('Baroda')) {
+        bg = const Color(0xFFF26522);
+        text = 'BOB';
+      } else if (cardName.contains('PNB')) {
+        bg = const Color(0xFFA21C2A);
+        text = 'PNB';
+      } else if (cardName.contains('Canara')) {
+        bg = const Color(0xFF0083CA);
+        text = 'CAN';
+      } else if (cardName.contains('IDFC')) {
+        bg = const Color(0xFF9E1B32);
+        text = 'IDFC';
+      } else if (cardName.contains('IndusInd')) {
+        bg = const Color(0xFF7B1113);
+        text = 'INDUS';
+      } else if (cardName.contains('RBL')) {
+        bg = const Color(0xFF1B365D);
+        text = 'RBL';
+      } else if (cardName.contains('Standard Chartered')) {
+        bg = const Color(0xFF008559);
+        text = 'SCB';
+      } else if (cardName.startsWith('Other')) {
+        return Container(
+          width: 38,
+          height: 28,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFCBD5E1)),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.add, size: 16, color: _brandBlue),
+        );
+      }
+      return Container(
+        width: 38,
+        height: 28,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: [
+            BoxShadow(
+              color: bg.withOpacity(0.25),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.2,
+          ),
+        ),
+      );
+    }
 
     showModalBottomSheet(
       context: context,
@@ -1182,6 +1302,23 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final searchQuery = cardSearchCtrl.text.trim().toLowerCase();
+            final filteredCreditCards = popularCreditCards.where((c) {
+              if (c == 'Other Credit Card') return true;
+              return c.toLowerCase().contains(searchQuery);
+            }).toList();
+
+            final filteredDebitCards = popularDebitCards.where((c) {
+              if (c == 'Other Debit Card') return true;
+              return c.toLowerCase().contains(searchQuery);
+            }).toList();
+
+            final bankQuery = bankSearchCtrl.text.trim().toLowerCase();
+            final filteredBanks = issuedBankOptions.where((b) {
+              if (b == 'Others') return true;
+              return b.toLowerCase().contains(bankQuery);
+            }).toList();
+
             return SafeArea(
               child: Container(
                 constraints: BoxConstraints(
@@ -1215,8 +1352,8 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.credit_card,
+                          child: Icon(
+                            isDebit ? Icons.payment : Icons.credit_card,
                             color: _brandBlue,
                             size: 22,
                           ),
@@ -1228,8 +1365,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             children: [
                               Text(
                                 existingCard != null
-                                    ? 'Edit Credit Card'
-                                    : 'Add Credit Card',
+                                    ? (isDebit
+                                        ? 'Edit Debit Card'
+                                        : 'Edit Credit Card')
+                                    : (isDebit
+                                        ? 'Add Debit Card'
+                                        : 'Add Credit Card'),
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -1238,8 +1379,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               ),
                               Text(
                                 existingCard != null
-                                    ? 'Update card limits & details (FAA-SEC-04)'
-                                    : 'Card Limit, Statement & Dues Tracking (FAA-SEC-04)',
+                                    ? (isDebit
+                                        ? 'Update debit card limits & details (FAA-SEC-04)'
+                                        : 'Update card limits & details (FAA-SEC-04)')
+                                    : (isDebit
+                                        ? 'ATM Limits, Daily POS & Card Tracking (FAA-SEC-04)'
+                                        : 'Card Limit, Statement & Dues Tracking (FAA-SEC-04)'),
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: _slateGrey,
@@ -1251,6 +1396,164 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
+                    // 2 Options: Credit Cards and Debit Cards selector
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      padding: const EdgeInsets.all(3),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setModalState(() {
+                                  isDebit = false;
+                                  isCardDropdownOpen = false;
+                                  isBankDropdownOpen = false;
+                                  cardSearchCtrl.clear();
+                                  bankSearchCtrl.clear();
+                                  if (selectedCard != null &&
+                                      !popularCreditCards
+                                          .contains(selectedCard)) {
+                                    selectedCard = popularCreditCards.first;
+                                    autoFillCardDetails(selectedCard, false);
+                                  }
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  color: !isDebit
+                                      ? _brandBlue
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(9),
+                                  boxShadow: !isDebit
+                                      ? [
+                                          BoxShadow(
+                                            color: _brandBlue.withOpacity(0.25),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.credit_card,
+                                          size: 15,
+                                          color: !isDebit
+                                              ? Colors.white
+                                              : _slateGrey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Credit Cards',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: !isDebit
+                                                ? Colors.white
+                                                : _slateGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setModalState(() {
+                                  isDebit = true;
+                                  isCardDropdownOpen = false;
+                                  isBankDropdownOpen = false;
+                                  cardSearchCtrl.clear();
+                                  bankSearchCtrl.clear();
+                                  if (selectedDebitCard != null &&
+                                      !popularDebitCards
+                                          .contains(selectedDebitCard)) {
+                                    selectedDebitCard =
+                                        popularDebitCards.first;
+                                    autoFillCardDetails(selectedDebitCard, true);
+                                  }
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                decoration: BoxDecoration(
+                                  color: isDebit
+                                      ? _brandBlue
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(9),
+                                  boxShadow: isDebit
+                                      ? [
+                                          BoxShadow(
+                                            color: _brandBlue.withOpacity(0.25),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.payment,
+                                          size: 15,
+                                          color: isDebit
+                                              ? Colors.white
+                                              : _slateGrey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Debit Cards',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDebit
+                                                ? Colors.white
+                                                : _slateGrey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     Flexible(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
@@ -1259,25 +1562,735 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Dropdown with Search Bar and RBI/SEBI Approved Cards List in Screen Section Place
+                            Builder(
+                              builder: (context) {
+                                final currentCard = !isDebit
+                                    ? selectedCard
+                                    : selectedDebitCard;
+                                final currentList = !isDebit
+                                    ? filteredCreditCards
+                                    : filteredDebitCards;
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Dropdown Header / Selector Trigger
+                                    InkWell(
+                                      onTap: () {
+                                        setModalState(() {
+                                          isCardDropdownOpen =
+                                              !isCardDropdownOpen;
+                                          if (isCardDropdownOpen) {
+                                            isBankDropdownOpen = false;
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: isCardDropdownOpen
+                                              ? const BorderRadius.vertical(
+                                                  top: Radius.circular(12),
+                                                )
+                                              : BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isCardDropdownOpen
+                                                ? _brandBlue
+                                                : const Color(0xFFCBD5E1),
+                                            width: isCardDropdownOpen ? 1.5 : 1.0,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: isCardDropdownOpen
+                                                  ? _brandBlue.withOpacity(0.08)
+                                                  : Colors.black.withOpacity(0.03),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              !isDebit
+                                                  ? Icons.credit_card_outlined
+                                                  : Icons.payment_outlined,
+                                              color: _brandBlue,
+                                              size: 22,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    !isDebit
+                                                        ? 'Credit Card Issuer & Variant'
+                                                        : 'Debit Card Issuer & Variant',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: _slateGrey,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    currentCard ??
+                                                        (!isDebit
+                                                            ? 'Select Credit Card Variant'
+                                                            : 'Select Debit Card Variant'),
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: currentCard !=
+                                                              null
+                                                          ? FontWeight.w600
+                                                          : FontWeight.normal,
+                                                      color: currentCard != null
+                                                          ? _navyDark
+                                                          : _slateGrey,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Icon(
+                                              isCardDropdownOpen
+                                                  ? Icons.keyboard_arrow_up
+                                                  : Icons.keyboard_arrow_down,
+                                              color: _navyDark,
+                                              size: 22,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Dropdown Body with Search Bar & RBI/SEBI Approved Cards List
+                                    if (isCardDropdownOpen)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                            bottom: Radius.circular(12),
+                                          ),
+                                          border: Border.all(
+                                            color: _brandBlue,
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // 1. Search Bar at the top of the dropdown
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(
+                                                10,
+                                                10,
+                                                10,
+                                                6,
+                                              ),
+                                              child: TextField(
+                                                controller: cardSearchCtrl,
+                                                onChanged: (_) =>
+                                                    setModalState(() {}),
+                                                decoration: InputDecoration(
+                                                  isDense: true,
+                                                  contentPadding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 9,
+                                                  ),
+                                                  labelText: !isDebit
+                                                      ? 'Search Credit Cards'
+                                                      : 'Search Debit Cards',
+                                                  hintText: !isDebit
+                                                      ? 'Search by name (e.g. Regalia, Amazon, Magnus)...'
+                                                      : 'Search by name (e.g. Millennia, Global, Coral)...',
+                                                  hintStyle: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: _slateGrey,
+                                                  ),
+                                                  prefixIcon: const Icon(
+                                                    Icons.search,
+                                                    size: 18,
+                                                    color: _brandBlue,
+                                                  ),
+                                                  suffixIcon: cardSearchCtrl
+                                                          .text.isNotEmpty
+                                                      ? IconButton(
+                                                          icon: const Icon(
+                                                            Icons.clear,
+                                                            size: 16,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          constraints:
+                                                              const BoxConstraints(),
+                                                          onPressed: () {
+                                                            cardSearchCtrl
+                                                                .clear();
+                                                            setModalState(
+                                                              () {},
+                                                            );
+                                                          },
+                                                        )
+                                                      : null,
+                                                  filled: true,
+                                                  fillColor: const Color(
+                                                    0xFFF8FAFC,
+                                                  ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: _brandBlue,
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 4),
+                                            // Scrollable List of Cards
+                                            ConstrainedBox(
+                                              constraints:
+                                                  const BoxConstraints(
+                                                maxHeight: 210,
+                                              ),
+                                              child: currentList.isEmpty
+                                                  ? Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                        16,
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          const Text(
+                                                            'No matching RBI/SEBI approved cards found',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: _slateGrey,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 6,
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () {
+                                                              setModalState(() {
+                                                                if (!isDebit) {
+                                                                  selectedCard =
+                                                                      'Other Credit Card';
+                                                                  autoFillCardDetails(
+                                                                    selectedCard,
+                                                                    false,
+                                                                  );
+                                                                } else {
+                                                                  selectedDebitCard =
+                                                                      'Other Debit Card';
+                                                                  autoFillCardDetails(
+                                                                    selectedDebitCard,
+                                                                    true,
+                                                                  );
+                                                                }
+                                                                isCardDropdownOpen =
+                                                                    false;
+                                                                cardSearchCtrl
+                                                                    .clear();
+                                                              });
+                                                            },
+                                                            child: Text(
+                                                              !isDebit
+                                                                  ? 'Select Other Credit Card'
+                                                                  : 'Select Other Debit Card',
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    _brandBlue,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Scrollbar(
+                                                      controller: dropdownScrollCtrl,
+                                                      child: ListView.separated(
+                                                        key: const Key('dropdown_cards_list'),
+                                                        controller: dropdownScrollCtrl,
+                                                        shrinkWrap: true,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 4,
+                                                        ),
+                                                        itemCount:
+                                                            currentList.length,
+                                                        separatorBuilder:
+                                                            (_, __) =>
+                                                                const Divider(
+                                                          height: 1,
+                                                          color: Color(
+                                                            0xFFF1F5F9,
+                                                          ),
+                                                        ),
+                                                        itemBuilder:
+                                                            (ctx, index) {
+                                                          final card =
+                                                              currentList[
+                                                                  index];
+                                                          final isSelected =
+                                                              (!isDebit &&
+                                                                      card ==
+                                                                          selectedCard) ||
+                                                                  (isDebit &&
+                                                                      card ==
+                                                                          selectedDebitCard);
+
+                                                          return InkWell(
+                                                            onTap: () {
+                                                              setModalState(() {
+                                                                if (!isDebit) {
+                                                                  selectedCard =
+                                                                      card;
+                                                                  autoFillCardDetails(
+                                                                    card,
+                                                                    false,
+                                                                  );
+                                                                } else {
+                                                                  selectedDebitCard =
+                                                                      card;
+                                                                  autoFillCardDetails(
+                                                                    card,
+                                                                    true,
+                                                                  );
+                                                                }
+                                                                isCardDropdownOpen =
+                                                                    false;
+                                                                cardSearchCtrl
+                                                                    .clear();
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              color: isSelected
+                                                                  ? const Color(
+                                                                      0xFFEFF6FF,
+                                                                    )
+                                                                  : Colors
+                                                                      .transparent,
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                horizontal: 12,
+                                                                vertical: 8,
+                                                              ),
+                                                              child: Row(
+                                                                children: [
+                                                                  getCardIssuerLogo(
+                                                                    card,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    width: 10,
+                                                                  ),
+                                                                  Expanded(
+                                                                    child:
+                                                                        Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        Text(
+                                                                          card,
+                                                                          style:
+                                                                              TextStyle(
+                                                                            fontSize:
+                                                                                12.5,
+                                                                            fontWeight:
+                                                                                isSelected ? FontWeight.bold : FontWeight.w600,
+                                                                            color:
+                                                                                isSelected ? _brandBlue : _navyDark,
+                                                                          ),
+                                                                          overflow:
+                                                                              TextOverflow.ellipsis,
+                                                                        ),
+                                                                        const SizedBox(
+                                                                          height:
+                                                                              2,
+                                                                        ),
+                                                                        Text(
+                                                                          getCardIssuerSub(
+                                                                            card,
+                                                                            isDebit,
+                                                                          ),
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            fontSize:
+                                                                                10,
+                                                                            color:
+                                                                                _slateGrey,
+                                                                          ),
+                                                                          overflow:
+                                                                              TextOverflow.ellipsis,
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                  if (isSelected) ...[
+                                                                    const SizedBox(
+                                                                      width: 6,
+                                                                    ),
+                                                                    const Icon(
+                                                                      Icons
+                                                                          .check_circle,
+                                                                      color:
+                                                                          _brandBlue,
+                                                                      size: 18,
+                                                                    ),
+                                                                  ],
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                    // Custom Card Name Field if "Other Credit Card" or "Other Debit Card" is selected
+                                    if (!isDebit &&
+                                        selectedCard ==
+                                            'Other Credit Card') ...[
+                                      const SizedBox(height: 14),
+                                      TextField(
+                                        controller: otherCardCtrl,
+                                        onChanged: (_) => setModalState(() {}),
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              'Other Credit Card Name & Variant',
+                                          hintText:
+                                              'e.g. OneCard, Standard Chartered Ultimate, IndusInd',
+                                          prefixIcon: const Icon(
+                                            Icons.credit_card,
+                                            color: _brandBlue,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    if (isDebit &&
+                                        selectedDebitCard ==
+                                            'Other Debit Card') ...[
+                                      const SizedBox(height: 14),
+                                      TextField(
+                                        controller: otherDebitCardCtrl,
+                                        onChanged: (_) => setModalState(() {}),
+                                        decoration: InputDecoration(
+                                          labelText:
+                                              'Other Debit Card Name & Variant',
+                                          hintText:
+                                              'e.g. Federal Bank Celesta, IDFC FIRST Wealth',
+                                          prefixIcon: const Icon(
+                                            Icons.credit_card,
+                                            color: _brandBlue,
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            // 1. Card Number with Validation (12-digit minimum validation)
+                            Builder(
+                              builder: (context) {
+                                final cleanCardNum = cardNumberCtrl.text.replaceAll(RegExp(r'\D'), '');
+                                final hasCardNum = cardNumberCtrl.text.trim().isNotEmpty;
+                                final isValidCardNum = cleanCardNum.length >= 12;
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    TextField(
+                                      controller: cardNumberCtrl,
+                                      keyboardType: TextInputType.number,
+                                      maxLength: 19,
+                                      onChanged: (val) {
+                                        final digits = val.replaceAll(RegExp(r'\D'), '');
+                                        if (digits.length >= 4) {
+                                          last4Ctrl.text = digits.substring(digits.length - 4);
+                                        } else {
+                                          last4Ctrl.text = digits;
+                                        }
+                                        setModalState(() {});
+                                      },
+                                      decoration: InputDecoration(
+                                        counterText: '',
+                                        labelText: 'Card Number',
+                                        hintText: 'Enter 12-digit card number',
+                                        prefixIcon: Icon(
+                                          isDebit ? Icons.payment : Icons.credit_card,
+                                          color: _brandBlue,
+                                        ),
+                                        suffixIcon: hasCardNum
+                                            ? (isValidCardNum
+                                                ? const Icon(
+                                                    Icons.check_circle,
+                                                    color: _emeraldGreen,
+                                                    size: 20,
+                                                  )
+                                                : const Icon(
+                                                    Icons.warning_amber_rounded,
+                                                    color: Color(0xFFEF4444),
+                                                    size: 20,
+                                                  ))
+                                            : null,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: hasCardNum && !isValidCardNum
+                                                ? const Color(0xFFEF4444)
+                                                : const Color(0xFFCBD5E1),
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: hasCardNum && !isValidCardNum
+                                                ? const Color(0xFFEF4444)
+                                                : (isValidCardNum
+                                                    ? _emeraldGreen
+                                                    : const Color(0xFFCBD5E1)),
+                                            width: hasCardNum ? 1.5 : 1.0,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(
+                                            color: hasCardNum && !isValidCardNum
+                                                ? const Color(0xFFEF4444)
+                                                : _brandBlue,
+                                            width: 1.8,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (hasCardNum && !isValidCardNum)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4, left: 4),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.error_outline,
+                                              size: 13,
+                                              color: Color(0xFFEF4444),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Card Number must be at least 12 digits (${cleanCardNum.length}/12)',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Color(0xFFEF4444),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    else if (isValidCardNum)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4, left: 4),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.check_circle,
+                                              size: 13,
+                                              color: _emeraldGreen,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                'Verified 12-Digit ${isDebit ? "Debit" : "Credit"} Card Number',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: _emeraldGreen,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            // 2. Row: CVV Number and Expiry (MM/YY)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: cvvCtrl,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 4,
+                                    obscureText: true,
+                                    onChanged: (_) => setModalState(() {}),
+                                    decoration: InputDecoration(
+                                      counterText: '',
+                                      labelText: 'CVV Number',
+                                      hintText: '3 digits',
+                                      prefixIcon: const Icon(
+                                        Icons.lock_outline,
+                                        color: _brandBlue,
+                                        size: 20,
+                                      ),
+                                      suffixIcon: cvvCtrl.text.length >= 3
+                                          ? const Icon(
+                                              Icons.check_circle,
+                                              color: _emeraldGreen,
+                                              size: 18,
+                                            )
+                                          : null,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    controller: expiryCtrl,
+                                    keyboardType: TextInputType.datetime,
+                                    maxLength: 5,
+                                    onChanged: (val) {
+                                      if (val.length == 2 && !val.contains('/')) {
+                                        expiryCtrl.text = '$val/';
+                                        expiryCtrl.selection = TextSelection.fromPosition(
+                                          TextPosition(offset: expiryCtrl.text.length),
+                                        );
+                                      }
+                                      setModalState(() {});
+                                    },
+                                    decoration: InputDecoration(
+                                      counterText: '',
+                                      labelText: 'Expiry (MM/YY)',
+                                      hintText: 'MM/YY (e.g. 10/28)',
+                                      prefixIcon: const Icon(
+                                        Icons.calendar_month_outlined,
+                                        color: _brandBlue,
+                                      ),
+                                      suffixIcon: RegExp(r'^(0[1-9]|1[0-2])\/?([0-9]{2})$').hasMatch(expiryCtrl.text.trim())
+                                          ? const Icon(
+                                              Icons.check_circle,
+                                              color: _emeraldGreen,
+                                              size: 18,
+                                            )
+                                          : null,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            // 3. Card Type Dropdown
                             DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: selectedCard,
+                              value: selectedCardType,
+                              hint: const Text(
+                                'Select Card Type',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _slateGrey,
+                                ),
+                              ),
                               decoration: InputDecoration(
-                                labelText: 'Credit Card Issuer & Variant',
+                                labelText: 'Card Type',
                                 prefixIcon: const Icon(
-                                  Icons.credit_card_outlined,
+                                  Icons.payment,
                                   color: _brandBlue,
+                                  size: 20,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              items: popularCards
+                              items: cardTypeOptions
                                   .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
+                                    (t) => DropdownMenuItem(
+                                      value: t,
                                       child: Text(
-                                        c,
+                                        t,
+                                        style: const TextStyle(fontSize: 12),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -1285,48 +2298,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   .toList(),
                               onChanged: (v) {
                                 if (v != null) {
-                                  setModalState(() {
-                                    selectedCard = v;
-                                    if (v.contains('HDFC')) {
-                                      selectedIssuedBank = 'HDFC Bank';
-                                    } else if (v.contains('ICICI')) {
-                                      selectedIssuedBank = 'ICICI Bank';
-                                    } else if (v.contains('SBI')) {
-                                      selectedIssuedBank =
-                                          'State Bank of India';
-                                    } else if (v.contains('Axis')) {
-                                      selectedIssuedBank = 'Axis Bank';
-                                    } else if (v.contains('Kotak')) {
-                                      selectedIssuedBank =
-                                          'Kotak Mahindra Bank';
-                                    } else if (v.contains('American Express')) {
-                                      selectedIssuedBank = 'American Express';
-                                      selectedCardType = 'American Express';
-                                    }
-                                  });
+                                  setModalState(() => selectedCardType = v);
                                 }
                               },
                             ),
-                            if (selectedCard == 'Other Credit Card') ...[
-                              const SizedBox(height: 14),
-                              TextField(
-                                controller: otherCardCtrl,
-                                onChanged: (_) => setModalState(() {}),
-                                decoration: InputDecoration(
-                                  labelText: 'Other Credit Card Name & Variant',
-                                  hintText:
-                                      'e.g. OneCard, Standard Chartered Ultimate, IndusInd',
-                                  prefixIcon: const Icon(
-                                    Icons.credit_card,
-                                    color: _brandBlue,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ],
                             const SizedBox(height: 14),
+                            // 4. Holder Name
                             TextField(
                               controller: holderNameCtrl,
                               onChanged: (_) => setModalState(() {}),
@@ -1343,83 +2320,469 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               ),
                             ),
                             const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    value: selectedIssuedBank,
-                                    decoration: InputDecoration(
-                                      labelText: 'Issued Bank',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    items: issuedBankOptions
-                                        .map(
-                                          (b) => DropdownMenuItem(
-                                            value: b,
-                                            child: BankNameWithLogo(
-                                              bankName: b,
-                                              logoSize: 18,
-                                              textStyle: const TextStyle(
-                                                fontSize: 12,
+                            // Searchable Expandable Issued Bank Dropdown
+                            Builder(
+                              builder: (context) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Bank Dropdown Header / Selector Trigger
+                                    InkWell(
+                                      onTap: () {
+                                        setModalState(() {
+                                          isBankDropdownOpen =
+                                              !isBankDropdownOpen;
+                                          if (isBankDropdownOpen) {
+                                            isCardDropdownOpen = false;
+                                          }
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: isBankDropdownOpen
+                                              ? const BorderRadius.vertical(
+                                                  top: Radius.circular(12),
+                                                )
+                                              : BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isBankDropdownOpen
+                                                ? _brandBlue
+                                                : const Color(0xFFCBD5E1),
+                                            width: isBankDropdownOpen ? 1.5 : 1.0,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: isBankDropdownOpen
+                                                  ? _brandBlue.withOpacity(0.08)
+                                                  : Colors.black.withOpacity(0.03),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            if (selectedIssuedBank != null &&
+                                                selectedIssuedBank != 'Others')
+                                              BankLogo(
+                                                bankName: selectedIssuedBank!,
+                                                size: 24,
+                                                showBorder: true,
+                                              )
+                                            else
+                                              Container(
+                                                width: 38,
+                                                height: 28,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEFF6FF),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                alignment: Alignment.center,
+                                                child: const Icon(
+                                                  Icons.account_balance_outlined,
+                                                  color: _brandBlue,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text(
+                                                    'Issued Bank',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: _slateGrey,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    selectedIssuedBank ??
+                                                        'Select Issuing Bank',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          selectedIssuedBank !=
+                                                                  null
+                                                              ? FontWeight.w600
+                                                              : FontWeight
+                                                                  .normal,
+                                                      color:
+                                                          selectedIssuedBank !=
+                                                                  null
+                                                              ? _navyDark
+                                                              : _slateGrey,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: (v) {
-                                      if (v != null) {
-                                        setModalState(
-                                          () => selectedIssuedBank = v,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 5,
-                                  child: DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    value: selectedCardType,
-                                    decoration: InputDecoration(
-                                      labelText: 'Card Type',
-                                      prefixIcon: const Icon(
-                                        Icons.payment,
-                                        color: _brandBlue,
-                                        size: 20,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                            Icon(
+                                              isBankDropdownOpen
+                                                  ? Icons.keyboard_arrow_up
+                                                  : Icons.keyboard_arrow_down,
+                                              color: _navyDark,
+                                              size: 22,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                    items: cardTypeOptions
-                                        .map(
-                                          (t) => DropdownMenuItem(
-                                            value: t,
-                                            child: Text(
-                                              t,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+
+                                    // Dropdown Body with Search Bar & Bank List
+                                    if (isBankDropdownOpen)
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                            bottom: Radius.circular(12),
                                           ),
-                                        )
-                                        .toList(),
-                                    onChanged: (v) {
-                                      if (v != null) {
-                                        setModalState(
-                                          () => selectedCardType = v,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
+                                          border: Border.all(
+                                            color: _brandBlue,
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.08),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Search Bar at the top of the bank dropdown
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(
+                                                10,
+                                                10,
+                                                10,
+                                                6,
+                                              ),
+                                              child: TextField(
+                                                controller: bankSearchCtrl,
+                                                onChanged: (_) =>
+                                                    setModalState(() {}),
+                                                decoration: InputDecoration(
+                                                  isDense: true,
+                                                  contentPadding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 9,
+                                                  ),
+                                                  labelText: 'Search Banks',
+                                                  hintText:
+                                                      'Search by bank name (e.g. HDFC, SBI, ICICI)...',
+                                                  hintStyle: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: _slateGrey,
+                                                  ),
+                                                  prefixIcon: const Icon(
+                                                    Icons.search,
+                                                    size: 18,
+                                                    color: _brandBlue,
+                                                  ),
+                                                  suffixIcon: bankSearchCtrl
+                                                          .text.isNotEmpty
+                                                      ? IconButton(
+                                                          icon: const Icon(
+                                                            Icons.clear,
+                                                            size: 16,
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          constraints:
+                                                              const BoxConstraints(),
+                                                          onPressed: () {
+                                                            bankSearchCtrl
+                                                                .clear();
+                                                            setModalState(
+                                                              () {},
+                                                            );
+                                                          },
+                                                        )
+                                                      : null,
+                                                  filled: true,
+                                                  fillColor: const Color(
+                                                    0xFFF8FAFC,
+                                                  ),
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: Color(0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      8,
+                                                    ),
+                                                    borderSide:
+                                                        const BorderSide(
+                                                      color: _brandBlue,
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(height: 4),
+                                            // Scrollable List of Banks
+                                            ConstrainedBox(
+                                              constraints:
+                                                  const BoxConstraints(
+                                                maxHeight: 210,
+                                              ),
+                                              child: filteredBanks.isEmpty
+                                                  ? Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                        16,
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          const Text(
+                                                            'No matching banks found',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: _slateGrey,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 6,
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () {
+                                                              setModalState(() {
+                                                                selectedIssuedBank =
+                                                                    'Others';
+                                                                isBankDropdownOpen =
+                                                                    false;
+                                                                bankSearchCtrl
+                                                                    .clear();
+                                                              });
+                                                            },
+                                                            child: const Text(
+                                                              'Select Other Bank',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color:
+                                                                    _brandBlue,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Scrollbar(
+                                                      controller:
+                                                          bankScrollCtrl,
+                                                      child: ListView.separated(
+                                                        key: const Key(
+                                                          'dropdown_banks_list',
+                                                        ),
+                                                        controller:
+                                                          bankScrollCtrl,
+                                                        shrinkWrap: true,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 4,
+                                                        ),
+                                                        itemCount:
+                                                            filteredBanks.length,
+                                                        separatorBuilder:
+                                                            (_, __) =>
+                                                                const Divider(
+                                                          height: 1,
+                                                          color: Color(
+                                                            0xFFF1F5F9,
+                                                          ),
+                                                        ),
+                                                        itemBuilder:
+                                                            (ctx, index) {
+                                                          final bank =
+                                                              filteredBanks[
+                                                                  index];
+                                                          final isSelected =
+                                                              bank ==
+                                                                  selectedIssuedBank;
+
+                                                          return InkWell(
+                                                            onTap: () {
+                                                              setModalState(() {
+                                                                selectedIssuedBank =
+                                                                    bank;
+                                                                isBankDropdownOpen =
+                                                                    false;
+                                                                bankSearchCtrl
+                                                                    .clear();
+                                                              });
+                                                            },
+                                                            child: Container(
+                                                              color: isSelected
+                                                                  ? const Color(
+                                                                      0xFFEFF6FF,
+                                                                    )
+                                                                  : Colors
+                                                                      .transparent,
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                horizontal: 12,
+                                                                vertical: 8,
+                                                              ),
+                                                              child: Row(
+                                                                children: [
+                                                                  if (bank !=
+                                                                      'Others')
+                                                                    BankLogo(
+                                                                      bankName:
+                                                                          bank,
+                                                                      size: 24,
+                                                                      showBorder:
+                                                                          true,
+                                                                    )
+                                                                  else
+                                                                    Container(
+                                                                      width: 24,
+                                                                      height:
+                                                                          24,
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: const Color(
+                                                                          0xFFF1F5F9,
+                                                                        ),
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(6),
+                                                                        border:
+                                                                            Border.all(
+                                                                          color: const Color(
+                                                                            0xFFCBD5E1,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      alignment:
+                                                                          Alignment.center,
+                                                                      child:
+                                                                          const Icon(
+                                                                        Icons
+                                                                            .add,
+                                                                        size:
+                                                                            14,
+                                                                        color:
+                                                                            _brandBlue,
+                                                                      ),
+                                                                    ),
+                                                                  const SizedBox(
+                                                                    width: 10,
+                                                                  ),
+                                                                  Expanded(
+                                                                    child:
+                                                                        Column(
+                                                                      crossAxisAlignment:
+                                                                          CrossAxisAlignment
+                                                                              .start,
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        Text(
+                                                                          bank,
+                                                                          style:
+                                                                              TextStyle(
+                                                                            fontSize:
+                                                                                13,
+                                                                            fontWeight:
+                                                                                isSelected
+                                                                                    ? FontWeight.bold
+                                                                                    : FontWeight.w600,
+                                                                            color:
+                                                                                isSelected
+                                                                                    ? _brandBlue
+                                                                                    : _navyDark,
+                                                                          ),
+                                                                        ),
+                                                                        const SizedBox(
+                                                                          height:
+                                                                              1,
+                                                                        ),
+                                                                        Text(
+                                                                          getBankSubtitle(
+                                                                            bank,
+                                                                          ),
+                                                                          style:
+                                                                              const TextStyle(
+                                                                            fontSize:
+                                                                                10,
+                                                                            color:
+                                                                                _slateGrey,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                  if (isSelected)
+                                                                    const Icon(
+                                                                      Icons
+                                                                          .check_circle,
+                                                                      color:
+                                                                          _brandBlue,
+                                                                      size: 18,
+                                                                    ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                             if (selectedIssuedBank == 'Others') ...[
                               const SizedBox(height: 14),
@@ -1440,159 +2803,62 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               ),
                             ],
                             const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: last4Ctrl,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 4,
-                                    decoration: InputDecoration(
-                                      counterText: '',
-                                      labelText: 'Last 4 Digits',
-                                      hintText: 'e.g. 8842',
-                                      prefixIcon: const Icon(
-                                        Icons.password,
-                                        color: _brandBlue,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                            // 7. Link Bank Account (For both Credit & Debit Cards)
+                            DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              value: selectedLinkedAccount,
+                              decoration: InputDecoration(
+                                labelText: 'Link Bank Account',
+                                prefixIcon: const Icon(
+                                  Icons.account_balance_outlined,
+                                  color: _brandBlue,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items: linkedAccountOptions
+                                  .map(
+                                    (acc) => DropdownMenuItem(
+                                      value: acc,
+                                      child: Text(
+                                        acc,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: expiryCtrl,
-                                    keyboardType: TextInputType.datetime,
-                                    maxLength: 5,
-                                    onChanged: (val) {
-                                      if (val.length == 2 &&
-                                          !val.contains('/')) {
-                                        expiryCtrl.text = '$val/';
-                                        expiryCtrl.selection =
-                                            TextSelection.fromPosition(
-                                              TextPosition(
-                                                offset: expiryCtrl.text.length,
-                                              ),
-                                            );
-                                      }
-                                      setModalState(() {});
-                                    },
-                                    decoration: InputDecoration(
-                                      counterText: '',
-                                      labelText: 'Expiry (MM/YY)',
-                                      hintText: 'MM/YY (e.g. 10/28)',
-                                      prefixIcon: const Icon(
-                                        Icons.calendar_month_outlined,
-                                        color: _brandBlue,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v != null) {
+                                  setModalState(
+                                    () => selectedLinkedAccount = v,
+                                  );
+                                }
+                              },
                             ),
+                            if (selectedLinkedAccount ==
+                                'Other Linked Account') ...[
+                              const SizedBox(height: 14),
+                              TextField(
+                                controller: otherLinkedAccountCtrl,
+                                onChanged: (_) => setModalState(() {}),
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Other Linked Account Number / Details',
+                                  hintText: 'e.g. Savings A/C ••9812',
+                                  prefixIcon: const Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    color: _brandBlue,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: limitCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Total Limit (₹)',
-                                      hintText: 'e.g. 300000',
-                                      prefixIcon: const Icon(
-                                        Icons.account_balance_wallet_outlined,
-                                        color: _brandBlue,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: outstandingCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Outstanding (₹)',
-                                      hintText: 'e.g. 34500',
-                                      prefixIcon: const Icon(
-                                        Icons.receipt_long_outlined,
-                                        color: Color(0xFFEF4444),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    value: selectedDueDate,
-                                    decoration: InputDecoration(
-                                      labelText: 'Statement Due Date',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                    items: dueDates
-                                        .map(
-                                          (d) => DropdownMenuItem(
-                                            value: d,
-                                            child: Text(
-                                              d,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: (v) {
-                                      if (v != null) {
-                                        setModalState(
-                                          () => selectedDueDate = v,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: rewardCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: 'Reward Points (Optional)',
-                                      hintText: 'e.g. 4500',
-                                      prefixIcon: const Icon(
-                                        Icons.stars_outlined,
-                                        color: Color(0xFFF59E0B),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
+                            // Security & Compliance encryption note
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -1602,18 +2868,20 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   color: const Color(0xFFBFDBFE),
                                 ),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.shield_outlined,
                                     size: 16,
                                     color: _brandBlue,
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Card data is tracked for Credit Utilization analytics and timely payment alerts. CVV and Card PIN are NEVER stored.',
-                                      style: TextStyle(
+                                      !isDebit
+                                          ? 'Credit card details are 256-bit AES encrypted for portfolio tracking and bill alerts. CVV and Card PIN are NEVER stored.'
+                                          : 'Debit card details are 256-bit AES encrypted for account link and balance security. CVV and ATM PIN are NEVER stored.',
+                                      style: const TextStyle(
                                         fontSize: 10,
                                         color: Color(0xFF1E3A8A),
                                         fontWeight: FontWeight.w500,
@@ -1639,23 +2907,77 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           ),
                         ),
                         onPressed: () {
-                          final enteredOther = otherCardCtrl.text.trim();
-                          if (selectedCard == 'Other Credit Card' &&
-                              enteredOther.isEmpty) {
+                          if (!isDebit) {
+                            if (selectedCard == null) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select a credit card variant',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+                            final enteredOther = otherCardCtrl.text.trim();
+                            if (selectedCard == 'Other Credit Card' &&
+                                enteredOther.isEmpty) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter your credit card name',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+                          } else {
+                            if (selectedDebitCard == null) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please select a debit card variant',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+                            final enteredOtherDebit =
+                                otherDebitCardCtrl.text.trim();
+                            if (selectedDebitCard == 'Other Debit Card' &&
+                                enteredOtherDebit.isEmpty) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please enter your debit card name',
+                                  ),
+                                  backgroundColor: Color(0xFFEF4444),
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          if (selectedIssuedBank == null ||
+                              selectedIssuedBank!.trim().isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  'Please enter your credit card name',
-                                ),
+                                content: Text('Please select an issuing bank'),
                                 backgroundColor: Color(0xFFEF4444),
                               ),
                             );
                             return;
                           }
 
-                          final enteredOtherBank = otherIssuedBankCtrl.text
-                              .trim();
+                          final enteredOtherBank =
+                              otherIssuedBankCtrl.text.trim();
                           if (selectedIssuedBank == 'Others' &&
                               enteredOtherBank.isEmpty) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -1668,63 +2990,103 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                             return;
                           }
 
-                          final cardName = selectedCard == 'Other Credit Card'
-                              ? enteredOther
-                              : selectedCard;
+                          final cleanCardDigits = cardNumberCtrl.text.replaceAll(RegExp(r'\D'), '');
+                          if (cleanCardDigits.isNotEmpty && cleanCardDigits.length < 12) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Card Number must be at least 12 digits (entered ${cleanCardDigits.length} digits)',
+                                ),
+                                backgroundColor: const Color(0xFFEF4444),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final cvvDigits = cvvCtrl.text.replaceAll(RegExp(r'\D'), '');
+                          if (cvvDigits.isNotEmpty && cvvDigits.length < 3) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('CVV Number must be at least 3 digits'),
+                                backgroundColor: Color(0xFFEF4444),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final cardName = !isDebit
+                              ? (selectedCard == 'Other Credit Card'
+                                  ? otherCardCtrl.text.trim()
+                                  : selectedCard!)
+                              : (selectedDebitCard == 'Other Debit Card'
+                                  ? otherDebitCardCtrl.text.trim()
+                                  : selectedDebitCard!);
+
                           final finalIssuedBank = selectedIssuedBank == 'Others'
                               ? enteredOtherBank
-                              : selectedIssuedBank;
+                              : selectedIssuedBank!;
+                          final finalCardType = selectedCardType ?? 'Visa';
                           final holder = holderNameCtrl.text.trim().isEmpty
                               ? 'Sireesha Bandaru'
                               : holderNameCtrl.text.trim();
                           final expiry = expiryCtrl.text.trim().isEmpty
                               ? '10/28'
                               : expiryCtrl.text.trim();
+                          final last4 = cleanCardDigits.length >= 4
+                              ? cleanCardDigits.substring(cleanCardDigits.length - 4)
+                              : (last4Ctrl.text.trim().isNotEmpty
+                                  ? last4Ctrl.text.trim()
+                                  : '4567');
+                          final finalCardNum = cardNumberCtrl.text.trim().isNotEmpty
+                              ? cardNumberCtrl.text.trim()
+                              : '5010 4329 $last4';
+                          final finalCvv = cvvCtrl.text.trim().isNotEmpty
+                              ? cvvCtrl.text.trim()
+                              : '884';
 
-                          final last4 = last4Ctrl.text.trim();
-                          if (last4.isEmpty) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please enter the last 4 digits of your credit card',
-                                ),
-                                backgroundColor: Color(0xFFEF4444),
-                              ),
-                            );
-                            return;
-                          }
-                          final limitVal =
-                              double.tryParse(
-                                limitCtrl.text.trim().replaceAll(',', ''),
-                              ) ??
-                              100000.0;
-                          final outstandingVal =
-                              double.tryParse(
-                                outstandingCtrl.text.trim().replaceAll(',', ''),
-                              ) ??
-                              0.0;
-                          final rewards =
-                              int.tryParse(rewardCtrl.text.trim()) ?? 0;
+                          final limitVal = existingCard?.creditLimit ?? 300000.0;
+                          final outstandingVal = existingCard?.outstandingBalance ?? 0.0;
+                          final atmLimitVal = existingCard?.dailyAtmLimit ?? 50000.0;
+                          final posLimitVal = existingCard?.dailyPosLimit ?? 100000.0;
+                          final rewards = existingCard?.rewardPoints ?? 1200;
+                          final linkedAcc = selectedLinkedAccount ==
+                                      'Other Linked Account' &&
+                                  otherLinkedAccountCtrl.text.trim().isNotEmpty
+                              ? otherLinkedAccountCtrl.text.trim()
+                              : selectedLinkedAccount;
 
                           if (existingCard != null) {
                             final updated = existingCard.copyWith(
                               cardName: cardName,
+                              cardNumber: finalCardNum,
+                              cvv: finalCvv,
                               last4Digits: last4,
-                              creditLimit: limitVal,
-                              outstandingBalance: outstandingVal,
-                              availableCredit: (limitVal - outstandingVal)
-                                  .clamp(0.0, double.infinity),
-                              statementDueDate: selectedDueDate,
-                              minimumDue: (outstandingVal * 0.05).clamp(
-                                0.0,
-                                double.infinity,
-                              ),
+                              creditLimit: isDebit ? 0.0 : limitVal,
+                              outstandingBalance:
+                                  isDebit ? 0.0 : outstandingVal,
+                              availableCredit: isDebit
+                                  ? 0.0
+                                  : (limitVal - outstandingVal)
+                                      .clamp(0.0, double.infinity),
+                              statementDueDate:
+                                  isDebit ? 'N/A' : selectedDueDate,
+                              minimumDue: isDebit
+                                  ? 0.0
+                                  : (outstandingVal * 0.05).clamp(
+                                      0.0,
+                                      double.infinity,
+                                    ),
                               rewardPoints: rewards,
                               cardHolderName: holder,
                               issuedBank: finalIssuedBank,
-                              cardType: selectedCardType,
+                              cardType: finalCardType,
                               expiryDate: expiry,
+                              isDebit: isDebit,
+                              dailyAtmLimit: isDebit ? atmLimitVal : null,
+                              dailyPosLimit: isDebit ? posLimitVal : null,
+                              linkedAccount: linkedAcc,
                             );
                             ref
                                 .read(bankAggregationProvider.notifier)
@@ -1744,26 +3106,38 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                 .read(bankAggregationProvider.notifier)
                                 .addCreditCardItem(
                                   cardName: cardName,
+                                  cardNumber: finalCardNum,
+                                  cvv: finalCvv,
                                   last4Digits: last4,
-                                  creditLimit: limitVal,
-                                  outstandingBalance: outstandingVal,
-                                  statementDueDate: selectedDueDate,
-                                  minimumDue: (outstandingVal * 0.05).clamp(
-                                    0.0,
-                                    double.infinity,
-                                  ),
+                                  creditLimit: isDebit ? 0.0 : limitVal,
+                                  outstandingBalance:
+                                      isDebit ? 0.0 : outstandingVal,
+                                  statementDueDate:
+                                      isDebit ? 'N/A' : selectedDueDate,
+                                  minimumDue: isDebit
+                                      ? 0.0
+                                      : (outstandingVal * 0.05).clamp(
+                                          0.0,
+                                          double.infinity,
+                                        ),
                                   rewardPoints: rewards,
                                   holderName: holder,
                                   issuedBank: finalIssuedBank,
-                                  cardType: selectedCardType,
+                                  cardType: finalCardType,
                                   expiryDate: expiry,
+                                  isDebit: isDebit,
+                                  dailyAtmLimit: isDebit ? atmLimitVal : null,
+                                  dailyPosLimit: isDebit ? posLimitVal : null,
+                                  linkedAccount: linkedAcc,
                                 );
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  '$cardName added to Credit Cards!',
+                                  !isDebit
+                                      ? '$cardName added to Credit Cards!'
+                                      : '$cardName added to Debit Cards!',
                                 ),
                                 backgroundColor: _emeraldGreen,
                               ),
@@ -1772,8 +3146,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                         },
                         child: Text(
                           existingCard != null
-                              ? 'Update Credit Card'
-                              : 'Add Credit Card to Portfolio',
+                              ? (isDebit
+                                  ? 'Update Debit Card'
+                                  : 'Update Credit Card')
+                              : (isDebit
+                                  ? 'Add Debit Card to Portfolio'
+                                  : 'Add Credit Card to Portfolio'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -1783,365 +3161,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                     ),
                   ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAddUpiModal(BuildContext context, {UpiAccountItem? existingUpi}) {
-    final upiCtrl = TextEditingController(text: existingUpi?.upiId ?? '');
-    final otherUpiCtrl = TextEditingController();
-    final otherBankCtrl = TextEditingController();
-    String selectedProvider = existingUpi?.provider ?? 'Google Pay';
-    String selectedBank = existingUpi?.linkedBank ?? 'State Bank of India';
-
-    final upiProviders = [
-      'Google Pay',
-      'PhonePe',
-      'Paytm UPI',
-      'BHIM UPI',
-      'Amazon Pay UPI',
-      'CRED UPI',
-      'WhatsApp Pay',
-      'Tata Pay',
-      'Other UPI',
-    ];
-
-    final bankOptions = [
-      'State Bank of India',
-      'HDFC Bank',
-      'ICICI Bank',
-      'Axis Bank',
-      'Kotak Mahindra Bank',
-      'Punjab National Bank',
-      'Bank of Baroda',
-      'Canara Bank',
-      'Union Bank of India',
-      'IndusInd Bank',
-      'Federal Bank',
-      'IDFC FIRST Bank',
-      'Others',
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return SafeArea(
-              child: Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(ctx).size.height * 0.90,
-                ),
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.qr_code_2,
-                              color: _brandBlue,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  existingUpi != null
-                                      ? 'Edit UPI Account'
-                                      : 'Link New UPI Account & VPA',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: _navyDark,
-                                  ),
-                                ),
-                                Text(
-                                  existingUpi != null
-                                      ? 'Update UPI VPA details (FAA-SEC-03)'
-                                      : 'NPCI Unified Payments Interface Aggregation (FAA-SEC-03)',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: _slateGrey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: upiCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'UPI ID (Virtual Payment Address)',
-                          hintText: 'e.g. mobile@okhdfcbank',
-                          prefixIcon: const Icon(
-                            Icons.alternate_email,
-                            color: _brandBlue,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: selectedProvider,
-                        decoration: InputDecoration(
-                          labelText: 'UPI App Provider',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        items: upiProviders
-                            .map(
-                              (p) => DropdownMenuItem(
-                                value: p,
-                                child: BankNameWithLogo(
-                                  bankName: p,
-                                  logoSize: 20,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setModalState(() => selectedProvider = v);
-                          }
-                        },
-                      ),
-                      if (selectedProvider == 'Other UPI' ||
-                          selectedProvider == 'Tata Pay / Other UPI') ...[
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: otherUpiCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Other UPI App / Provider Name',
-                            hintText: 'e.g. Navi, CRED, Super.money, Tata Neu',
-                            prefixIcon: const Icon(
-                              Icons.apps_outlined,
-                              color: _brandBlue,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: selectedBank,
-                        decoration: InputDecoration(
-                          labelText: 'Underlying Linked Bank Account',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        items: bankOptions
-                            .map(
-                              (b) => DropdownMenuItem(
-                                value: b,
-                                child: BankNameWithLogo(
-                                  bankName: b,
-                                  logoSize: 20,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setModalState(() => selectedBank = v);
-                          }
-                        },
-                      ),
-                      if (selectedBank == 'Others' ||
-                          selectedBank == 'Other Bank') ...[
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: otherBankCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Other Linked Bank Name',
-                            hintText:
-                                'e.g. Standard Chartered, Yes Bank, RBL Bank',
-                            prefixIcon: const Icon(
-                              Icons.account_balance_outlined,
-                              color: _brandBlue,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _brandBlue,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            final text = upiCtrl.text.trim();
-                            if (text.isEmpty) {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter a valid UPI ID (e.g. name@bank)',
-                                  ),
-                                  backgroundColor: Color(0xFFEF4444),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final isOtherUpi =
-                                selectedProvider == 'Other UPI' ||
-                                selectedProvider == 'Tata Pay / Other UPI';
-                            final enteredOtherUpi = otherUpiCtrl.text.trim();
-                            if (isOtherUpi && enteredOtherUpi.isEmpty) {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter your UPI app / provider name',
-                                  ),
-                                  backgroundColor: Color(0xFFEF4444),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final isOtherBank =
-                                selectedBank == 'Others' ||
-                                selectedBank == 'Other Bank';
-                            final enteredOtherBank = otherBankCtrl.text.trim();
-                            if (isOtherBank && enteredOtherBank.isEmpty) {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please enter your linked bank name',
-                                  ),
-                                  backgroundColor: Color(0xFFEF4444),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final providerName = isOtherUpi
-                                ? enteredOtherUpi
-                                : selectedProvider;
-                            final bankName = isOtherBank
-                                ? enteredOtherBank
-                                : selectedBank;
-
-                            if (existingUpi != null) {
-                              final updated = existingUpi.copyWith(
-                                upiId: text,
-                                provider: providerName,
-                                linkedBank: bankName,
-                              );
-                              ref
-                                  .read(bankAggregationProvider.notifier)
-                                  .updateUpiAccount(updated);
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'UPI account $text updated successfully!',
-                                  ),
-                                  backgroundColor: _emeraldGreen,
-                                ),
-                              );
-                            } else {
-                              ref
-                                  .read(bankAggregationProvider.notifier)
-                                  .addUpiAccount(text, providerName, bankName);
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(
-                                context,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'UPI account $text linked successfully!',
-                                  ),
-                                  backgroundColor: _emeraldGreen,
-                                ),
-                              );
-                            }
-                          },
-                          child: Text(
-                            existingUpi != null
-                                ? 'Update UPI ID'
-                                : 'Verify & Link UPI ID',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             );
@@ -2315,8 +3334,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   )
                                   .toList(),
                               onChanged: (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setModalState(() => selectedLoanType = v);
+                                }
                               },
                             ),
                             const SizedBox(height: 14),
@@ -2341,8 +3361,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   )
                                   .toList(),
                               onChanged: (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setModalState(() => selectedLender = v);
+                                }
                               },
                             ),
                             if (selectedLender == 'Others') ...[
@@ -2712,8 +3733,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   )
                                   .toList(),
                               onChanged: (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setModalState(() => selectedAssetType = v);
+                                }
                               },
                             ),
                             const SizedBox(height: 14),
@@ -3112,8 +4134,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   )
                                   .toList(),
                               onChanged: (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setModalState(() => selectedPolicyType = v);
+                                }
                               },
                             ),
                             const SizedBox(height: 14),
@@ -3138,8 +4161,9 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                   )
                                   .toList(),
                               onChanged: (v) {
-                                if (v != null)
+                                if (v != null) {
                                   setModalState(() => selectedProvider = v);
+                                }
                               },
                             ),
                             if (selectedProvider == 'Others') ...[
@@ -3360,29 +4384,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-  Widget _buildConsentBullet(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.check_circle_outline,
-            size: 14,
-            color: _emeraldGreen,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF334155)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(bankAggregationProvider);
@@ -3412,7 +4413,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bank & Aggregation',
+                    'Bank Aggregation',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
@@ -3448,7 +4449,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Synchronizing bank accounts, UPI, cards & investments...',
+                          'Synchronizing bank accounts, cards & investments...',
                         ),
                         backgroundColor: _brandBlue,
                         duration: Duration(milliseconds: 1500),
@@ -3466,51 +4467,39 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 2. SECTION 12: Aggregated Financial Position & Net Worth Hero Dashboard
+            // 1. Aggregated Financial Position & Net Worth Hero Dashboard
             _buildAggregatedFinancialDashboard(state),
             const SizedBox(height: 14),
 
-            // 3. Quick Category Filter Tabs
+            // 2. Quick Category Filter Tabs
             _buildCategoryFilterTabs(state),
             const SizedBox(height: 16),
 
-            // 5. SECTION 2: Connected Bank Accounts
+            // 3. Connected Bank Accounts (FAA-SEC-02)
             _buildBankAccountsSection(context, state),
             const SizedBox(height: 16),
 
-            // 6. SECTION 3: UPI Account Aggregation
-            _buildUpiAccountsSection(context, state),
-            const SizedBox(height: 16),
-
-            // 7. SECTION 4: Credit Card Liabilities
+            // 4. Credit & Debit Cards (FAA-SEC-04)
             _buildCreditCardsSection(context, state),
             const SizedBox(height: 16),
 
-            // 8. SECTION 5: Loan Account Aggregation
+            // 5. Loan Account Aggregation (FAA-SEC-05)
             _buildLoansSection(context, state),
             const SizedBox(height: 16),
 
-            // 9. SECTION 6 & 9: Investments & Retirement Aggregation
+            // 6. Investments & Retirement Aggregation (FAA-SEC-06 & 09)
             _buildInvestmentsSection(context, state),
             const SizedBox(height: 16),
 
-            // 10. SECTION 7: Insurance Policy Aggregation
+            // 7. Insurance Protection Coverage (FAA-SEC-07)
             _buildInsuranceSection(context, state),
             const SizedBox(height: 16),
 
-            // 11. SECTION 8: Digital Wallets Aggregation
-            _buildWalletsSection(state),
-            const SizedBox(height: 16),
-
-            // 12. SECTION 11: RBI Account Aggregator Consent Management
-            _buildConsentManagementSection(context, state),
-            const SizedBox(height: 16),
-
-            // 14. Recent Ingested Transactions
+            // 8. Recent Ingested Transactions
             _buildRecentTransactionsSection(state),
             const SizedBox(height: 16),
 
-            // 15. Security & Regulatory Compliance Footer
+            // 9. Security & Regulatory Compliance Footer
             _buildSecurityFooter(),
             const SizedBox(height: 24),
           ],
@@ -3734,15 +4723,12 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
 
   Widget _buildCategoryFilterTabs(BankAggregationState state) {
     final tabs = [
-      'All (${state.bankAccounts.length + state.upiAccounts.length + state.creditCards.length + state.loans.length})',
+      'All (${state.bankAccounts.length + state.creditCards.length + state.loans.length})',
       'Banks (${state.bankAccounts.length})',
-      'UPI (${state.upiAccounts.length})',
       'Cards (${state.creditCards.length})',
       'Loans (${state.loans.length})',
       'Investments (${state.investments.length})',
       'Insurance (${state.insurancePolicies.length})',
-      'Wallets (${state.wallets.length})',
-      'Consents (${state.consents.length})',
     ];
 
     return SingleChildScrollView(
@@ -4127,212 +5113,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     );
   }
 
-  void _showUpiAccountDetails(BuildContext context, UpiAccountItem upi) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCBD5E1),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      BankLogo(
-                        bankName: upi.provider.isNotEmpty
-                            ? upi.provider
-                            : upi.linkedBank,
-                        size: 40,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              upi.upiId,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: _navyDark,
-                              ),
-                            ),
-                            Text(
-                              '${upi.provider} • Linked: ${upi.linkedBank}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: _slateGrey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Active',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: _emeraldGreen,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildDetailRow(
-                          'UPI Virtual Address',
-                          upi.upiId,
-                          Icons.alternate_email,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'App Provider',
-                          upi.provider,
-                          Icons.apps_outlined,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Underlying Linked Bank',
-                          upi.linkedBank,
-                          Icons.account_balance_outlined,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Primary UPI ID',
-                          upi.isPrimary ? 'Yes (Default Mandate)' : 'No',
-                          Icons.star_outline,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Account Status',
-                          upi.status,
-                          Icons.verified_outlined,
-                          isHighlight: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFEF4444),
-                            side: const BorderSide(color: Color(0xFFFCA5A5)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            _confirmDelete(
-                              context: context,
-                              title: 'Delete UPI Account?',
-                              message:
-                                  'Are you sure you want to remove ${upi.upiId} from linked UPI handles?',
-                              onDelete: () {
-                                Navigator.pop(ctx);
-                                ref
-                                    .read(bankAggregationProvider.notifier)
-                                    .deleteUpiAccount(upi.id);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'UPI account ${upi.upiId} deleted successfully',
-                                    ),
-                                    backgroundColor: const Color(0xFFEF4444),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                          icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text(
-                            'Delete',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 6,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _brandBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            _showAddUpiModal(context, existingUpi: upi);
-                          },
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text(
-                            'Edit Details',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _showCreditCardDetails(BuildContext context, CreditCardItem card) {
     showModalBottomSheet(
       context: context,
@@ -4419,42 +5199,80 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           const Divider(height: 20, color: Color(0xFFE2E8F0)),
                         ],
                         _buildDetailRow(
-                          'Credit Limit',
-                          '₹ ${_formatCurrency(card.creditLimit)}',
-                          Icons.credit_score_outlined,
+                          'Card Category',
+                          card.isDebit ? 'Debit Card' : 'Credit Card',
+                          Icons.credit_card,
                         ),
                         const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Outstanding Due',
-                          '₹ ${_formatCurrency(card.outstandingBalance)}',
-                          Icons.payment_outlined,
-                          isHighlight: true,
-                          highlightColor: const Color(0xFFEF4444),
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Available Credit',
-                          '₹ ${_formatCurrency(card.availableCredit)}',
-                          Icons.account_balance_wallet_outlined,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Statement Due Date',
-                          card.statementDueDate,
-                          Icons.calendar_today_outlined,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Minimum Amount Due',
-                          '₹ ${_formatCurrency(card.minimumDue)}',
-                          Icons.warning_amber_outlined,
-                        ),
-                        const Divider(height: 20, color: Color(0xFFE2E8F0)),
-                        _buildDetailRow(
-                          'Reward Points',
-                          '${card.rewardPoints} Pts',
-                          Icons.stars_outlined,
-                        ),
+                        if (!card.isDebit) ...[
+                          _buildDetailRow(
+                            'Credit Limit',
+                            '₹ ${_formatCurrency(card.creditLimit)}',
+                            Icons.credit_score_outlined,
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Outstanding Due',
+                            '₹ ${_formatCurrency(card.outstandingBalance)}',
+                            Icons.payment_outlined,
+                            isHighlight: true,
+                            highlightColor: const Color(0xFFEF4444),
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Available Credit',
+                            '₹ ${_formatCurrency(card.availableCredit)}',
+                            Icons.account_balance_wallet_outlined,
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Statement Due Date',
+                            card.statementDueDate,
+                            Icons.calendar_today_outlined,
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Minimum Amount Due',
+                            '₹ ${_formatCurrency(card.minimumDue)}',
+                            Icons.warning_amber_outlined,
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Reward Points',
+                            '${card.rewardPoints} Pts',
+                            Icons.stars_outlined,
+                          ),
+                        ] else ...[
+                          _buildDetailRow(
+                            'Daily ATM Limit',
+                            '₹ ${_formatCurrency(card.dailyAtmLimit ?? 50000)}',
+                            Icons.local_atm_outlined,
+                          ),
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Daily POS / Online Limit',
+                            '₹ ${_formatCurrency(card.dailyPosLimit ?? 100000)}',
+                            Icons.point_of_sale_outlined,
+                            isHighlight: true,
+                            highlightColor: const Color(0xFF10B981),
+                          ),
+                          if (card.linkedAccount != null) ...[
+                            const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                            _buildDetailRow(
+                              'Linked Bank Account',
+                              card.linkedAccount!,
+                              Icons.account_balance_outlined,
+                            ),
+                          ],
+                          const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                          _buildDetailRow(
+                            'Status',
+                            'Active • Synced',
+                            Icons.check_circle_outline,
+                            isHighlight: true,
+                            highlightColor: const Color(0xFF10B981),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -4475,9 +5293,11 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           onPressed: () {
                             _confirmDelete(
                               context: context,
-                              title: 'Delete Credit Card?',
+                              title: card.isDebit
+                                  ? 'Delete Debit Card?'
+                                  : 'Delete Credit Card?',
                               message:
-                                  'Are you sure you want to remove ${card.cardName} (•••• ${card.last4Digits}) from your credit portfolio?',
+                                  'Are you sure you want to remove ${card.cardName} (•••• ${card.last4Digits}) from your portfolio?',
                               onDelete: () {
                                 Navigator.pop(ctx);
                                 ref
@@ -5457,10 +6277,10 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // SECTION 3: UPI ACCOUNT AGGREGATION
+  // SECTION 4: CREDIT CARD LIABILITIES
   // --------------------------------------------------------------------------
 
-  Widget _buildUpiAccountsSection(
+  Widget _buildCreditCardsSection(
     BuildContext context,
     BankAggregationState state,
   ) {
@@ -5493,7 +6313,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'UPI Accounts & Mandates',
+                      'Credit & Debit Cards',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -5503,240 +6323,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                     ),
                     SizedBox(height: 2),
                     Text(
-                      'GPay, PhonePe, Paytm & BHIM (FAA-SEC-03)',
-                      style: TextStyle(fontSize: 10, color: _slateGrey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () => _showAddUpiModal(context),
-                icon: const Icon(Icons.add, size: 14, color: _brandBlue),
-                label: const Text(
-                  'Add UPI',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: _brandBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Column(
-            children: state.upiAccounts.isEmpty
-                ? [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 20,
-                        horizontal: 16,
-                      ),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _bgCanvas,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _cardBorder),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(
-                            Icons.qr_code_2_outlined,
-                            color: _slateGrey,
-                            size: 28,
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'No UPI accounts linked yet.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _slateGrey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ]
-                : state.upiAccounts.map((upi) {
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _showUpiAccountDetails(context, upi),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _bgCanvas,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _cardBorder),
-                          ),
-                          child: Row(
-                            children: [
-                              BankLogo(
-                                bankName: upi.provider.isNotEmpty
-                                    ? upi.provider
-                                    : upi.linkedBank,
-                                size: 32,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            upi.upiId,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                              color: _navyDark,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (upi.isPrimary) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 5,
-                                              vertical: 1,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _brandBlue.withOpacity(
-                                                0.12,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'Primary',
-                                              style: TextStyle(
-                                                fontSize: 8,
-                                                color: _brandBlue,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${upi.provider} • Linked: ${upi.linkedBank}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: _slateGrey,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF10B981,
-                                  ).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'Active',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: _emeraldGreen,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.chevron_right,
-                                size: 16,
-                                color: _slateGrey,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // SECTION 4: CREDIT CARD LIABILITIES
-  // --------------------------------------------------------------------------
-
-  Widget _buildCreditCardsSection(
-    BuildContext context,
-    BankAggregationState state,
-  ) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 3) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Credit Cards & Limits',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: _navyDark,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Credit Line Tracking & Due Dates (FAA-SEC-04)',
+                      'Credit & Debit Card Tracking & Due Dates (FAA-SEC-04)',
                       style: TextStyle(fontSize: 10, color: _slateGrey),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -5794,7 +6381,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                           ),
                           SizedBox(height: 6),
                           Text(
-                            'No credit cards added yet.',
+                            'No credit or debit cards added yet.',
                             style: TextStyle(
                               fontSize: 12,
                               color: _slateGrey,
@@ -5844,7 +6431,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
-                                          '•••• ${card.last4Digits}${card.cardType != null ? ' • ${card.cardType}' : ''}',
+                                          '•••• ${card.last4Digits}${card.cardType != null ? ' • ${card.cardType}' : ''}${card.cardHolderName != null ? ' • ${card.cardHolderName}' : ''}${card.expiryDate != null ? ' • ${card.expiryDate}' : ''}',
                                           style: const TextStyle(
                                             fontSize: 10,
                                             color: _slateGrey,
@@ -5856,26 +6443,63 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text(
-                                        'Outstanding Due',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          color: _slateGrey,
+                                  if (!card.isDebit) ...[
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        const Text(
+                                          'Outstanding Due',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: _slateGrey,
+                                          ),
+                                        ),
+                                        Text(
+                                          '₹ ${_formatCurrency(card.outstandingBalance)}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFEF4444),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0FDF4),
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFBBF7D0),
                                         ),
                                       ),
-                                      Text(
-                                        '₹ ${_formatCurrency(card.outstandingBalance)}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFEF4444),
-                                        ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            size: 11,
+                                            color: Color(0xFF16A34A),
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Debit Card',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF166534),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                   const SizedBox(width: 4),
                                   const Icon(
                                     Icons.chevron_right,
@@ -5887,78 +6511,160 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                               const SizedBox(height: 10),
                               const Divider(height: 1, color: _cardBorder),
                               const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
+                              if (!card.isDebit) ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Total Limit',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: _slateGrey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹ ${_formatCurrency(card.creditLimit)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: _navyDark,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Available Credit',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: _slateGrey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹ ${_formatCurrency(card.availableCredit)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: _emeraldGreen,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          CrossAxisAlignment.end,
                                       children: [
                                         const Text(
-                                          'Total Limit',
+                                          'Payment Due',
                                           style: TextStyle(
                                             fontSize: 9,
                                             color: _slateGrey,
                                           ),
                                         ),
                                         Text(
-                                          '₹ ${_formatCurrency(card.creditLimit)}',
+                                          card.statementDueDate,
                                           style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
-                                            color: _navyDark,
+                                            color: Color(0xFFD97706),
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: Column(
+                                  ],
+                                ),
+                              ] else ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Daily ATM Limit',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: _slateGrey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹ ${_formatCurrency(card.dailyAtmLimit ?? 50000)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: _navyDark,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Daily POS / Online',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: _slateGrey,
+                                            ),
+                                          ),
+                                          Text(
+                                            '₹ ${_formatCurrency(card.dailyPosLimit ?? 100000)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: _emeraldGreen,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          CrossAxisAlignment.end,
                                       children: [
                                         const Text(
-                                          'Available Credit',
+                                          'Linked A/C',
                                           style: TextStyle(
                                             fontSize: 9,
                                             color: _slateGrey,
                                           ),
                                         ),
                                         Text(
-                                          '₹ ${_formatCurrency(card.availableCredit)}',
+                                          card.linkedAccount != null
+                                              ? (card.linkedAccount!.length > 15
+                                                  ? card.linkedAccount!
+                                                      .substring(0, 15)
+                                                  : card.linkedAccount!)
+                                              : 'Savings A/C',
                                           style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
-                                            color: _emeraldGreen,
+                                            color: Color(0xFF2563EB),
                                           ),
-                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      const Text(
-                                        'Payment Due',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          color: _slateGrey,
-                                        ),
-                                      ),
-                                      Text(
-                                        card.statementDueDate,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFD97706),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -5976,7 +6682,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
   // --------------------------------------------------------------------------
 
   Widget _buildLoansSection(BuildContext context, BankAggregationState state) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 4) {
+    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 3) {
       return const SizedBox.shrink();
     }
 
@@ -6206,7 +6912,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     BuildContext context,
     BankAggregationState state,
   ) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 5) {
+    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 4) {
       return const SizedBox.shrink();
     }
 
@@ -6417,7 +7123,7 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
     BuildContext context,
     BankAggregationState state,
   ) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 6) {
+    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 5) {
       return const SizedBox.shrink();
     }
 
@@ -6612,304 +7318,6 @@ class _BankAggregationScreenState extends ConsumerState<BankAggregationScreen> {
                       ),
                     );
                   }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // SECTION 8: WALLETS
-  // --------------------------------------------------------------------------
-
-  Widget _buildWalletsSection(BankAggregationState state) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 7) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Digital Wallets & Cash Position (FAA-SEC-08)',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: _navyDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: state.wallets.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final w = entry.value;
-              final isLast = idx == state.wallets.length - 1;
-
-              return Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: isLast ? 0 : 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _bgCanvas,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _cardBorder),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              w.walletName,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: _navyDark,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.account_balance_wallet,
-                            size: 14,
-                            color: _brandBlue,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '₹ ${_formatCurrency(w.balance)}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: _brandBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // SECTION 11: CONSENT MANAGEMENT
-  // --------------------------------------------------------------------------
-
-  Widget _buildConsentManagementSection(
-    BuildContext context,
-    BankAggregationState state,
-  ) {
-    if (state.selectedTabIndex != 0 && state.selectedTabIndex != 8) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Consent Management (FAA-SEC-11)',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: _navyDark,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'RBI Regulated Account Aggregator Lifecycle',
-                      style: TextStyle(fontSize: 10, color: _slateGrey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.verified_outlined, color: _brandBlue, size: 20),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Column(
-            children: state.consents.map((consent) {
-              final isActive = consent.status == 'Active';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _bgCanvas,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _cardBorder),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              BankLogo(bankName: consent.institution, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  consent.institution,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _navyDark,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? _emeraldGreen.withOpacity(0.15)
-                                : const Color(0xFFEF4444).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            consent.status,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: isActive
-                                  ? _emeraldGreen
-                                  : const Color(0xFFEF4444),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'ID: ${consent.consentId} • Scope: ${consent.consentType}',
-                      style: const TextStyle(fontSize: 10, color: _slateGrey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      'Valid until: ${consent.expiryDate}',
-                      style: const TextStyle(fontSize: 10, color: _slateGrey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (isActive) ...[
-                          TextButton(
-                            onPressed: () {
-                              ref
-                                  .read(bankAggregationProvider.notifier)
-                                  .revokeConsent(consent.consentId);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Consent revoked for ${consent.institution} (FAA-BR-011)',
-                                  ),
-                                  backgroundColor: const Color(0xFFEF4444),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Revoke Consent',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFFEF4444),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _brandBlue,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              ref
-                                  .read(bankAggregationProvider.notifier)
-                                  .renewConsent(consent.consentId);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Consent renewed for ${consent.institution}!',
-                                  ),
-                                  backgroundColor: _emeraldGreen,
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Renew Consent',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
           ),
         ],
       ),

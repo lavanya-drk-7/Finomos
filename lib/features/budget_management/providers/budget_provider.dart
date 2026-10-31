@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/budget_models.dart';
+import '../services/budget_api_service.dart';
 import '../../expense_tracking/domain/expense_models.dart';
 
 class BudgetNotifier extends Notifier<BudgetState> {
+  final BudgetApiService _apiService = BudgetApiService();
+
   @override
   BudgetState build() {
+    // Schedule background fetch from live backend API
+    Future.microtask(() => loadLiveBudgets());
+
     return const BudgetState(
       budgets: [
         BudgetItem(
@@ -78,17 +84,117 @@ class BudgetNotifier extends Notifier<BudgetState> {
     );
   }
 
-  void addBudget(BudgetItem item) {
-    state = state.copyWith(budgets: [...state.budgets, item]);
+  /// Load live budget summary, list, analytics, active alerts & guardrail settings
+  Future<void> loadLiveBudgets() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final summaryFuture = _apiService.getSummary();
+      final budgetsFuture = _apiService.getBudgets();
+      final alertsFuture = _apiService.getActiveAlerts();
+      final analyticsFuture = _apiService.getUtilizationAnalytics();
+      final guardrailsFuture = _apiService.getGuardrailSettings();
+
+      final results = await Future.wait([
+        summaryFuture,
+        budgetsFuture,
+        alertsFuture,
+        analyticsFuture,
+        guardrailsFuture,
+      ]);
+
+      final summary = results[0] as BudgetSummaryData?;
+      final liveBudgets = results[1] as List<BudgetItem>?;
+      final activeAlerts = results[2] as List<ActiveBudgetAlert>?;
+      final analytics = results[3] as BudgetAnalyticsResponse?;
+      final guardrails = results[4] as GuardrailSettings?;
+
+      state = state.copyWith(
+        budgets: (liveBudgets != null && liveBudgets.isNotEmpty)
+            ? liveBudgets
+            : state.budgets,
+        summary: summary ?? state.summary,
+        activeAlerts: activeAlerts ?? state.activeAlerts,
+        analytics: analytics ?? state.analytics,
+        guardrails: guardrails ?? state.guardrails,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
   }
 
-  void updateBudget(BudgetItem item) {
-    final updated = state.budgets.map((b) => b.id == item.id ? item : b).toList();
-    state = state.copyWith(budgets: updated);
+  /// Create a budget locally and sync to live backend
+  Future<void> addBudget(BudgetItem item) async {
+    state = state.copyWith(budgets: [...state.budgets, item], isSyncing: true);
+
+    try {
+      final created = await _apiService.createBudget(
+        name: item.name,
+        category: item.category,
+        type: item.type,
+        amount: item.amount,
+        period: item.period,
+        alertThreshold: item.alertThreshold,
+        alertsEnabled: item.alertsEnabled,
+      );
+
+      if (created != null) {
+        final updatedBudgets = state.budgets
+            .map((b) => b.id == item.id ? created : b)
+            .toList();
+        state = state.copyWith(budgets: updatedBudgets, isSyncing: false);
+        loadLiveBudgets();
+        return;
+      }
+    } catch (_) {}
+
+    state = state.copyWith(isSyncing: false);
   }
 
-  void deleteBudget(String id) {
-    state = state.copyWith(budgets: state.budgets.where((b) => b.id != id).toList());
+  /// Update a budget locally and sync to live backend
+  Future<void> updateBudget(BudgetItem item) async {
+    final updated = state.budgets
+        .map((b) => b.id == item.id ? item : b)
+        .toList();
+    state = state.copyWith(budgets: updated, isSyncing: true);
+
+    try {
+      final res = await _apiService.updateBudget(
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        amount: item.amount,
+        period: item.period,
+        alertThreshold: item.alertThreshold,
+        alertsEnabled: item.alertsEnabled,
+      );
+
+      if (res != null) {
+        final list = state.budgets
+            .map((b) => b.id == item.id ? res : b)
+            .toList();
+        state = state.copyWith(budgets: list, isSyncing: false);
+        loadLiveBudgets();
+        return;
+      }
+    } catch (_) {}
+
+    state = state.copyWith(isSyncing: false);
+  }
+
+  /// Delete a budget locally and sync to live backend
+  Future<void> deleteBudget(String id) async {
+    state = state.copyWith(
+      budgets: state.budgets.where((b) => b.id != id).toList(),
+      isSyncing: true,
+    );
+
+    try {
+      await _apiService.deleteBudget(id);
+      loadLiveBudgets();
+    } catch (_) {}
+
+    state = state.copyWith(isSyncing: false);
   }
 
   void toggleAlert(bool val) {
@@ -97,6 +203,64 @@ class BudgetNotifier extends Notifier<BudgetState> {
 
   void dismissBannerAlert() {
     state = state.copyWith(clearActiveBanner: true);
+  }
+
+  /// Dismiss an active live alert from server
+  Future<void> dismissLiveAlert(String alertId) async {
+    final updatedAlerts = state.activeAlerts.map((a) {
+      if (a.alertId == alertId) return a.copyWith(isDismissed: true);
+      return a;
+    }).toList();
+
+    state = state.copyWith(activeAlerts: updatedAlerts);
+    try {
+      await _apiService.dismissAlert(alertId);
+    } catch (_) {}
+  }
+
+  /// Update live guardrail settings
+  Future<void> updateGuardrails(GuardrailSettings settings) async {
+    state = state.copyWith(guardrails: settings);
+    try {
+      final updated = await _apiService.updateGuardrailSettings(settings);
+      if (updated != null) {
+        state = state.copyWith(guardrails: updated);
+      }
+    } catch (_) {}
+  }
+
+  /// Trigger recalculate all budgets on backend
+  Future<void> triggerRecalculate() async {
+    state = state.copyWith(isSyncing: true);
+    try {
+      final liveBudgets = await _apiService.recalculateBudgets();
+      if (liveBudgets != null && liveBudgets.isNotEmpty) {
+        state = state.copyWith(budgets: liveBudgets);
+      }
+      loadLiveBudgets();
+    } catch (_) {}
+    state = state.copyWith(isSyncing: false);
+  }
+
+  /// Trigger period rollover on backend
+  Future<void> triggerRollover({
+    required String fromMonth,
+    required String toMonth,
+    bool rolloverSurplus = true,
+  }) async {
+    state = state.copyWith(isSyncing: true);
+    try {
+      final liveBudgets = await _apiService.rolloverBudgets(
+        fromMonth: fromMonth,
+        toMonth: toMonth,
+        rolloverSurplus: rolloverSurplus,
+      );
+      if (liveBudgets != null && liveBudgets.isNotEmpty) {
+        state = state.copyWith(budgets: liveBudgets);
+      }
+      loadLiveBudgets();
+    } catch (_) {}
+    state = state.copyWith(isSyncing: false);
   }
 
   /// Evaluates an expense against all relevant budgets.
@@ -120,7 +284,9 @@ class BudgetNotifier extends Notifier<BudgetState> {
         final oldLevel = budget.currentAlertLevel;
         final newLevel = updatedBudget.currentAlertLevel;
 
-        if (state.alertEnabled && newLevel != oldLevel && newLevel != BudgetAlertLevel.none) {
+        if (state.alertEnabled &&
+            newLevel != oldLevel &&
+            newLevel != BudgetAlertLevel.none) {
           if (newLevel == BudgetAlertLevel.exceeded) {
             final overspent = updatedBudget.overspentAmount;
             final util = updatedBudget.utilizationPercentage;
@@ -156,7 +322,26 @@ class BudgetNotifier extends Notifier<BudgetState> {
           }
         }
 
-        updatedBudgets.add(updatedBudget.copyWith(lastAlertTriggered: newLevel));
+        updatedBudgets.add(
+          updatedBudget.copyWith(lastAlertTriggered: newLevel),
+        );
+
+        // Deduct from live backend asynchronously if budget has a live id
+        if (!budget.id.startsWith('b_') && !budget.id.startsWith('budget_')) {
+          _apiService
+              .deductExpense(
+                budgetId: budget.id,
+                amount: amount,
+                description: description.isNotEmpty
+                    ? description
+                    : 'Expense on ${budget.category}',
+                category: category,
+                date: DateTime.now().toIso8601String().split('T').first,
+                paymentMode: 'UPI',
+              )
+              .then((_) => loadLiveBudgets())
+              .catchError((_) {});
+        }
       } else {
         updatedBudgets.add(budget);
       }

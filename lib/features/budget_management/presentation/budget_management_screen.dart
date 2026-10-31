@@ -113,8 +113,9 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
     final cat = category.toLowerCase();
     if (cat.contains('food')) return const Color(0xFFF97316);
     if (cat.contains('grocer')) return const Color(0xFF10B981);
-    if (cat.contains('transport') || cat.contains('travel'))
+    if (cat.contains('transport') || cat.contains('travel')) {
       return const Color(0xFF0066FF);
+    }
     if (cat.contains('shopping')) return const Color(0xFF8B5CF6);
     if (cat.contains('utilit')) return const Color(0xFFEAB308);
     if (cat.contains('rent')) return const Color(0xFF0EA5E9);
@@ -1039,6 +1040,63 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
             tooltip: 'Create Budget',
             onPressed: () => _showCreateBudgetSheet(context),
           ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Color(0xFF0066FF)),
+            tooltip: 'Budget Actions',
+            onSelected: (val) {
+              if (val == 'recalculate') {
+                ref.read(budgetProvider.notifier).triggerRecalculate();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Recalculating all budgets from live expenses...'),
+                    backgroundColor: Color(0xFF0066FF),
+                  ),
+                );
+              } else if (val == 'rollover') {
+                _showRolloverDialog(context);
+              } else if (val == 'refresh') {
+                ref.read(budgetProvider.notifier).loadLiveBudgets();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Refreshing live budget data...'),
+                    backgroundColor: Color(0xFF0066FF),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (ctx) => const [
+              PopupMenuItem(
+                value: 'refresh',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 18, color: Color(0xFF0066FF)),
+                    SizedBox(width: 8),
+                    Text('Refresh Live Data'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'recalculate',
+                child: Row(
+                  children: [
+                    Icon(Icons.sync, size: 18, color: Color(0xFF0066FF)),
+                    SizedBox(width: 8),
+                    Text('Recalculate All Budgets'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'rollover',
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month, size: 18, color: Color(0xFF0066FF)),
+                    SizedBox(width: 8),
+                    Text('Rollover to Next Period'),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(width: 4),
         ],
         bottom: PreferredSize(
@@ -1115,11 +1173,76 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
         (_selectedCategoryFilter != 'All' ? 1 : 0) +
         (_selectedSortBy != 'Default' ? 1 : 0);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // In-App SMS Alert Banner if present
-        const InAppTransactionAlertBanner(),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(budgetProvider.notifier).loadLiveBudgets(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Active Live Alerts from Backend API
+          if (state.activeAlerts.any((a) => !a.isDismissed)) ...[
+            for (final alert in state.activeAlerts.where((a) => !a.isDismissed))
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFEF4444), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEF4444).withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFEF4444),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            alert.title,
+                            style: const TextStyle(
+                              color: Color(0xFF991B1B),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            alert.message,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFFB91C1C),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => ref.read(budgetProvider.notifier).dismissLiveAlert(alert.alertId),
+                      child: const Text('Dismiss', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          // In-App SMS Alert Banner if present
+          const InAppTransactionAlertBanner(),
 
         // Outflow & Priority Overview Card (Matching Finomos Project Standard)
         Container(
@@ -1321,9 +1444,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  state.totalOverspent > 0
-                      ? 'AI Personal CFO: High alert! Spending has breached your allocated ceiling by ${_formatRupees(state.totalOverspent)}. Reduce discretionary expenses immediately.'
-                      : 'AI Personal CFO: ${state.budgets.length} category budgets active. Overall utilization is ${_formatRupees(state.totalSpent)} (${state.overallUsagePercentage.toStringAsFixed(1)}%). Remaining runway is healthy.',
+                  state.summary?.aiCfoInsight.isNotEmpty == true
+                      ? state.summary!.aiCfoInsight
+                      : (state.totalOverspent > 0
+                          ? 'AI Personal CFO: High alert! Spending has breached your allocated ceiling by ${_formatRupees(state.totalOverspent)}. Reduce discretionary expenses immediately.'
+                          : 'AI Personal CFO: ${state.budgets.length} category budgets active. Overall utilization is ${_formatRupees(state.totalSpent)} (${state.overallUsagePercentage.toStringAsFixed(1)}%). Remaining runway is healthy.'),
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: Color(0xFF92400E),
@@ -1774,6 +1899,7 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
 
         const SizedBox(height: 24),
       ],
+    ),
     );
   }
 
@@ -1968,6 +2094,26 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   : const Color(0xFF10B981),
             ),
           ),
+          if (b.eligibleTransactions.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () => _showTransactionsBottomSheet(context, b),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long, size: 13, color: Color(0xFF0066FF)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${b.eligibleTransactions.length} linked transactions (tap to view)',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF0066FF),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 20, color: Color(0xFFF1F5F9)),
 
           // Actions Row
@@ -2045,9 +2191,11 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
   }
 
   Widget _buildAnalyticsTab(BudgetState state) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => ref.read(budgetProvider.notifier).loadLiveBudgets(),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
         // Summary Metrics Cards Grid
         Row(
           children: [
@@ -2210,9 +2358,13 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   'Automatically deduct confirmed bank SMS debits from category budgets',
                   style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
-                value: true,
+                value: state.guardrails.autoSmsDeduction,
                 activeColor: const Color(0xFF0066FF),
-                onChanged: (val) {},
+                onChanged: (val) {
+                  ref.read(budgetProvider.notifier).updateGuardrails(
+                    state.guardrails.copyWith(autoSmsDeduction: val),
+                  );
+                },
               ),
               const Divider(height: 10),
               SwitchListTile(
@@ -2227,8 +2379,12 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                 ),
                 value: state.alertEnabled,
                 activeColor: const Color(0xFFEF4444),
-                onChanged: (val) =>
-                    ref.read(budgetProvider.notifier).toggleAlert(val),
+                onChanged: (val) {
+                  ref.read(budgetProvider.notifier).toggleAlert(val);
+                  ref.read(budgetProvider.notifier).updateGuardrails(
+                    state.guardrails.copyWith(overspendingBanners: val),
+                  );
+                },
               ),
               const Divider(height: 10),
               SwitchListTile(
@@ -2241,15 +2397,20 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
                   'Notify when expenses reach 80% of monthly allocation',
                   style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
-                value: true,
+                value: state.guardrails.warning80Alerts,
                 activeColor: const Color(0xFFF59E0B),
-                onChanged: (val) {},
+                onChanged: (val) {
+                  ref.read(budgetProvider.notifier).updateGuardrails(
+                    state.guardrails.copyWith(warning80Alerts: val),
+                  );
+                },
               ),
             ],
           ),
         ),
         const SizedBox(height: 24),
       ],
+    ),
     );
   }
 
@@ -2297,6 +2458,166 @@ class _BudgetManagementScreenState extends ConsumerState<BudgetManagementScreen>
           Text(
             subtitle,
             style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
+  }
+  void _showTransactionsBottomSheet(BuildContext context, BudgetItem budget) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final txs = budget.eligibleTransactions;
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          builder: (_, scrollController) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${budget.name} Transactions',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0A2540),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${txs.length} records',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0066FF),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Transactions currently deducted from ${budget.category} budget',
+                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                ),
+                const Divider(height: 24),
+                Expanded(
+                  child: txs.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No eligible transactions recorded yet',
+                            style: TextStyle(color: Color(0xFF94A3B8)),
+                          ),
+                        )
+                      : ListView.separated(
+                          controller: scrollController,
+                          itemCount: txs.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (ctx, i) {
+                            final tx = txs[i];
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0066FF).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.receipt_long, color: Color(0xFF0066FF), size: 20),
+                              ),
+                              title: Text(
+                                tx.description.isNotEmpty ? tx.description : tx.category,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                '${tx.date} • ${tx.paymentMode}${tx.merchant != null && tx.merchant!.isNotEmpty ? " • ${tx.merchant}" : ""}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                              trailing: Text(
+                                '-${_formatRupees(tx.amount)}',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFEF4444),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRolloverDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Period Rollover'),
+        content: const Text(
+          'Roll over active budgets from current month to next month? Surplus or deficits will be carried forward automatically.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0066FF)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              final now = DateTime.now();
+              final fromMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+              final nextMonthDate = DateTime(now.year, now.month + 1);
+              final toMonth = '${nextMonthDate.year}-${nextMonthDate.month.toString().padLeft(2, '0')}';
+
+              ref.read(budgetProvider.notifier).triggerRollover(
+                fromMonth: fromMonth,
+                toMonth: toMonth,
+                rolloverSurplus: true,
+              );
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Budgets rolled over successfully!'),
+                  backgroundColor: Color(0xFF10B981),
+                ),
+              );
+            },
+            child: const Text('Rollover Now', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

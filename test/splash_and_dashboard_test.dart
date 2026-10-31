@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finomos/main.dart';
-import 'package:finomos/core/router/app_router.dart';
-import 'package:finomos/features/splash/presentation/splash_screen.dart';
 import 'package:finomos/features/dashboard/presentation/dashboard_screen.dart';
 
 void main() {
@@ -47,5 +45,40 @@ void main() {
 
     // Verify dashboard content is present
     expect(find.text('Finomos Financial OS'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen AI Personal CFO section displays Total Available Balance and Liquid Cash Balance', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: DashboardScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify health badge is kept, while removed header elements are gone
+    expect(find.text('HEALTH: 88/100'), findsOneWidget);
+    expect(find.text('AI PERSONAL CFO'), findsNothing);
+    expect(find.text('Virtual Digital Twin & Autopilot Active'), findsNothing);
+    expect(find.textContaining('Runway: 8.5 Mos'), findsNothing);
+
+    // Verify Total Available Balance in Accounts
+    expect(find.text('Total Available Balance'), findsOneWidget);
+    expect(find.text('In Connected Accounts'), findsOneWidget);
+    expect(find.text('₹2,18,750'), findsWidgets); // Both in AI CFO card and Bank Feeds tile
+
+    // Verify Liquid Cash Balance (down from Available Balance)
+    expect(find.text('Liquid Cash Balance'), findsOneWidget);
+    expect(find.text('Instant Access (Bank + Wallets)'), findsOneWidget);
+    expect(find.text('₹2,22,040'), findsOneWidget);
+
+    // Verify Launch AI CFO Copilot button is removed, but account sync badge is present
+    expect(find.text('Launch AI CFO Copilot'), findsNothing);
+    expect(find.text('2 Accounts Synced'), findsOneWidget);
   });
 }

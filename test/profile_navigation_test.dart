@@ -66,7 +66,7 @@ void main() {
     // 4. Navigate to /bank-aggregation
     appRouter.go('/bank-aggregation');
     await tester.pumpAndSettle();
-    expect(find.text('Bank Account Aggregation'), findsOneWidget);
+    expect(find.text('Bank Aggregation'), findsOneWidget);
 
     // 5. Navigate to /settings
     appRouter.go('/settings');

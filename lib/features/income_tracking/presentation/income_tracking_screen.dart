@@ -8,6 +8,8 @@ import '../../../core/widgets/bank_logo.dart';
 import '../../document_vault/presentation/widgets/document_action_helper.dart';
 import '../domain/income_models.dart';
 import '../providers/income_provider.dart';
+import '../../../core/services/invoice_pdf_service.dart';
+import '../../../core/services/api_client.dart';
 
 class IncomeTrackingScreen extends ConsumerStatefulWidget {
   const IncomeTrackingScreen({super.key});
@@ -20,11 +22,13 @@ class IncomeTrackingScreen extends ConsumerStatefulWidget {
 class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
 
   static const List<String> _availableBanks = [
     'HDFC Bank ••••4587',
     'ICICI Bank ••••9021',
     'SBI ••••1123',
+    'State Bank of India (**** 4587)',
     'Axis Bank ••••3301',
     'Other / Cash',
   ];
@@ -55,11 +59,15 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(incomeProvider.notifier).loadLiveIncomeData();
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -100,15 +108,29 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     return '₹${buffer.toString()},$lastThree';
   }
 
-  void _viewUploadedDocument(
+  Future<void> _viewUploadedDocument(
     BuildContext context,
     String docName,
     String? docPath,
-  ) {
+  ) async {
+    String resolvedPath = docPath ?? '';
     String fileSize = '1.2 MB';
-    if (docPath != null && docPath.isNotEmpty) {
+
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
       try {
-        final f = File(docPath);
+        final bytes = await ApiClient().getBytes(resolvedPath);
+        if (bytes != null && bytes.isNotEmpty) {
+          final tempFile = File('${Directory.systemTemp.path}/$docName');
+          await tempFile.writeAsBytes(bytes, flush: true);
+          resolvedPath = tempFile.path;
+          fileSize = bytes.length > 1024 * 1024
+              ? '${(bytes.length / (1024 * 1024)).toStringAsFixed(1)} MB'
+              : '${(bytes.length / 1024).toStringAsFixed(0)} KB';
+        }
+      } catch (_) {}
+    } else if (resolvedPath.isNotEmpty) {
+      try {
+        final f = File(resolvedPath);
         if (f.existsSync()) {
           final bytes = f.lengthSync();
           fileSize = bytes > 1024 * 1024
@@ -118,30 +140,657 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
       } catch (_) {}
     }
 
+    if (!context.mounted) return;
+
+    final isVoucher = docName.toUpperCase().contains('VOUCHER') || docName.toUpperCase().startsWith('FIN-INC');
+
     DocumentActionHelper.showDocumentPreviewDialog(
       context: context,
-      idType: 'Income Proof Document',
-      idNumber: 'Finomos Attached Proof',
+      idType: isVoucher ? 'Official Section 65B Receipt Voucher' : 'Income Proof Document',
+      idNumber: isVoucher ? docName.replaceAll('.pdf', '') : 'Finomos Attached Proof',
       fileName: docName,
       fileSize: fileSize,
-      localPath: docPath,
+      localPath: resolvedPath,
       uploadDate: 'Today',
-      uploadSource: (docPath != null && docPath.contains('cache'))
-          ? 'Camera / Gallery'
-          : 'Attached Document',
-      onDownload: () => _downloadUploadedDocument(context, docName, docPath),
+      uploadSource: isVoucher
+          ? 'RBI Account Aggregator & Section 65B Cloud Vault'
+          : (resolvedPath.contains('cache') ? 'Camera / Gallery' : 'Attached Document'),
+      onDownload: () => _downloadUploadedDocument(context, docName, resolvedPath),
     );
   }
 
-  void _downloadUploadedDocument(
+  Future<void> _downloadUploadedDocument(
     BuildContext context,
     String docName,
     String? docPath,
-  ) {
+  ) async {
+    String resolvedPath = docPath ?? '';
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+      try {
+        final bytes = await ApiClient().getBytes(resolvedPath);
+        if (bytes != null && bytes.isNotEmpty) {
+          final tempFile = File('${Directory.systemTemp.path}/$docName');
+          await tempFile.writeAsBytes(bytes, flush: true);
+          resolvedPath = tempFile.path;
+        }
+      } catch (_) {}
+    }
+
+    if (!context.mounted) return;
+
     DocumentActionHelper.downloadDocumentToDevice(
       context: context,
       fileName: docName,
-      localPath: docPath,
+      localPath: resolvedPath,
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0A2540),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showTransactionDetailsSheet(BuildContext context, IncomeEntry item) {
+    IncomeEntry currentEntry = item;
+    final invoiceNumber = item.voucherNumber ??
+        InvoicePdfService.generateInvoiceNumber(
+          isExpense: false,
+          id: item.id,
+        );
+
+    IncomeVoucherData? voucherData;
+    bool hasFetchedVoucher = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            if (!hasFetchedVoucher) {
+              hasFetchedVoucher = true;
+              ref.read(incomeProvider.notifier).fetchVoucherDetails(item.id).then((v) {
+                if (v != null && modalCtx.mounted) {
+                  setModalState(() {
+                    voucherData = v;
+                  });
+                }
+              });
+              ref.read(incomeProvider.notifier).fetchSingleEntry(item.id).then((fresh) {
+                if (fresh != null && modalCtx.mounted) {
+                  setModalState(() {
+                    currentEntry = fresh;
+                  });
+                }
+              });
+            }
+            final attachedDocName = currentEntry.documentName ??
+                (voucherData?.attachedDocumentUrl != null
+                    ? voucherData!.attachedDocumentUrl!.split('/').last
+                    : null);
+            final attachedDocPath = currentEntry.documentPath ?? voucherData?.attachedDocumentUrl;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.90,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Drag Handle
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Top Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF059669).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long,
+                              color: Color(0xFF059669),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Transaction Details',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0A2540),
+                                  ),
+                                ),
+                                Text(
+                                  'Official Income Receipt & Voucher',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                            onPressed: () => Navigator.pop(sheetCtx),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Scrollable content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Overview Amount Card
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0A2540), Color(0xFF059669)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0A2540).withOpacity(0.18),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'TOTAL AMOUNT RECEIVED',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981).withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: const Color(0xFF10B981),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              color: Color(0xFF34D399),
+                                              size: 11,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'VERIFIED',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '+${_formatRupees(item.amount)}',
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.source,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Receipt Voucher: ${voucherData?.voucherNumber ?? item.voucherNumber ?? invoiceNumber}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Detailed Information Box
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'INCOME SUMMARY',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0A2540),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                                  _buildDetailRow('Source / Payee', item.source),
+                                  const SizedBox(height: 8),
+                                  if (voucherData?.amountInWords != null &&
+                                      voucherData!.amountInWords.isNotEmpty) ...[
+                                    _buildDetailRow('Amount in Words', voucherData!.amountInWords),
+                                    const SizedBox(height: 8),
+                                  ],
+                                  _buildDetailRow('Category', item.category),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow('Date Credited', item.date),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow('Inflow Frequency', item.frequency),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Bank Account',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          BankLogo(bankName: item.bankAccount, size: 14),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            item.bankAccount,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0A2540),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow('Stream Nature', '${item.type} Income'),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    'Verification Status',
+                                    currentEntry.verificationType ??
+                                        (currentEntry.isVerified
+                                            ? 'Digitally Verified Inflow'
+                                            : 'Manual Entry Inflow'),
+                                  ),
+                                  if (currentEntry.voucherNumber != null &&
+                                      currentEntry.voucherNumber!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow(
+                                      'Voucher Number',
+                                      currentEntry.voucherNumber!,
+                                    ),
+                                  ],
+                                  if (currentEntry.createdAt != null &&
+                                      currentEntry.createdAt!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow(
+                                      'Recorded Date',
+                                      currentEntry.createdAt!.length >= 10
+                                          ? currentEntry.createdAt!.substring(0, 10)
+                                          : currentEntry.createdAt!,
+                                    ),
+                                  ],
+                                  if (item.notes.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow('Notes / Remarks', item.notes),
+                                  ],
+                                  if (attachedDocName != null && attachedDocName.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Attached Document',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: InkWell(
+                                            onTap: () => _viewUploadedDocument(
+                                              context,
+                                              attachedDocName,
+                                              attachedDocPath,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.attachment,
+                                                  size: 14,
+                                                  color: Color(0xFF0066FF),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    attachedDocName,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Color(0xFF0066FF),
+                                                      decoration: TextDecoration.underline,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Security & Compliance Card
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.verified_user_outlined,
+                                    color: Color(0xFF0066FF),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      voucherData?.complianceStandard ??
+                                          'Cryptographically verified & RBI Account Aggregator compliant record. Valid under Section 65B of Indian Evidence Act.',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF1E40AF),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Sticky Bottom Action Bar with Download Invoice Button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              key: const ValueKey('download_invoice_button'),
+                              onPressed: () async {
+                                try {
+                                  await InvoicePdfService.downloadIncomeInvoice(
+                                    context: context,
+                                    entry: item,
+                                  );
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Download failed: $e'),
+                                        backgroundColor: const Color(0xFFEF4444),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.picture_as_pdf,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Download Invoice',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0066FF),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final invoiceNumber =
+                                    item.voucherNumber ??
+                                    InvoicePdfService.generateInvoiceNumber(
+                                      isExpense: false,
+                                      id: item.id,
+                                    );
+                                final fileName = '$invoiceNumber.pdf';
+                                final bytes =
+                                    InvoicePdfService.generateIncomeInvoiceBytes(
+                                      item,
+                                    );
+                                final tempFile = File(
+                                  '${Directory.systemTemp.path}/$fileName',
+                                );
+                                tempFile.writeAsBytesSync(bytes, flush: true);
+
+                                if (context.mounted) {
+                                  DocumentActionHelper.showDocumentPreviewDialog(
+                                    context: context,
+                                    idType: 'Income Voucher & Receipt',
+                                    idNumber: invoiceNumber,
+                                    fileName: fileName,
+                                    fileSize:
+                                        '${(bytes.length / 1024).toStringAsFixed(1)} KB',
+                                    localPath: tempFile.path,
+                                    uploadDate: item.date,
+                                    uploadSource: 'Finomos AI Personal CFO',
+                                    onDownload: () =>
+                                        InvoicePdfService.downloadIncomeInvoice(
+                                          context: context,
+                                          entry: item,
+                                        ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                                color: Color(0xFF0066FF),
+                              ),
+                              label: const Text(
+                                'Preview Invoice Document',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0066FF),
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFF0066FF),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (voucherData?.voucherPdfUrl != null &&
+                              voucherData!.voucherPdfUrl!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  _viewUploadedDocument(
+                                    context,
+                                    '${voucherData!.voucherNumber}.pdf',
+                                    voucherData!.voucherPdfUrl,
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.verified,
+                                  size: 18,
+                                  color: Color(0xFF059669),
+                                ),
+                                label: const Text(
+                                  'View Official Section 65B Voucher',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF059669),
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  backgroundColor: const Color(0xFFECFDF5),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: const BorderSide(color: Color(0xFFA7F3D0)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -183,11 +832,17 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         ? existingEntry.frequency
         : 'Monthly';
 
+    final bankList = <String>[..._availableBanks];
+    if (existingEntry != null &&
+        existingEntry.bankAccount.isNotEmpty &&
+        !bankList.contains(existingEntry.bankAccount)) {
+      bankList.insert(bankList.length - 1, existingEntry.bankAccount);
+    }
+
     String selectedBank =
-        existingEntry != null &&
-            _availableBanks.contains(existingEntry.bankAccount)
-        ? existingEntry.bankAccount
-        : 'HDFC Bank ••••4587';
+        existingEntry != null && bankList.contains(existingEntry.bankAccount)
+            ? existingEntry.bankAccount
+            : (bankList.contains('HDFC Bank ••••4587') ? 'HDFC Bank ••••4587' : bankList.first);
 
     bool isVerified = existingEntry?.isVerified ?? true;
     String selectedDateStr = existingEntry?.date ?? '25 Aug 2025';
@@ -374,7 +1029,7 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                             borderSide: BorderSide.none,
                           ),
                         ),
-                        items: _availableBanks
+                        items: bankList
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
@@ -477,6 +1132,23 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                 selectedDocumentName = res.fileName;
                                 selectedDocumentPath = res.localPath;
                               });
+                              if (res.localPath != null && res.localPath!.isNotEmpty) {
+                                try {
+                                  final file = File(res.localPath!);
+                                  if (file.existsSync()) {
+                                    final uploaded = await ref.read(incomeProvider.notifier).uploadProof(
+                                      file,
+                                      entryId: existingEntry?.id,
+                                    );
+                                    if (uploaded != null) {
+                                      setSheetState(() {
+                                        selectedDocumentName = uploaded.documentName;
+                                        selectedDocumentPath = uploaded.documentPath;
+                                      });
+                                    }
+                                  }
+                                } catch (_) {}
+                              }
                             }
                           } catch (e) {
                             setSheetState(() {
@@ -790,6 +1462,188 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     );
   }
 
+
+  void _showConfirmInflowSheet(BuildContext context, DetectedInflow inflow) {
+    String selectedCategory = inflow.suggestedCategory;
+    if (!_availableCategories.contains(selectedCategory)) {
+      selectedCategory = 'Salary';
+    }
+    String selectedFrequency = 'Monthly';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+                top: 12,
+                left: 20,
+                right: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.verified,
+                          color: Color(0xFF10B981),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Confirm Detected Inflow',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0A2540),
+                              ),
+                            ),
+                            Text(
+                              'RBI Account Aggregator Live Feed Verification',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          inflow.detectedSource,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${inflow.bankAccount} • ${inflow.date}',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                            Text(
+                              '+${_formatRupees(inflow.amount)}',
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF10B981)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Confirm Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A2540))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    items: _availableCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedCategory = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Inflow Frequency', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A2540))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: selectedFrequency,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    items: _availableFrequencies.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedFrequency = val);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(sheetCtx);
+                        final created = await ref.read(incomeProvider.notifier).confirmDetectedInflow(
+                          inflow.detectedId,
+                          category: selectedCategory,
+                          frequency: selectedFrequency,
+                        );
+                        if (context.mounted && created != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Added "${created.source}" as active income stream with Section 65B voucher ${created.voucherNumber}!',
+                              ),
+                              backgroundColor: const Color(0xFF10B981),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Confirm & Add to Income Streams', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -862,6 +1716,57 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                       ],
                     ),
                     const Divider(height: 16),
+
+                    // Stream Nature / Type (Active, Passive, Windfall)
+                    const Text(
+                      'Stream Nature / Type',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0A2540),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Consumer(
+                      builder: (_, ref2, __) {
+                        final st = ref2.watch(incomeProvider);
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: ['All', 'Active', 'Passive', 'Windfall'].map((type) {
+                              final isSel = st.selectedTypeFilter.toLowerCase() == type.toLowerCase();
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text(type),
+                                  selected: isSel,
+                                  onSelected: (v) {
+                                    ref.read(incomeProvider.notifier).setTypeFilter(v ? type : 'All');
+                                    setSheetState(() {});
+                                  },
+                                  selectedColor: const Color(0xFF10B981),
+                                  backgroundColor: Colors.white,
+                                  labelStyle: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                                    color: isSel ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(
+                                      color: isSel ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                                    ),
+                                  ),
+                                  showCheckmark: false,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
                     // Category
                     const Text(
@@ -1060,11 +1965,17 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                     Consumer(
                       builder: (_, ref2, __) {
                         final st = ref2.watch(incomeProvider);
+                        final bankFilterOptions = <String>['All', ..._availableBanks];
+                        for (final e in st.entries) {
+                          if (e.bankAccount.isNotEmpty && !bankFilterOptions.contains(e.bankAccount)) {
+                            bankFilterOptions.insert(bankFilterOptions.length - 1, e.bankAccount);
+                          }
+                        }
                         return SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           child: Row(
-                            children: ['All', ..._availableBanks].map((bank) {
+                            children: bankFilterOptions.map((bank) {
                               final isSel =
                                   st.selectedBankAccountFilter.toLowerCase() ==
                                   bank.toLowerCase();
@@ -1398,22 +2309,25 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
           matchesDate;
     }).toList();
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => ref.read(incomeProvider.notifier).loadLiveIncomeData(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
         // Total Inflow Card
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF0A2540), Color(0xFF10B981)],
+              colors: [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF10B981)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0A2540).withOpacity(0.18),
+                color: const Color(0xFF064E3B).withOpacity(0.25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1422,13 +2336,137 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Total Monthly Inflow',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'Total Monthly Inflow',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white30, width: 0.8),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: ['30D', '90D', '1Y', '5Y'].contains(state.forecastHorizon)
+                            ? state.forecastHorizon
+                            : '30D',
+                        isDense: true,
+                        dropdownColor: const Color(0xFF047857),
+                        borderRadius: BorderRadius.circular(14),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: '30D',
+                            child: Text('30 Days (30D)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: '90D',
+                            child: Text('90 Days (90D)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: '1Y',
+                            child: Text('1 Year (1Y)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                          DropdownMenuItem(
+                            value: '5Y',
+                            child: Text('5 Years (5Y)', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          ),
+                        ],
+                        selectedItemBuilder: (BuildContext context) {
+                          return const [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
+                                SizedBox(width: 4),
+                                Text(
+                                  '30D Horizon',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
+                                SizedBox(width: 4),
+                                Text(
+                                  '90D Horizon',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
+                                SizedBox(width: 4),
+                                Text(
+                                  '1Y Horizon',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
+                                SizedBox(width: 4),
+                                Text(
+                                  '5Y Horizon',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ];
+                        },
+                        onChanged: (val) {
+                          if (val != null) {
+                            ref.read(incomeProvider.notifier).setForecastHorizon(val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               Text(
@@ -1439,72 +2477,238 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                   color: Colors.white,
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // AI Personal CFO Recommendation Banner
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF86EFAC)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.psychology, color: Color(0xFF047857), size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'AI Personal CFO: High Stability (Score ${state.stabilityScore.toStringAsFixed(0)}/100). Passive cash flow generates ${_formatRupees(state.passiveMonthlyIncome)}/mo across rent and dividend holdings.',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF047857),
-                    fontWeight: FontWeight.w500,
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.trending_up,
+                          size: 14,
+                          color: Color(0xFF34D399),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Projected Inflow (${state.forecastHorizon}): ${_formatRupees(state.getForecastAmount(state.forecastHorizon))}',
+                            style: const TextStyle(
+                              color: Color(0xFFD1FAE5),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  if (state.forecastData != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      state.forecastData!.compoundingRate,
+                      style: const TextStyle(
+                        color: Color(0xFFA7F3D0),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
 
+        // Detected Inflow Banner from Account Aggregator feed
+        if (state.detectedInflows.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF93C5FD)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: Color(0xFF2563EB), size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${state.detectedInflows.length} Inflow Detected',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E3A8A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDBEAFE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'ACCOUNT AGGREGATOR',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1D4ED8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                for (final inflow in state.detectedInflows) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                inflow.detectedSource,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${inflow.bankAccount} • ${inflow.date} • ${(inflow.confidenceScore * 100).round()}% match',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '+${_formatRupees(inflow.amount)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF059669),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () => _showConfirmInflowSheet(context, inflow),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+        // Search Box (Queries live backend by source, company or notes)
+        Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (val) {
+              ref.read(incomeProvider.notifier).setSearchQuery(val);
+            },
+            decoration: InputDecoration(
+              hintText: 'Search by source, company or notes...',
+              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+              prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+              suffixIcon: state.searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Color(0xFF64748B)),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(incomeProvider.notifier).setSearchQuery('');
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+          ),
+        ),
+
         // Section Title: Income History (REQUIRED BY TEST SUITE)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Text(
-                  'Income History',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0A2540),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${filteredEntries.length} records',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF047857),
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'Income History',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A2540),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${filteredEntries.length} records',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF047857),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             InkWell(
               onTap: () => _showFilterSheet(context),
@@ -1574,7 +2778,8 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         if (state.selectedCategoryFilter != 'All' ||
             state.selectedBankAccountFilter != 'All' ||
             state.selectedDateFilter != 'All' ||
-            state.selectedTypeFilter != 'All')
+            state.selectedTypeFilter != 'All' ||
+            state.searchQuery.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1641,6 +2846,16 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                 .setTypeFilter('All');
                           },
                         ),
+                      if (state.searchQuery.isNotEmpty)
+                        _buildFilterBadge(
+                          'Search: "${state.searchQuery}"',
+                          () {
+                            _searchController.clear();
+                            ref
+                                .read(incomeProvider.notifier)
+                                .setSearchQuery('');
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -1665,7 +2880,28 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
           ),
 
         // Income Streams Cards
-        if (filteredEntries.isEmpty)
+        if (state.isLoading && state.entries.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFF047857)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Loading live income streams...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (filteredEntries.isEmpty)
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
@@ -1699,9 +2935,14 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
           )
         else
           for (final item in filteredEntries)
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => _showTransactionDetailsSheet(context, item),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -1801,15 +3042,52 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                 ],
               ),
             ),
+            ),
+            ),
+        if (state.pagination != null && state.pagination!.totalPages > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.chevron_left, size: 16),
+                  label: const Text('Previous', style: TextStyle(fontSize: 12)),
+                  onPressed: state.pagination!.currentPage > 1
+                      ? () => ref.read(incomeProvider.notifier).setPage(state.pagination!.currentPage - 1)
+                      : null,
+                ),
+                Text(
+                  'Page ${state.pagination!.currentPage} of ${state.pagination!.totalPages} (${state.pagination!.totalRecords} total)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.chevron_right, size: 16),
+                  label: const Text('Next', style: TextStyle(fontSize: 12)),
+                  onPressed: state.pagination!.currentPage < state.pagination!.totalPages
+                      ? () => ref.read(incomeProvider.notifier).setPage(state.pagination!.currentPage + 1)
+                      : null,
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 24),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildIncomeSourcesTab(IncomeState state) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => ref.read(incomeProvider.notifier).loadLiveIncomeData(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
         // Master Overview Card
         Container(
           padding: const EdgeInsets.all(20),
@@ -1928,7 +3206,28 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         const SizedBox(height: 10),
 
         // Sources list
-        if (state.entries.isEmpty)
+        if (state.isLoading && state.entries.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFF047857)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Loading live income sources...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (state.entries.isEmpty)
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
@@ -1973,8 +3272,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
 
         const SizedBox(height: 28),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildIncomeSourceCard(IncomeEntry item) {
     final catColor = _getCategoryColor(item.category);
@@ -2108,6 +3408,41 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               InkWell(
+                onTap: () => _showTransactionDetailsSheet(context, item),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 15,
+                        color: Color(0xFF0A2540),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Invoice',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0A2540),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
                 onTap: () => _showAddIncomeSheet(context, existingEntry: item),
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
@@ -2179,59 +3514,6 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderMetricChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10.5,
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickSourceChip({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

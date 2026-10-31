@@ -19,11 +19,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify key titles and header elements
-    expect(find.text('Bank & Aggregation'), findsOneWidget);
+    expect(find.text('Bank Aggregation'), findsOneWidget);
     expect(find.text('CONSOLIDATED FINANCIAL NET WORTH'), findsOneWidget);
-    expect(find.text('Connected Accounts'), findsOneWidget);
-    expect(find.text('UPI Accounts & Mandates'), findsOneWidget);
-    expect(find.text('Credit Cards & Limits'), findsOneWidget);
+    expect(find.text('UPI Accounts & Mandates'), findsNothing);
+    expect(find.text('Digital Wallets & Cash Position (FAA-SEC-08)'), findsNothing);
+    expect(find.text('Credit & Debit Cards'), findsOneWidget);
     expect(find.text('Loan Accounts & Liabilities'), findsOneWidget);
 
     // Scroll to middle
@@ -37,17 +37,17 @@ void main() {
     await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -800));
     await tester.pumpAndSettle();
 
-    expect(find.text('Consent Management (FAA-SEC-11)'), findsOneWidget);
+    expect(find.text('Consent Management (FAA-SEC-11)'), findsNothing);
     expect(find.text('Recent Ingested Transactions'), findsOneWidget);
 
     // Scroll back to top
     await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, 1400));
     await tester.pumpAndSettle();
 
-    // Tap UPI tab filter
-    await tester.tap(find.text('UPI (3)'));
+    // Tap Cards tab filter
+    await tester.tap(find.textContaining('Cards ('));
     await tester.pumpAndSettle();
-    expect(find.text('UPI Accounts & Mandates'), findsOneWidget);
+    expect(find.text('Credit & Debit Cards'), findsOneWidget);
 
     // Tap All tab
     await tester.tap(find.textContaining('All ('));

@@ -170,7 +170,7 @@ class ProfileScreen extends ConsumerWidget {
                 _buildMenuOption(
                   icon: Icons.account_balance_outlined,
                   title: 'Bank Accounts & Aggregation',
-                  subtitle: 'Linked bank accounts & mandates',
+                  subtitle: 'Linked bank accounts, cards & loans',
                   onTap: () => context.push('/bank-aggregation'),
                 ),
                 _buildMenuOption(

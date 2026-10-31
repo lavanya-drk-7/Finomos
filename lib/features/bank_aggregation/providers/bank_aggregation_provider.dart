@@ -243,10 +243,10 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
         InstitutionDirectoryItem(id: 'inst_4', name: 'Axis Bank Ltd', logoText: 'AXIS', category: 'Banks'),
         InstitutionDirectoryItem(id: 'inst_5', name: 'Kotak Mahindra Bank', logoText: 'KOTAK', category: 'Banks'),
         InstitutionDirectoryItem(id: 'inst_6', name: 'Punjab National Bank', logoText: 'PNB', category: 'Banks'),
-        InstitutionDirectoryItem(id: 'inst_7', name: 'Google Pay UPI', logoText: 'GPAY', category: 'UPI'),
-        InstitutionDirectoryItem(id: 'inst_8', name: 'PhonePe UPI', logoText: 'PHONEPE', category: 'UPI'),
-        InstitutionDirectoryItem(id: 'inst_9', name: 'Paytm Payments Bank / UPI', logoText: 'PAYTM', category: 'UPI'),
-        InstitutionDirectoryItem(id: 'inst_10', name: 'BHIM UPI', logoText: 'BHIM', category: 'UPI'),
+        InstitutionDirectoryItem(id: 'inst_7', name: 'Standard Chartered Bank', logoText: 'SCB', category: 'Banks'),
+        InstitutionDirectoryItem(id: 'inst_8', name: 'Bank of Baroda', logoText: 'BOB', category: 'Banks'),
+        InstitutionDirectoryItem(id: 'inst_9', name: 'Canara Bank', logoText: 'CNRB', category: 'Banks'),
+        InstitutionDirectoryItem(id: 'inst_10', name: 'Federal Bank', logoText: 'FDRL', category: 'Banks'),
         InstitutionDirectoryItem(id: 'inst_11', name: 'Zerodha Broking', logoText: 'KITE', category: 'Investments'),
         InstitutionDirectoryItem(id: 'inst_12', name: 'Groww Investments', logoText: 'GROWW', category: 'Investments'),
         InstitutionDirectoryItem(id: 'inst_13', name: 'HDFC ERGO Health', logoText: 'ERGO', category: 'Insurance'),
@@ -269,7 +269,7 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
           amount: -23450.00,
           date: '05 Oct 2026',
           institution: 'State Bank of India',
-          type: 'AutoPay Mandate',
+          type: 'Standing Instruction',
         ),
         AggregatorTransactionItem(
           id: 'tx_3',
@@ -277,8 +277,8 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
           category: 'Food & Dining',
           amount: -450.00,
           date: '10 Oct 2026',
-          institution: 'Google Pay (SBI)',
-          type: 'UPI',
+          institution: 'SBI Debit Card',
+          type: 'Debit Card',
         ),
         AggregatorTransactionItem(
           id: 'tx_4',
@@ -296,7 +296,7 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
           amount: -5000.00,
           date: '14 Oct 2026',
           institution: 'HDFC Bank',
-          type: 'AutoPay Mandate',
+          type: 'Auto-Debit',
         ),
       ],
     );
@@ -322,7 +322,7 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
     state = state.copyWith(
       isSyncing: false,
       lastSyncedTime: 'Today at $timeStr • Real-Time AA Sync Active',
-      connectionStatus: 'All 7 Pillars Connected & Synced',
+      connectionStatus: 'All 5 Pillars Connected & Synced',
     );
   }
 
@@ -400,6 +400,8 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
   void addCreditCardItem({
     required String cardName,
     required String last4Digits,
+    String? cardNumber,
+    String? cvv,
     required double creditLimit,
     required double outstandingBalance,
     required String statementDueDate,
@@ -409,11 +411,17 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
     String? issuedBank,
     String? cardType,
     String? expiryDate,
+    bool isDebit = false,
+    double? dailyAtmLimit,
+    double? dailyPosLimit,
+    String? linkedAccount,
   }) {
     final newCard = CreditCardItem(
       id: 'card_${DateTime.now().millisecondsSinceEpoch}',
       cardName: cardName,
       last4Digits: last4Digits,
+      cardNumber: cardNumber,
+      cvv: cvv,
       creditLimit: creditLimit,
       outstandingBalance: outstandingBalance,
       availableCredit: (creditLimit - outstandingBalance).clamp(0.0, double.infinity),
@@ -424,6 +432,10 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       issuedBank: issuedBank,
       cardType: cardType,
       expiryDate: expiryDate,
+      isDebit: isDebit,
+      dailyAtmLimit: dailyAtmLimit,
+      dailyPosLimit: dailyPosLimit,
+      linkedAccount: linkedAccount,
     );
     state = state.copyWith(creditCards: [...state.creditCards, newCard]);
   }

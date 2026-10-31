@@ -88,8 +88,10 @@ class UpiAccountItem {
 
 class CreditCardItem {
   final String id;
-  final String cardName; // HDFC Regalia Gold
+  final String cardName; // HDFC Regalia Gold, HDFC Millennia Debit Card, etc.
   final String last4Digits; // 4567
+  final String? cardNumber; // Full 12 to 16 digit card number
+  final String? cvv; // 3-digit CVV
   final double creditLimit;
   final double outstandingBalance;
   final double availableCredit;
@@ -100,11 +102,17 @@ class CreditCardItem {
   final String? issuedBank;
   final String? cardType; // Visa, Mastercard, RuPay, etc.
   final String? expiryDate; // MM/YY
+  final bool isDebit; // true for Debit Cards, false for Credit Cards
+  final double? dailyAtmLimit; // e.g. 50,000
+  final double? dailyPosLimit; // e.g. 100,000
+  final String? linkedAccount; // e.g. Primary Savings A/C (••••6789)
 
   const CreditCardItem({
     required this.id,
     required this.cardName,
     required this.last4Digits,
+    this.cardNumber,
+    this.cvv,
     required this.creditLimit,
     required this.outstandingBalance,
     required this.availableCredit,
@@ -115,15 +123,21 @@ class CreditCardItem {
     this.issuedBank,
     this.cardType,
     this.expiryDate,
+    this.isDebit = false,
+    this.dailyAtmLimit,
+    this.dailyPosLimit,
+    this.linkedAccount,
   });
 
-  double get utilizationRatio => creditLimit > 0 ? (outstandingBalance / creditLimit) : 0.0;
+  double get utilizationRatio => (!isDebit && creditLimit > 0) ? (outstandingBalance / creditLimit) : 0.0;
   String get utilizationPercent => (utilizationRatio * 100).toStringAsFixed(1);
 
   CreditCardItem copyWith({
     String? id,
     String? cardName,
     String? last4Digits,
+    String? cardNumber,
+    String? cvv,
     double? creditLimit,
     double? outstandingBalance,
     double? availableCredit,
@@ -134,11 +148,17 @@ class CreditCardItem {
     String? issuedBank,
     String? cardType,
     String? expiryDate,
+    bool? isDebit,
+    double? dailyAtmLimit,
+    double? dailyPosLimit,
+    String? linkedAccount,
   }) {
     return CreditCardItem(
       id: id ?? this.id,
       cardName: cardName ?? this.cardName,
       last4Digits: last4Digits ?? this.last4Digits,
+      cardNumber: cardNumber ?? this.cardNumber,
+      cvv: cvv ?? this.cvv,
       creditLimit: creditLimit ?? this.creditLimit,
       outstandingBalance: outstandingBalance ?? this.outstandingBalance,
       availableCredit: availableCredit ?? this.availableCredit,
@@ -149,6 +169,10 @@ class CreditCardItem {
       issuedBank: issuedBank ?? this.issuedBank,
       cardType: cardType ?? this.cardType,
       expiryDate: expiryDate ?? this.expiryDate,
+      isDebit: isDebit ?? this.isDebit,
+      dailyAtmLimit: dailyAtmLimit ?? this.dailyAtmLimit,
+      dailyPosLimit: dailyPosLimit ?? this.dailyPosLimit,
+      linkedAccount: linkedAccount ?? this.linkedAccount,
     );
   }
 }
@@ -321,7 +345,7 @@ class InstitutionDirectoryItem {
   final String id;
   final String name;
   final String logoText;
-  final String category; // Banks, UPI, Credit Cards, Loans, Investments, Insurance
+  final String category; // Banks, Credit Cards, Loans, Investments, Insurance
   final bool apiEnabled;
   final bool aaSupported;
   final String status;
@@ -391,7 +415,7 @@ class BankAggregationState {
     this.selectedTabIndex = 0,
     this.isSyncing = false,
     this.lastSyncedTime = 'Just now • Every 4 Hours',
-    this.connectionStatus = 'All 7 Pillars Connected & Synced',
+    this.connectionStatus = 'All 5 Pillars Connected & Synced',
   });
 
   // Consolidated Financial Position Calculations (Section 12 FRD/FRS)
@@ -399,7 +423,8 @@ class BankAggregationState {
   double get totalWalletCash => wallets.fold(0.0, (s, w) => s + w.balance);
   double get totalCashPosition => totalBankCash + totalWalletCash;
 
-  double get totalCreditCardDebt => creditCards.fold(0.0, (s, c) => s + c.outstandingBalance);
+  double get totalCreditCardDebt =>
+      creditCards.where((c) => !c.isDebit).fold(0.0, (s, c) => s + c.outstandingBalance);
   double get totalLoanDebt => loans.fold(0.0, (s, l) => s + l.outstandingPrincipal);
   double get totalDebtPosition => totalCreditCardDebt + totalLoanDebt;
 

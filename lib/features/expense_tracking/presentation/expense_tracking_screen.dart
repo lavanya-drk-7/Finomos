@@ -10,6 +10,9 @@ import '../domain/expense_models.dart';
 import '../providers/expense_provider.dart';
 import '../../budget_management/providers/budget_provider.dart';
 import '../../transaction_detection/presentation/widgets/in_app_transaction_alert_banner.dart';
+import '../../../core/services/invoice_pdf_service.dart';
+import '../../../core/constants/api_constants.dart';
+import '../../../core/services/api_client.dart';
 
 class ExpenseTrackingScreen extends ConsumerStatefulWidget {
   const ExpenseTrackingScreen({super.key});
@@ -74,6 +77,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
       if (mounted) setState(() {});
     });
     _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(expenseProvider.notifier).loadLiveExpenses();
+    });
   }
 
   @override
@@ -121,15 +127,34 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
     return '₹${buffer.toString()},$lastThree';
   }
 
-  void _viewUploadedDocument(
+  Future<void> _viewUploadedDocument(
     BuildContext context,
     String docName,
     String? docPath,
-  ) {
+  ) async {
+    String resolvedPath = docPath ?? '';
     String fileSize = '1.2 MB';
-    if (docPath != null && docPath.isNotEmpty) {
+
+    if (resolvedPath.contains('/uploads/')) {
+      final uploadFileName = resolvedPath.split('/uploads/').last;
+      resolvedPath = '${ApiConstants.baseUrl}/uploads/$uploadFileName';
+    }
+
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
       try {
-        final f = File(docPath);
+        final bytes = await ApiClient().getBytes(resolvedPath);
+        if (bytes != null && bytes.isNotEmpty) {
+          final tempFile = File('${Directory.systemTemp.path}/$docName');
+          await tempFile.writeAsBytes(bytes, flush: true);
+          resolvedPath = tempFile.path;
+          fileSize = bytes.length > 1024 * 1024
+              ? '${(bytes.length / (1024 * 1024)).toStringAsFixed(1)} MB'
+              : '${(bytes.length / 1024).toStringAsFixed(0)} KB';
+        }
+      } catch (_) {}
+    } else if (resolvedPath.isNotEmpty) {
+      try {
+        final f = File(resolvedPath);
         if (f.existsSync()) {
           final bytes = f.lengthSync();
           fileSize = bytes > 1024 * 1024
@@ -139,30 +164,623 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
       } catch (_) {}
     }
 
+    if (!context.mounted) return;
+
+    final isVoucher = docName.toUpperCase().contains('INVOICE') || docName.toUpperCase().startsWith('INV-EXP');
+
     DocumentActionHelper.showDocumentPreviewDialog(
       context: context,
-      idType: 'Expense Receipt Document',
-      idNumber: 'Finomos Attached Receipt',
+      idType: isVoucher ? 'Official Section 65B Expense Invoice' : 'Expense Receipt Document',
+      idNumber: isVoucher ? docName.replaceAll('.pdf', '') : 'Finomos Attached Receipt',
       fileName: docName,
       fileSize: fileSize,
-      localPath: docPath,
+      localPath: resolvedPath,
       uploadDate: 'Today',
-      uploadSource: (docPath != null && docPath.contains('cache'))
-          ? 'Camera / Gallery'
-          : 'Attached Document',
-      onDownload: () => _downloadUploadedDocument(context, docName, docPath),
+      uploadSource: isVoucher
+          ? 'RBI Account Aggregator & Section 65B Cloud Vault'
+          : (resolvedPath.contains('cache') ? 'Camera / Gallery' : 'Attached Document'),
+      onDownload: () => _downloadUploadedDocument(context, docName, resolvedPath),
     );
   }
 
-  void _downloadUploadedDocument(
+  Future<void> _downloadUploadedDocument(
     BuildContext context,
     String docName,
     String? docPath,
-  ) {
+  ) async {
+    String resolvedPath = docPath ?? '';
+    if (resolvedPath.contains('/uploads/')) {
+      final uploadFileName = resolvedPath.split('/uploads/').last;
+      resolvedPath = '${ApiConstants.baseUrl}/uploads/$uploadFileName';
+    }
+
+    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+      try {
+        final bytes = await ApiClient().getBytes(resolvedPath);
+        if (bytes != null && bytes.isNotEmpty) {
+          final tempFile = File('${Directory.systemTemp.path}/$docName');
+          await tempFile.writeAsBytes(bytes, flush: true);
+          resolvedPath = tempFile.path;
+        }
+      } catch (_) {}
+    }
+
+    if (!context.mounted) return;
+
     DocumentActionHelper.downloadDocumentToDevice(
       context: context,
       fileName: docName,
-      localPath: docPath,
+      localPath: resolvedPath,
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0A2540),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showTransactionDetailsSheet(BuildContext context, ExpenseEntry item) {
+    final invoiceNumber = InvoicePdfService.generateInvoiceNumber(
+      isExpense: true,
+      id: item.id,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.90,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Drag Handle
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Top Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long,
+                              color: Color(0xFFDC2626),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Transaction Details',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0A2540),
+                                  ),
+                                ),
+                                Text(
+                                  'Official Expense Record & Tax Invoice',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              color: Color(0xFF64748B),
+                            ),
+                            onPressed: () => Navigator.pop(sheetCtx),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Scrollable content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Overview Amount Card
+                            Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF0A2540),
+                                    Color(0xFFDC2626),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF0A2540,
+                                    ).withOpacity(0.18),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'TOTAL AMOUNT PAID',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(
+                                            0xFF10B981,
+                                          ).withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFF10B981),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              color: Color(0xFF34D399),
+                                              size: 11,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'COMPLETED',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '-${_formatRupees(item.amount)}',
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.description,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Invoice Ref: $invoiceNumber',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Detailed Information Box
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'TRANSACTION SUMMARY',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0A2540),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const Divider(
+                                    height: 16,
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                  _buildDetailRow(
+                                    'Description',
+                                    item.description,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow('Category', item.category),
+                                  if (item.merchant.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow(
+                                      'Merchant / Payee',
+                                      item.merchant,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    'Transaction Date',
+                                    item.date,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    'Payment Mode',
+                                    item.paymentMode,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Bank Account',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          BankLogo(
+                                            bankName: item.bankAccount,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            item.bankAccount,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0A2540),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    'Budget Priority',
+                                    item.priority,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    'Outflow Frequency',
+                                    item.isRecurring
+                                        ? 'Recurring Automatic'
+                                        : 'One-Time Outflow',
+                                  ),
+                                  if (item.notes.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    _buildDetailRow(
+                                      'Notes / Remarks',
+                                      item.notes,
+                                    ),
+                                  ],
+                                  if (item.documentName != null &&
+                                      item.documentName!.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Attached Receipt',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: InkWell(
+                                            onTap: () => _viewUploadedDocument(
+                                              context,
+                                              item.documentName!,
+                                              item.documentPath,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.attachment,
+                                                  size: 14,
+                                                  color: Color(0xFF0066FF),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(
+                                                    item.documentName!,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF0066FF),
+                                                      decoration: TextDecoration
+                                                          .underline,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Security & Compliance Card
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFBFDBFE),
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.verified_user_outlined,
+                                    color: Color(0xFF0066FF),
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Cryptographically verified & RBI Account Aggregator compliant record. Valid under Section 65B of Indian Evidence Act.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF1E40AF),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Sticky Bottom Action Bar with Download Invoice Button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton.icon(
+                              key: const ValueKey('download_invoice_button'),
+                              onPressed: () async {
+                                try {
+                                  await InvoicePdfService.downloadExpenseInvoice(
+                                    context: context,
+                                    entry: item,
+                                  );
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Download failed: $e'),
+                                        backgroundColor: const Color(
+                                          0xFFEF4444,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.picture_as_pdf,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                'Download Invoice',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0066FF),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final invoiceNumber =
+                                    InvoicePdfService.generateInvoiceNumber(
+                                      isExpense: true,
+                                      id: item.id,
+                                    );
+                                final fileName = '$invoiceNumber.pdf';
+                                final bytes =
+                                    InvoicePdfService.generateExpenseInvoiceBytes(
+                                      item,
+                                    );
+                                final tempFile = File(
+                                  '${Directory.systemTemp.path}/$fileName',
+                                );
+                                tempFile.writeAsBytesSync(bytes, flush: true);
+
+                                if (context.mounted) {
+                                  DocumentActionHelper.showDocumentPreviewDialog(
+                                    context: context,
+                                    idType: 'Expense Invoice & Receipt',
+                                    idNumber: invoiceNumber,
+                                    fileName: fileName,
+                                    fileSize:
+                                        '${(bytes.length / 1024).toStringAsFixed(1)} KB',
+                                    localPath: tempFile.path,
+                                    uploadDate: item.date,
+                                    uploadSource: 'Finomos AI Personal CFO',
+                                    onDownload: () =>
+                                        InvoicePdfService.downloadExpenseInvoice(
+                                          context: context,
+                                          entry: item,
+                                        ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                                color: Color(0xFF0A2540),
+                              ),
+                              label: const Text(
+                                'Preview Invoice Document',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0A2540),
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -555,6 +1173,20 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                                 selectedDocumentName = res.fileName;
                                 selectedDocumentPath = res.localPath;
                               });
+                              if (res.localPath != null && res.localPath!.isNotEmpty) {
+                                try {
+                                  final file = File(res.localPath!);
+                                  if (file.existsSync()) {
+                                    final uploaded = await ref.read(expenseProvider.notifier).uploadReceipt(file);
+                                    if (uploaded != null) {
+                                      setSheetState(() {
+                                        selectedDocumentName = uploaded.documentName;
+                                        selectedDocumentPath = uploaded.documentPath;
+                                      });
+                                    }
+                                  }
+                                } catch (_) {}
+                              }
                             }
                           } catch (e) {
                             setSheetState(() {
@@ -1495,10 +2127,13 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
           matchesDate;
     }).toList();
 
-    return ListView(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => ref.read(expenseProvider.notifier).loadLiveExpenses(),
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
         const InAppTransactionAlertBanner(),
         // Outflow & Priority Overview Card
         Container(
@@ -1521,13 +2156,37 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Total Monthly Outflow',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'Total Monthly Outflow',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (state.summaryData != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        state.summaryData!.healthScoreRating,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 10),
               Text(
@@ -1538,37 +2197,164 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                   color: Colors.white,
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // AI Personal CFO Spending Coach Banner
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFEF2F2),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFFECACA)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.psychology, color: Color(0xFFDC2626), size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'AI Personal CFO: Expense Health Score is ${state.expenseHealthScore.toStringAsFixed(0)}/100. Discretionary spending (${state.wantsRatio.toStringAsFixed(1)}%) is well within the 30% financial guardrail.',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF991B1B),
-                    fontWeight: FontWeight.w500,
-                  ),
+              if (state.summaryData != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.speed, size: 13, color: Color(0xFFFCA5A5)),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Daily Avg: ${_formatRupees(state.dailyAverage)}/day',
+                              style: const TextStyle(
+                                color: Color(0xFFFEE2E2),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Savings: ${state.savingsRate.toStringAsFixed(1)}%',
+                      style: const TextStyle(
+                        color: Color(0xFFFEE2E2),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+
+        // Auto-Detected Outflows Banner from SMS & Account Aggregator
+        if (state.detectedExpenses.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFCA5A5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${state.detectedExpenses.length} Outflow Detected',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF991B1B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        state.detectedExpenses.first.channel.replaceAll('_', ' '),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                for (final exp in state.detectedExpenses) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                exp.description,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF0A2540),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${exp.suggestedCategory} • ${exp.bankAccount}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '-${_formatRupees(exp.amount)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Color(0xFFDC2626),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFDC2626),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                ref.read(expenseProvider.notifier).confirmDetectedExpense(exp.detectionId);
+                              },
+                              child: const Text('Confirm', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
 
         // Search Box
         Container(
@@ -1818,7 +2604,28 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
           ),
 
         // Expense Items Cards
-        if (filteredExpenses.isEmpty)
+        if (state.isLoading && state.expenses.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFFDC2626)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Loading live expenses...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (filteredExpenses.isEmpty)
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
@@ -1856,171 +2663,242 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
             Builder(
               builder: (context) {
                 final isNewlyAdded = item.id == _highlightedExpenseId;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isNewlyAdded
-                        ? const Color(0xFFF0FDF4)
-                        : Colors.white,
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isNewlyAdded
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFE2E8F0),
-                      width: isNewlyAdded ? 1.5 : 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
+                    onTap: () => _showTransactionDetailsSheet(context, item),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
                         color: isNewlyAdded
-                            ? const Color(0xFF10B981).withOpacity(0.12)
-                            : Colors.black.withOpacity(0.02),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: _getPriorityColor(
-                                item.priority,
-                              ).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              _getCategoryIcon(item.category),
-                              color: _getPriorityColor(item.priority),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        item.description,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Color(0xFF0A2540),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (isNewlyAdded) ...[
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 5,
-                                          vertical: 1.5,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF10B981),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'JUST RECORDED',
-                                          style: TextStyle(
-                                            fontSize: 8.5,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    if (item.isRecurring) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 1,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFDBEAFE),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'AUTO',
-                                          style: TextStyle(
-                                            fontSize: 8.5,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF0066FF),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${item.category} • ${item.paymentMode}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    BankLogo(
-                                      bankName: item.bankAccount,
-                                      size: 12,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        '${item.bankAccount} • ${item.merchant.isNotEmpty ? "${item.merchant} • " : ""}${item.date}',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: Color(0xFF94A3B8),
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '-${_formatRupees(item.amount)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                              color: Color(0xFFEF4444),
-                            ),
+                            ? const Color(0xFFF0FDF4)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isNewlyAdded
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFE2E8F0),
+                          width: isNewlyAdded ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isNewlyAdded
+                                ? const Color(0xFF10B981).withOpacity(0.12)
+                                : Colors.black.withOpacity(0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                    ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: _getPriorityColor(
+                                    item.priority,
+                                  ).withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  _getCategoryIcon(item.category),
+                                  color: _getPriorityColor(item.priority),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            item.description,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Color(0xFF0A2540),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (isNewlyAdded) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 5,
+                                              vertical: 1.5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF10B981),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'JUST RECORDED',
+                                              style: TextStyle(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                        if (item.isRecurring) ...[
+                                          const SizedBox(width: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDBEAFE),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'AUTO',
+                                              style: TextStyle(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0066FF),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.category} • ${item.paymentMode}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        BankLogo(
+                                          bankName: item.bankAccount,
+                                          size: 12,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            '${item.bankAccount} • ${item.merchant.isNotEmpty ? "${item.merchant} • " : ""}${item.date}',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '-${_formatRupees(item.amount)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14,
+                                      color: Color(0xFFEF4444),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.description_outlined,
+                                        size: 11,
+                                        color: Color(0xFF0066FF),
+                                      ),
+                                      SizedBox(width: 2),
+                                      Text(
+                                        'Invoice',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0066FF),
+                                        ),
+                                      ),
+                                      SizedBox(width: 2),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        size: 11,
+                                        color: Color(0xFF0066FF),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
             ),
+        if (state.pagination != null && state.pagination!.totalPages > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.chevron_left, size: 16),
+                  label: const Text('Previous', style: TextStyle(fontSize: 12)),
+                  onPressed: state.pagination!.currentPage > 1
+                      ? () => ref.read(expenseProvider.notifier).setPage(state.pagination!.currentPage - 1)
+                      : null,
+                ),
+                Text(
+                  'Page ${state.pagination!.currentPage} of ${state.pagination!.totalPages} (${state.pagination!.totalRecords} total)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.chevron_right, size: 16),
+                  label: const Text('Next', style: TextStyle(fontSize: 12)),
+                  onPressed: state.pagination!.currentPage < state.pagination!.totalPages
+                      ? () => ref.read(expenseProvider.notifier).setPage(state.pagination!.currentPage + 1)
+                      : null,
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 24),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildExpenseSourcesTab(ExpenseState state) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    return RefreshIndicator(
+      onRefresh: () => ref.read(expenseProvider.notifier).loadLiveExpenses(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
         // Master Card: Configured Expense Sources
         Container(
           padding: const EdgeInsets.all(20),
@@ -2139,7 +3017,28 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
         const SizedBox(height: 10),
 
         // Expense Sources list
-        if (state.expenses.isEmpty)
+        if (state.isLoading && state.expenses.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Color(0xFFDC2626)),
+                  SizedBox(height: 12),
+                  Text(
+                    'Loading live expense sources...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (state.expenses.isEmpty)
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
@@ -2184,8 +3083,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
 
         const SizedBox(height: 28),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildExpenseSourceCard(ExpenseEntry item) {
     final priColor = _getPriorityColor(item.priority);
@@ -2322,6 +3222,41 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               InkWell(
+                onTap: () => _showTransactionDetailsSheet(context, item),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 15,
+                        color: Color(0xFF0A2540),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Invoice',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0A2540),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
                 onTap: () => _showAddExpenseSheet(context, existingEntry: item),
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
@@ -2393,59 +3328,6 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderMetricChip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 10.5,
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickExpenseChip({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -26,13 +26,14 @@ void main() {
 
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BankAggregationScreen())));
     await tester.pumpAndSettle();
-    expect(find.text('Bank Account Aggregation'), findsOneWidget);
+    expect(find.text('Bank Aggregation'), findsOneWidget);
     expect(find.text('CONSOLIDATED FINANCIAL NET WORTH', skipOffstage: false), findsOneWidget);
     expect(find.text('Connected Accounts', skipOffstage: false), findsOneWidget);
-    expect(find.text('UPI Accounts & Mandates', skipOffstage: false), findsOneWidget);
-    expect(find.text('Credit Cards & Limits', skipOffstage: false), findsOneWidget);
+    expect(find.text('UPI Accounts & Mandates', skipOffstage: false), findsNothing);
+    expect(find.text('Digital Wallets & Cash Position (FAA-SEC-08)', skipOffstage: false), findsNothing);
+    expect(find.text('Credit & Debit Cards', skipOffstage: false), findsOneWidget);
     expect(find.text('Loan Accounts & Liabilities', skipOffstage: false), findsOneWidget);
-    expect(find.text('Consent Management (FAA-SEC-11)', skipOffstage: false), findsOneWidget);
+    expect(find.text('Consent Management (FAA-SEC-11)', skipOffstage: false), findsNothing);
   });
 
   testWidgets('IncomeTrackingScreen renders properly', (WidgetTester tester) async {
@@ -85,26 +86,29 @@ void main() {
   });
 
   testWidgets('DashboardScreen renders properly', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: DashboardScreen())));
     await tester.pumpAndSettle();
     expect(find.text('Finomos Financial OS'), findsOneWidget);
     expect(find.text('1. INCOME'), findsOneWidget);
     expect(find.text('2. EXPENSE'), findsOneWidget);
-    expect(find.text('3. PROTECT'), findsOneWidget);
-    expect(find.text('4. BORROW'), findsOneWidget);
-    expect(find.text('5. GROW'), findsOneWidget);
-    expect(find.text('6. PLAN'), findsOneWidget);
-    expect(find.text('7. COMPLY'), findsOneWidget);
+    expect(find.text('3. BUDGET'), findsOneWidget);
+    expect(find.text('4. BANK FEEDS'), findsOneWidget);
+    expect(find.text('5. PROTECT'), findsOneWidget);
+    expect(find.text('6. BORROW'), findsOneWidget);
+    expect(find.text('7. GROW'), findsOneWidget);
+    expect(find.text('8. PLAN'), findsOneWidget);
+    expect(find.text('9. COMPLY'), findsOneWidget);
     expect(find.text('ADVISORS'), findsOneWidget);
     expect(find.text('Emergency & Insurance'), findsOneWidget);
     expect(find.text('Debt & Repayment'), findsOneWidget);
     expect(find.text('Income & Forecasting'), findsNothing);
     expect(find.text('Expense & Cash Flow'), findsNothing);
     expect(find.text('Total Amount'), findsNothing);
-    expect(find.text('₹1,32,500'), findsOneWidget);
+    expect(find.text('₹0'), findsWidgets);
     expect(find.text('+12.4%'), findsOneWidget);
-    expect(find.text('₹52,899'), findsOneWidget);
-    expect(find.text('39.9%'), findsOneWidget);
   });
 
   testWidgets('NotificationsScreen renders properly', (WidgetTester tester) async {

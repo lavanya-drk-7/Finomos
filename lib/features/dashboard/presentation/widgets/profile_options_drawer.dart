@@ -75,7 +75,7 @@ class _ProfileOptionsDrawerState extends ConsumerState<ProfileOptionsDrawer> {
     _SubSectionData(
       icon: Icons.account_balance_outlined,
       title: 'Bank Accounts & Aggregation',
-      subtitle: 'Linked bank accounts & mandates',
+      subtitle: 'Linked bank accounts, cards & loans',
       route: '/bank-aggregation',
     ),
     _SubSectionData(

@@ -15,7 +15,7 @@ void main() {
     appRouter.go('/bank-aggregation');
     await tester.pumpAndSettle();
 
-    expect(find.text('Bank & Aggregation'), findsOneWidget);
+    expect(find.text('Bank Aggregation'), findsOneWidget);
     expect(find.text('CONSOLIDATED FINANCIAL NET WORTH'), findsOneWidget);
     expect(find.text('Connected Accounts'), findsOneWidget);
   });

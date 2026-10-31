@@ -59,7 +59,7 @@ void main() {
   });
 
   group('LoginScreen Validation Widget Tests', () {
-    testWidgets('shows validation error when email is cleared and Verify Email is clicked', (WidgetTester tester) async {
+    testWidgets('shows validation error when mobile is cleared and Continue is clicked', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -68,159 +68,203 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-
-      // Find Email text field and enter empty string
-      final emailField = find.widgetWithText(TextFormField, 'Email ID');
-      expect(emailField, findsOneWidget);
-      await tester.enterText(emailField, '');
-      await tester.pumpAndSettle();
-
-      // Tap "Verify Email" button
-      final verifyEmailBtn = find.widgetWithText(ElevatedButton, 'Verify Email');
-      await tester.ensureVisible(verifyEmailBtn);
-      await tester.tap(verifyEmailBtn);
-      await tester.pumpAndSettle();
-
-      // Inline validation error & snackbar displayed
-      expect(find.text('Email ID is required'), findsWidgets);
-    });
-
-    testWidgets('shows validation error when invalid email format is entered', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final emailField = find.widgetWithText(TextFormField, 'Email ID');
-      await tester.enterText(emailField, 'notanemail');
-      await tester.pumpAndSettle();
-
-      final verifyEmailBtn = find.widgetWithText(ElevatedButton, 'Verify Email');
-      await tester.ensureVisible(verifyEmailBtn);
-      await tester.tap(verifyEmailBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Please enter a valid email address'), findsWidgets);
-    });
-
-    testWidgets('shows validation error when password is too short in Login', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final passwordField = find.widgetWithText(TextFormField, 'Password');
-      await tester.enterText(passwordField, '123');
-      await tester.pumpAndSettle();
-
-      final verifyEmailBtn = find.widgetWithText(ElevatedButton, 'Verify Email');
-      await tester.ensureVisible(verifyEmailBtn);
-      await tester.tap(verifyEmailBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Password must be at least 6 characters'), findsWidgets);
-    });
-
-    testWidgets('shows validation error when mobile is cleared and Verify Mobile OTP is clicked', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final mobileTab = find.text('Mobile Number');
-      if (mobileTab.evaluate().isNotEmpty) {
-        await tester.tap(mobileTab.first);
-        await tester.pumpAndSettle();
-      }
 
       final mobileField = find.widgetWithText(TextFormField, 'Mobile Number');
-      await tester.ensureVisible(mobileField);
+      expect(mobileField, findsOneWidget);
       await tester.enterText(mobileField, '');
       await tester.pumpAndSettle();
 
-      final verifyMobileBtn = find.widgetWithText(ElevatedButton, 'Verify Mobile OTP');
-      await tester.ensureVisible(verifyMobileBtn);
-      await tester.tap(verifyMobileBtn);
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
       await tester.pumpAndSettle();
 
       expect(find.text('Mobile number is required'), findsWidgets);
     });
 
-    testWidgets('successfully logs in with Email ID and Password', (WidgetTester tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
+    testWidgets('shows Enter Valid OTP when wrong OTP is entered in Mobile flow', (WidgetTester tester) async {
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             home: LoginScreen(),
           ),
         ),
       );
-      await tester.pumpAndSettle();
-
-      final emailField = find.widgetWithText(TextFormField, 'Email ID');
-      await tester.enterText(emailField, 'sireesha@gmail.com');
-      final passwordField = find.widgetWithText(TextFormField, 'Password');
-      await tester.enterText(passwordField, 'Password123');
-      await tester.pumpAndSettle();
-
-      final verifyEmailBtn = find.widgetWithText(ElevatedButton, 'Verify Email');
-      await tester.ensureVisible(verifyEmailBtn);
-      await tester.tap(verifyEmailBtn);
-      await tester.pump();
-
-      expect(find.text('Login Successful!'), findsWidgets);
-      expect(container.read(authKycProvider).isExistingUser, isTrue);
-      await tester.pump(const Duration(milliseconds: 350));
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('successfully logs in with Mobile Number and 6-Digit OTP', (WidgetTester tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: LoginScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final mobileTab = find.text('Mobile Number');
-      await tester.tap(mobileTab.first);
       await tester.pumpAndSettle();
 
       final mobileField = find.widgetWithText(TextFormField, 'Mobile Number');
-      await tester.ensureVisible(mobileField);
       await tester.enterText(mobileField, '9876543210');
       await tester.pumpAndSettle();
 
-      final verifyMobileBtn = find.widgetWithText(ElevatedButton, 'Verify Mobile OTP');
-      await tester.ensureVisible(verifyMobileBtn);
-      await tester.tap(verifyMobileBtn);
+      // Tap Continue to proceed to OTP step
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter 6 Digit OTP'), findsOneWidget);
+
+      // Enter incorrect OTP
+      final otpFields = find.byType(TextFormField);
+      // First 6 are OTP fields
+      for (int i = 0; i < 6; i++) {
+        await tester.enterText(otpFields.at(i), '0');
+      }
+      await tester.pumpAndSettle();
+
+      ScaffoldMessenger.of(tester.element(find.byType(LoginScreen))).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      final verifyBtn = find.widgetWithText(ElevatedButton, 'Verify');
+      await tester.ensureVisible(verifyBtn);
+      await tester.tap(verifyBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter Valid OTP'), findsWidgets);
+    });
+
+    testWidgets('successfully logs in with Mobile Number and correct OTP', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final mobileField = find.widgetWithText(TextFormField, 'Mobile Number');
+      await tester.enterText(mobileField, '9876543210');
+      await tester.pumpAndSettle();
+
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+
+      // Tap Auto-fill to fill the generated OTP
+      final autoFillBtn = find.text('Auto-fill');
+      expect(autoFillBtn, findsOneWidget);
+      await tester.tap(autoFillBtn);
+      await tester.pumpAndSettle();
+
+      ScaffoldMessenger.of(tester.element(find.byType(LoginScreen))).clearSnackBars();
+      await tester.pumpAndSettle();
+
+      final verifyBtn = find.widgetWithText(ElevatedButton, 'Verify');
+      await tester.ensureVisible(verifyBtn);
+      await tester.tap(verifyBtn);
       await tester.pump();
 
       expect(find.text('Login Successful!'), findsWidgets);
       expect(container.read(authKycProvider).isExistingUser, isTrue);
       expect(container.read(authKycProvider).isMobileVerified, isTrue);
       expect(container.read(authKycProvider).isOtpVerified, isTrue);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('shows validation error when email is cleared and Continue is clicked', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch to Email ID login via bottom option
+      final switchBtn = find.text('Login with Email ID instead');
+      await tester.tap(switchBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter Email ID to Continue'), findsOneWidget);
+
+      final emailField = find.widgetWithText(TextFormField, 'Email ID');
+      await tester.enterText(emailField, '');
+      await tester.pumpAndSettle();
+
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Email ID is required'), findsWidgets);
+    });
+
+    testWidgets('shows Incorrect Password Try Again when wrong password entered', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchBtn = find.text('Login with Email ID instead');
+      await tester.tap(switchBtn);
+      await tester.pumpAndSettle();
+
+      final emailField = find.widgetWithText(TextFormField, 'Email ID');
+      await tester.enterText(emailField, 'sireesha@gmail.com');
+      await tester.pumpAndSettle();
+
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enter Password'), findsOneWidget);
+
+      final passwordField = find.widgetWithText(TextFormField, 'Password');
+      await tester.enterText(passwordField, 'WrongPass123');
+      await tester.pumpAndSettle();
+
+      final verifyBtn = find.widgetWithText(ElevatedButton, 'Verify');
+      await tester.tap(verifyBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect Password Try Again'), findsWidgets);
+    });
+
+    testWidgets('successfully logs in with correct registered password', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: LoginScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final switchBtn = find.text('Login with Email ID instead');
+      await tester.tap(switchBtn);
+      await tester.pumpAndSettle();
+
+      final emailField = find.widgetWithText(TextFormField, 'Email ID');
+      await tester.enterText(emailField, 'sireesha@gmail.com');
+      await tester.pumpAndSettle();
+
+      final continueBtn = find.widgetWithText(ElevatedButton, 'Continue');
+      await tester.tap(continueBtn);
+      await tester.pumpAndSettle();
+
+      final passwordField = find.widgetWithText(TextFormField, 'Password');
+      // Registered password in default user state is 'Password@123'
+      await tester.enterText(passwordField, 'Password@123');
+      await tester.pumpAndSettle();
+
+      final verifyBtn = find.widgetWithText(ElevatedButton, 'Verify');
+      await tester.tap(verifyBtn);
+      await tester.pump();
+
+      expect(find.text('Login Successful!'), findsWidgets);
+      expect(container.read(authKycProvider).isExistingUser, isTrue);
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
     });

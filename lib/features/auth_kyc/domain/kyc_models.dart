@@ -24,12 +24,16 @@ class UserRegistrationData {
   final bool consentTermsPrivacy;
   final bool agreeTerms;
   final bool agreePrivacy;
+  final String authToken;
+  final String? userId;
 
   const UserRegistrationData({
     this.fullName = 'Sireesha',
     this.email = 'sireesha@gmail.com',
     this.mobileNumber = '+91 98765 43210',
-    this.password = 'Password@123',
+    this.password = 'Sireesha@123',
+    this.authToken = 'jwt-token-cmuzhxi5a000asr4p9f6jcndp',
+    this.userId = 'cmuzhxi5a000asr4p9f6jcndp',
     this.dob = '1995-08-15',
     this.gender = 'Female',
     this.panNumber = 'ABCDE1234F',
@@ -88,12 +92,16 @@ class UserRegistrationData {
     bool? consentTermsPrivacy,
     bool? agreeTerms,
     bool? agreePrivacy,
+    String? authToken,
+    String? userId,
   }) {
     return UserRegistrationData(
       fullName: fullName ?? this.fullName,
       email: email ?? this.email,
       mobileNumber: mobileNumber ?? this.mobileNumber,
       password: password ?? this.password,
+      authToken: authToken ?? this.authToken,
+      userId: userId ?? this.userId,
       dob: dob ?? this.dob,
       gender: gender ?? this.gender,
       panNumber: panNumber ?? this.panNumber,

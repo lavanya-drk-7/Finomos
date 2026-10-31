@@ -34,6 +34,26 @@ class AuthKycNotifier extends Notifier<KycStateData> {
     );
   }
 
+  void setSessionUser({
+    required String token,
+    required String userId,
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    state = state.copyWith(
+      isExistingUser: true,
+      kycStatus: KycStatus.verified,
+      user: state.user.copyWith(
+        fullName: name,
+        email: email,
+        mobileNumber: phone,
+        authToken: token,
+        userId: userId,
+      ),
+    );
+  }
+
   void updateProfilePhoto(String path) {
     state = state.copyWith(user: state.user.copyWith(profilePicUrl: path));
   }
