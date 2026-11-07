@@ -1,17 +1,26 @@
-# finomos
+# Finomos - AI Personal CFO
 
-A new Flutter project.
+A comprehensive Flutter application for personal financial management, banking aggregation, SMS transaction detection, tax planning, and wealth management.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This project is a starting point for the Finomos application.
 
-A few resources to get you started if this is your first Flutter project:
+### Prerequisites
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Flutter SDK (3.44.8+)
+- Dart SDK (3.12.0+)
+- Android Studio / Xcode
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Running the App
+
+```bash
+flutter pub get
+flutter run
+```
+
+### Building for Release
+
+```bash
+flutter build appbundle --release
+```
