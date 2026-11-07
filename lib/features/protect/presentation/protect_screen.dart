@@ -43,7 +43,7 @@ class _ProtectScreenState extends ConsumerState<ProtectScreen> with SingleTicker
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -119,7 +119,10 @@ class _ProtectScreenState extends ConsumerState<ProtectScreen> with SingleTicker
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Emergency Safety Net', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const Expanded(
+                    child: Text('Emergency Safety Net', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(

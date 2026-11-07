@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../domain/kyc_models.dart';
 import '../providers/auth_kyc_provider.dart';
+import '../../../core/services/cache_service.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../../document_vault/providers/document_provider.dart';
 import '../../document_vault/presentation/widgets/document_action_helper.dart';
 import 'flow_header.dart';
@@ -17,14 +20,15 @@ class IdDocumentItem {
   bool isUploaded;
 
   IdDocumentItem({
-    required this.idType,
+    required String idType,
     required String idNumber,
     required this.fileName,
     this.fileSize = '1.8 MB',
     this.uploadSource = 'Documents',
     this.localPath = '',
     this.isUploaded = false,
-  }) : idNumberController = TextEditingController(text: idNumber);
+  })  : idType = _KycDetailsScreenState.normalizeIdType(idType),
+        idNumberController = TextEditingController(text: idNumber);
 
   void dispose() {
     idNumberController.dispose();
@@ -41,7 +45,7 @@ class KycDetailsScreen extends ConsumerStatefulWidget {
 class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final List<String> _idTypes = [
+  static const List<String> _idTypes = [
     'PAN Card',
     'Aadhaar Card',
     'Driving License',
@@ -50,6 +54,31 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
     'Other Govt ID',
   ];
 
+  static String normalizeIdType(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'PAN Card';
+    final lower = raw.trim().toLowerCase();
+    if (lower == 'pan' || lower == 'pan card' || lower.contains('pan')) {
+      return 'PAN Card';
+    } else if (lower == 'aadhaar' ||
+        lower == 'aadhaar card' ||
+        lower == 'masked aadhaar card' ||
+        lower.contains('aadhaar') ||
+        lower.contains('aadhar')) {
+      return 'Aadhaar Card';
+    } else if (lower == 'driving_license' ||
+        lower == 'driving license' ||
+        lower.contains('driving') ||
+        lower.contains('license')) {
+      return 'Driving License';
+    } else if (lower == 'passport' || lower.contains('passport')) {
+      return 'Passport';
+    } else if (lower == 'voter_id' || lower == 'voter id' || lower.contains('voter')) {
+      return 'Voter ID';
+    } else {
+      return 'Other Govt ID';
+    }
+  }
+
   late List<IdDocumentItem> _documents;
 
   @override
@@ -57,13 +86,15 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
     super.initState();
     final user = ref.read(authKycProvider).user;
 
-    if (user.kycDocuments.isNotEmpty) {
-      _documents = user.kycDocuments
+    final uploadedDocs = user.kycDocuments.where((d) => d.isUploaded && d.fileName.trim().isNotEmpty).toList();
+
+    if (uploadedDocs.isNotEmpty) {
+      _documents = uploadedDocs
           .map((kd) => IdDocumentItem(
-                idType: kd.idType,
+                idType: normalizeIdType(kd.idType),
                 idNumber: kd.idNumber,
                 fileName: kd.fileName,
-                fileSize: kd.fileSize,
+                fileSize: kd.fileSize.isNotEmpty ? kd.fileSize : '',
                 localPath: kd.fileUrl,
                 isUploaded: kd.isUploaded,
               ))
@@ -72,16 +103,14 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
       _documents = [
         IdDocumentItem(
           idType: 'PAN Card',
-          idNumber: user.panNumber.isEmpty ? 'ABCDE1234F' : user.panNumber,
-          fileName: user.idProofFileName.isEmpty ? 'PAN_Card_Sireesha.pdf' : user.idProofFileName,
-          fileSize: '1.8 MB',
-          isUploaded: true,
+          idNumber: '',
+          fileName: '',
+          fileSize: '',
+          localPath: '',
+          isUploaded: false,
         ),
       ];
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _syncToVault();
-    });
   }
 
   void _syncToVault() {
@@ -95,7 +124,7 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
         fileUrl: doc.localPath,
         isUploaded: doc.isUploaded,
         isVerified: doc.isUploaded,
-        uploadDate: '30 Sep 2026',
+        uploadDate: doc.isUploaded ? 'Today' : '',
       );
     }).toList();
 
@@ -121,16 +150,7 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
       orElse: () => 'Aadhaar Card',
     );
 
-    String defaultNum = '';
-    if (nextIdType == 'Aadhaar Card') {
-      defaultNum = '9876 5432 1098';
-    } else if (nextIdType == 'Driving License') {
-      defaultNum = 'DL-1420110012345';
-    } else if (nextIdType == 'Passport') {
-      defaultNum = 'Z1234567';
-    } else {
-      defaultNum = 'ID-9988776655';
-    }
+    const String defaultNum = '';
 
     setState(() {
       _documents.add(
@@ -183,6 +203,29 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
         doc.isUploaded = true;
       });
       _syncToVault();
+
+      // Trigger live Section 65B identity upload to backend API if file is on local disk
+      if (result.localPath != null && result.localPath!.isNotEmpty) {
+        final localFile = File(result.localPath!);
+        if (localFile.existsSync()) {
+          String docTypeBackend = 'PAN';
+          final lower = doc.idType.toLowerCase();
+          if (lower.contains('aadhaar')) {
+            docTypeBackend = 'AADHAAR';
+          } else if (lower.contains('passport')) {
+            docTypeBackend = 'PASSPORT';
+          } else if (lower.contains('driving')) {
+            docTypeBackend = 'DRIVING_LICENSE';
+          }
+
+          final idNum = doc.idNumberController.text.trim();
+          ref.read(authKycProvider.notifier).uploadKycDocument(
+                file: localFile,
+                documentType: docTypeBackend,
+                idNumber: idNum,
+              );
+        }
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -389,6 +432,36 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
       );
       ref.read(authKycProvider.notifier).updateUserData(updated);
       ref.read(documentVaultProvider.notifier).syncKycDocuments(updated.kycDocuments);
+
+      // Attach KYC documents (POST /api/auth/onboarding/kyc-documents)
+      final aadhaarCandidate = _documents.where(
+        (doc) => doc.idType.toLowerCase().contains('aadhaar') && doc.isUploaded,
+      ).firstOrNull;
+      final aadhaarNum = aadhaarCandidate?.idNumberController.text.trim();
+      final panNumberUpper = panDoc.idNumberController.text.trim().toUpperCase();
+
+      LocalCacheService().saveUserProfileRecord(
+        phone: user.mobileNumber,
+        email: user.email,
+        userId: user.userId,
+        data: {
+          'panNumber': panNumberUpper,
+          if (aadhaarNum != null && aadhaarNum.isNotEmpty) 'aadhaarNumber': aadhaarNum,
+        },
+      );
+
+      ref.read(profileProvider.notifier).updatePersonalInfo(
+        ref.read(profileProvider).personalInfo.copyWith(
+          panNumber: panNumberUpper,
+          aadhaarNumber: (aadhaarNum != null && aadhaarNum.isNotEmpty) ? aadhaarNum : '',
+        ),
+      );
+
+      ref.read(authKycProvider.notifier).attachOnboardingKycDocuments(
+            panNumber: panNumberUpper,
+            aadhaarNumber: (aadhaarNum != null && aadhaarNum.isNotEmpty) ? aadhaarNum : '',
+          );
+
       ref.read(authKycProvider.notifier).updateStep(4);
       context.go('/consent');
     }
@@ -521,7 +594,10 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
 
                                   // 1. SELECT ID TYPE DROPDOWN
                                   DropdownButtonFormField<String>(
-                                    value: doc.idType,
+                                    isExpanded: true,
+                                    value: _idTypes.contains(doc.idType)
+                                        ? doc.idType
+                                        : normalizeIdType(doc.idType),
                                     decoration: InputDecoration(
                                       labelText: 'Select ID Type *',
                                       prefixIcon: const Icon(Icons.credit_card, color: Color(0xFF0066FF)),
@@ -537,7 +613,10 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
                                       ),
                                     ),
                                     items: _idTypes
-                                        .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                                        .map((type) => DropdownMenuItem(
+                                              value: type,
+                                              child: Text(type, overflow: TextOverflow.ellipsis),
+                                            ))
                                         .toList(),
                                     onChanged: (val) {
                                       if (val != null) {
@@ -589,7 +668,23 @@ class _KycDetailsScreenState extends ConsumerState<KycDetailsScreen> {
                                         borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
                                       ),
                                     ),
-                                    validator: (v) => v == null || v.trim().isEmpty ? 'Please enter ${doc.idType} number' : null,
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return 'Please enter ${doc.idType} number';
+                                      }
+                                      if (doc.idType == 'PAN Card') {
+                                        final clean = v.trim().toUpperCase();
+                                        if (!RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$').hasMatch(clean)) {
+                                          return 'Please enter a valid 10-character PAN (e.g. ABCDE1234F)';
+                                        }
+                                      } else if (doc.idType == 'Aadhaar Card') {
+                                        final digits = v.replaceAll(RegExp(r'\D'), '');
+                                        if (digits.length != 12 && !v.contains('•')) {
+                                          return 'Please enter a valid 12-digit Aadhaar number';
+                                        }
+                                      }
+                                      return null;
+                                    },
                                   ),
                                   const SizedBox(height: 16),
 

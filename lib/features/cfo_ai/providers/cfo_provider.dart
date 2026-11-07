@@ -1,3 +1,7 @@
+import '../../auth_kyc/providers/auth_kyc_provider.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
+import '../../income_tracking/providers/income_provider.dart';
+import '../../expense_tracking/providers/expense_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/cfo_models.dart';
@@ -41,13 +45,36 @@ class CfoState {
 class CfoNotifier extends Notifier<CfoState> {
   @override
   CfoState build() {
+    final user = ref.watch(authKycProvider).user;
+    final bankState = ref.watch(bankAggregationProvider);
+    final incomeState = ref.watch(incomeProvider);
+    final expenseState = ref.watch(expenseProvider);
+
+    final double totalAssets = bankState.totalAssets;
+    final double totalLiabilities = bankState.totalLiabilities;
+    final double netWorth = bankState.netWorth;
+    final double monthlyInflow = incomeState.summaryData?.totalMonthlyIncome ??
+        incomeState.entries.fold(0.0, (s, e) => s + e.amount);
+    final double monthlyOutflow = expenseState.summaryData?.totalMonthlyExpenses ??
+        expenseState.expenses.fold(0.0, (s, e) => s + e.amount);
+    final double runwayMonths = monthlyOutflow > 0
+        ? ((bankState.totalBankCash + bankState.totalLiquidCash) / monthlyOutflow)
+        : 0.0;
+    final double fiRatio = monthlyOutflow > 0 && totalAssets > 0
+        ? (totalAssets / (monthlyOutflow * 12 * 25))
+        : 0.0;
+
+    final name = user.fullName.isNotEmpty
+        ? user.fullName
+        : (user.email.isNotEmpty ? user.email.split('@').first : 'there');
+
     return CfoState(
       chatHistory: [
         AiChatMessage(
           id: '1',
           sender: 'cfo',
           text:
-              'Hello Rahul! I am your AI Personal CFO. I monitor your 7 Financial Pillars 24/7. How can I assist your financial life today?',
+              'Hello $name! I am your AI Personal CFO. I monitor your 7 Financial Pillars 24/7. How can I assist your financial life today?',
           timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
           actionButtons: [
             'Can I buy a car worth ₹12L?',
@@ -62,19 +89,19 @@ class CfoNotifier extends Notifier<CfoState> {
           id: 'r1',
           name: 'Never Miss EMI',
           description:
-              'Auto-reserve EMI 3 days before due date from salary credit.',
-          trigger: 'Salary Credited',
-          action: 'Reserve ₹25,000 in EMI Account',
+              'Auto-reserve money in high-yield account 3 days before any loan EMI due date.',
+          trigger: '3 Days Before Due Date',
+          action: 'Transfer EMI Amount to Primary Bank Account',
           isActive: true,
           priority: 'P3 - Obligations',
         ),
         AutopilotRule(
           id: 'r2',
-          name: 'Maintain ₹50,000 Cash Safety',
+          name: 'Impulse Buy Cooling Off',
           description:
-              'If bank balance drops below ₹50,000, pause P5/P6 spending.',
-          trigger: 'Balance < ₹50,000',
-          action: 'Pause Travel & Shopping Budgets',
+              'Hold any non-essential purchase exceeding ₹5,000 for 48 hours to evaluate impulse urge.',
+          trigger: 'Debit > ₹5,000 on Discretionary Category',
+          action: 'Prompt 48h Cooling Notification',
           isActive: true,
           priority: 'P1 - Survival',
         ),
@@ -88,66 +115,66 @@ class CfoNotifier extends Notifier<CfoState> {
           priority: 'P4 - Wealth',
         ),
       ],
-      overallHealthScore: 88.0,
+      overallHealthScore: totalAssets > 0 ? 88.0 : 0.0,
       healthComponents: [
         FinancialHealthScoreComponent(
           category: 'Cash Flow',
-          score: 92,
-          status: 'Excellent',
+          score: monthlyInflow > 0 ? 92 : 0,
+          status: monthlyInflow > 0 ? 'Excellent' : 'Not Configured',
           icon: Icons.waterfall_chart,
           color: const Color(0xFF10B981),
         ),
         FinancialHealthScoreComponent(
           category: 'Emergency Reserve',
-          score: 85,
-          status: 'Healthy',
+          score: runwayMonths >= 6 ? 85 : (runwayMonths > 0 ? 50 : 0),
+          status: runwayMonths >= 6 ? 'Healthy' : (runwayMonths > 0 ? 'Building' : 'Empty'),
           icon: Icons.security,
           color: const Color(0xFF0066FF),
         ),
         FinancialHealthScoreComponent(
           category: 'Insurance Protection',
-          score: 78,
-          status: 'Gap Detected',
+          score: bankState.insurancePolicies.isNotEmpty ? 78 : 0,
+          status: bankState.insurancePolicies.isNotEmpty ? 'Active' : 'No Cover',
           icon: Icons.health_and_safety,
           color: const Color(0xFFF59E0B),
         ),
         FinancialHealthScoreComponent(
           category: 'Debt Compliance',
-          score: 94,
-          status: 'Optimal',
+          score: totalLiabilities > 0 ? 94 : 100,
+          status: totalLiabilities > 0 ? 'Optimal' : 'Debt Free',
           icon: Icons.credit_score,
           color: const Color(0xFF10B981),
         ),
         FinancialHealthScoreComponent(
           category: 'Investments & Wealth',
-          score: 90,
-          status: 'On Track',
+          score: bankState.investments.isNotEmpty ? 90 : 0,
+          status: bankState.investments.isNotEmpty ? 'On Track' : 'Not Started',
           icon: Icons.trending_up,
           color: const Color(0xFF10B981),
         ),
         FinancialHealthScoreComponent(
           category: 'Retirement Readiness',
-          score: 82,
-          status: 'Good',
+          score: fiRatio > 0 ? 82 : 0,
+          status: fiRatio > 0 ? 'Good' : 'Not Configured',
           icon: Icons.beach_access,
           color: const Color(0xFF0066FF),
         ),
         FinancialHealthScoreComponent(
           category: 'Tax Compliance',
-          score: 95,
-          status: 'File Ready',
+          score: monthlyInflow > 0 ? 95 : 0,
+          status: monthlyInflow > 0 ? 'File Ready' : 'N/A',
           icon: Icons.assignment_turned_in,
           color: const Color(0xFF10B981),
         ),
       ],
       digitalTwin: DigitalTwinState(
-        totalAssets: 4580000,
-        totalLiabilities: 1240000,
-        monthlyInflow: 150000,
-        monthlyOutflow: 85000,
-        emergencyRunwayMonths: 8.5,
-        financialIndependenceRatio: 1.15,
-        netWorth: 3340000,
+        totalAssets: totalAssets,
+        totalLiabilities: totalLiabilities,
+        monthlyInflow: monthlyInflow,
+        monthlyOutflow: monthlyOutflow,
+        emergencyRunwayMonths: runwayMonths,
+        financialIndependenceRatio: fiRatio,
+        netWorth: netWorth,
       ),
       isThinking: false,
     );

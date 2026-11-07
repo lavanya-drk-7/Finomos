@@ -21,9 +21,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   @override
   void initState() {
     super.initState();
-    final demoDigits = ['1', '2', '3', '4', '5', '6'];
     for (int i = 0; i < 6; i++) {
-      _controllers[i].text = demoDigits[i];
+      _controllers[i].text = '';
     }
     _startResendTimer();
   }
@@ -56,14 +55,44 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     super.dispose();
   }
 
-  void _onVerify() {
-    ref.read(authKycProvider.notifier).setOtpVerified(true);
-    final kycState = ref.read(authKycProvider);
-    if (kycState.isExistingUser) {
-      context.go('/dashboard');
+  Future<void> _onVerify() async {
+    final otp = _controllers.map((c) => c.text.trim()).join();
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 6-digit OTP'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    final user = ref.read(authKycProvider).user;
+    final res = await ref.read(authKycProvider.notifier).verifyOtp(
+      phone: user.mobileNumber,
+      otp: otp,
+    );
+    if (res != null && res.verified) {
+      ref.read(authKycProvider.notifier).setOtpVerified(true);
+      final kycState = ref.read(authKycProvider);
+      if (mounted) {
+        if (kycState.isExistingUser) {
+          context.go('/dashboard');
+        } else {
+          ref.read(authKycProvider.notifier).updateStep(5);
+          context.go('/user-details');
+        }
+      }
     } else {
-      ref.read(authKycProvider.notifier).updateStep(5);
-      context.go('/user-details');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res?.message.isNotEmpty == true
+                ? res!.message
+                : 'Invalid OTP. Please check the code and try again.'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
@@ -131,9 +160,11 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         const SizedBox(height: 28),
 
                         // 6 OTP Box Inputs
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: List.generate(6, (index) {
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(6, (index) {
                             return SizedBox(
                               width: 44,
                               height: 52,
@@ -171,6 +202,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                             );
                           }),
                         ),
+                      ),
                         const SizedBox(height: 24),
 
                         // Resend OTP

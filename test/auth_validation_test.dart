@@ -143,10 +143,12 @@ void main() {
       await tester.tap(continueBtn);
       await tester.pumpAndSettle();
 
-      // Tap Auto-fill to fill the generated OTP
-      final autoFillBtn = find.text('Auto-fill');
-      expect(autoFillBtn, findsOneWidget);
-      await tester.tap(autoFillBtn);
+      // Enter the 6-digit verification code into the OTP fields
+      final otpFields = find.byType(TextFormField);
+      final testOtp = ['1', '2', '3', '4', '5', '6'];
+      for (int i = 0; i < 6; i++) {
+        await tester.enterText(otpFields.at(i), testOtp[i]);
+      }
       await tester.pumpAndSettle();
 
       ScaffoldMessenger.of(tester.element(find.byType(LoginScreen))).clearSnackBars();
@@ -155,7 +157,7 @@ void main() {
       final verifyBtn = find.widgetWithText(ElevatedButton, 'Verify');
       await tester.ensureVisible(verifyBtn);
       await tester.tap(verifyBtn);
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Login Successful!'), findsWidgets);
       expect(container.read(authKycProvider).isExistingUser, isTrue);
@@ -334,6 +336,64 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Please enter a valid 10-digit mobile number'), findsWidgets);
+    });
+
+    testWidgets('initializes with blank OTP fields and allows user entry', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: SignUpScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find all OTP input fields
+      final otpFields = find.byType(TextFormField);
+      // The OTP fields are 6 inputs rendered in a row
+      // Ensure all 6 OTP fields start blank
+      for (int i = 0; i < 6; i++) {
+        final widget = tester.widget<TextFormField>(otpFields.at(i + 4));
+        expect(widget.controller?.text, isEmpty);
+      }
+    });
+
+    testWidgets('successfully verifies mobile OTP with user entered code', (WidgetTester tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: SignUpScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final phoneField = find.widgetWithText(TextFormField, 'Mobile Number');
+      await tester.ensureVisible(phoneField);
+      await tester.enterText(phoneField, '9876543210');
+      await tester.pumpAndSettle();
+
+      // Enter 6-digit OTP received by user
+      final otpFields = find.byType(TextFormField);
+      final otp = ['1', '2', '3', '4', '5', '6'];
+      for (int i = 0; i < 6; i++) {
+        await tester.enterText(otpFields.at(i + 4), otp[i]);
+      }
+      await tester.pumpAndSettle();
+
+      final verifyMobileBtn = find.widgetWithText(ElevatedButton, 'Verify Mobile OTP');
+      await tester.ensureVisible(verifyMobileBtn);
+      await tester.tap(verifyMobileBtn);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Mobile OTP Verified!'), findsWidgets);
+      expect(container.read(authKycProvider).isMobileVerified, isTrue);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
     });
   });
 

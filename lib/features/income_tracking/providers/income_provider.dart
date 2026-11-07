@@ -1,32 +1,53 @@
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/income_models.dart';
 import '../services/income_api_service.dart';
 
 class IncomeNotifier extends Notifier<IncomeState> {
   final IncomeApiService _apiService = IncomeApiService();
+  Future<void>? _inFlightFetch;
 
   @override
   IncomeState build() {
+    final cachedSummary = _apiService.getCachedSummary();
+    final cachedEntries = _apiService.getCachedEntries();
+
     // Schedule background initial fetch from the live backend API
     Future.microtask(() => loadLiveIncomeData());
 
-    return const IncomeState(
-      entries: [],
-      isLoading: true,
+    final deleted = LocalCacheService().get('deleted_income_ids');
+    final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+    final activeEntries = (cachedEntries?.entries ?? const <IncomeEntry>[])
+        .where((e) => !deletedIds.contains(e.id))
+        .toList();
+
+    return IncomeState(
+      entries: activeEntries,
+      pagination: cachedEntries?.pagination,
+      summaryData: cachedSummary,
+      isLoading: false,
+      isSyncing: true,
     );
   }
 
-/// Fetch live data from backend API (summary + entries + forecast)
-  Future<void> loadLiveIncomeData({int? page, int? limit}) async {
+  /// Fetch live data from backend API with deduplication & progressive updates
+  Future<void> loadLiveIncomeData({int? page, int? limit, bool force = false}) {
+    if (!force && _inFlightFetch != null) return _inFlightFetch!;
+    _inFlightFetch = _executeLoadLiveIncome(page: page, limit: limit)
+        .whenComplete(() => _inFlightFetch = null);
+    return _inFlightFetch!;
+  }
+
+  Future<void> _executeLoadLiveIncome({int? page, int? limit}) async {
     final targetPage = page ?? state.currentPage;
     final targetLimit = limit ?? state.pagination?.perPage ?? 20;
 
     state = state.copyWith(
       isSyncing: true,
-      isLoading: state.entries.isEmpty,
       errorMessage: null,
       currentPage: targetPage,
     );
@@ -45,36 +66,74 @@ class IncomeNotifier extends Notifier<IncomeState> {
       final forecastFuture = _apiService.getForecast(horizon: state.forecastHorizon);
       final detectedFuture = _apiService.getDetectedInflows();
 
+      // Progressive update 1: as soon as summary arrives, update state instantly
+      summaryFuture.then((summary) {
+        if (!ref.mounted) return null;
+        if (summary != null) {
+          state = state.copyWith(
+            summaryData: summary,
+            autoTrackingEnabled: summary.autoTrackingEnabled,
+          );
+        }
+      });
+
+      // Progressive update 2: as soon as entries arrive, update state instantly
+      final deleted = LocalCacheService().get('deleted_income_ids');
+      final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+
+      entriesFuture.then((entriesRes) {
+        if (!ref.mounted) return null;
+        if (entriesRes != null) {
+          final serverList = entriesRes.entries.where((e) => !deletedIds.contains(e.id)).toList();
+          final localUnsynced = state.entries.where((e) => e.id.startsWith('inc_') && !serverList.any((s) => s.id == e.id)).toList();
+          final combined = [...localUnsynced, ...serverList];
+          state = state.copyWith(
+            entries: combined,
+            pagination: entriesRes.pagination,
+            isLoading: false,
+          );
+          LocalCacheService().save(
+            'income_entries',
+            {'entries': combined.map((e) => e.toJson()).toList()},
+          );
+        }
+      });
+
       final results = await Future.wait([summaryFuture, entriesFuture, forecastFuture, detectedFuture]);
+      if (!ref.mounted) return;
       final summary = results[0] as IncomeSummaryData?;
       final entriesResponse = results[1] as IncomeEntriesResponse?;
       final forecast = results[2] as IncomeForecastData?;
       final detectedInflows = results[3] as List<DetectedInflow>?;
 
+      final activeInflows = detectedInflows ?? state.detectedInflows;
+
+      final activeEntries = entriesResponse != null
+          ? [
+              ...state.entries.where((e) => e.id.startsWith('inc_') && !entriesResponse.entries.any((s) => s.id == e.id)),
+              ...entriesResponse.entries.where((e) => !deletedIds.contains(e.id)),
+            ]
+          : state.entries;
+
+      state = state.copyWith(
+        entries: activeEntries,
+        pagination: entriesResponse?.pagination ?? state.pagination,
+        summaryData: summary ?? state.summaryData,
+        forecastData: forecast ?? state.forecastData,
+        detectedInflows: activeInflows,
+        autoTrackingEnabled: summary?.autoTrackingEnabled ?? state.autoTrackingEnabled,
+        isLoading: false,
+        isSyncing: false,
+      );
+
       if (entriesResponse != null) {
-        state = state.copyWith(
-          entries: entriesResponse.entries,
-          pagination: entriesResponse.pagination,
-          summaryData: summary ?? state.summaryData,
-          forecastData: forecast ?? state.forecastData,
-          detectedInflows: detectedInflows ?? state.detectedInflows,
-          autoTrackingEnabled: summary?.autoTrackingEnabled ?? state.autoTrackingEnabled,
-          isLoading: false,
-          isSyncing: false,
-        );
-      } else if (summary != null) {
-        state = state.copyWith(
-          summaryData: summary,
-          forecastData: forecast ?? state.forecastData,
-          detectedInflows: detectedInflows ?? state.detectedInflows,
-          autoTrackingEnabled: summary.autoTrackingEnabled,
-          isLoading: false,
-          isSyncing: false,
-        );
-      } else {
-        state = state.copyWith(isLoading: false, isSyncing: false);
+        LocalCacheService().save('income_entries', {
+          'entries': activeEntries.map((e) => e.toJson()).toList(),
+          'pagination': entriesResponse.pagination.toJson(),
+        });
       }
     } catch (e) {
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoading: false,
         isSyncing: false,
@@ -85,9 +144,23 @@ class IncomeNotifier extends Notifier<IncomeState> {
 
   /// Create new income entry on live backend and update state
   Future<void> addIncome(IncomeEntry entry) async {
+    try {
+      ref.read(bankAggregationProvider.notifier).adjustAccountBalance(
+        bankAccount: entry.bankAccount,
+        delta: entry.amount,
+      );
+    } catch (_) {}
+
+    final deleted = LocalCacheService().get('deleted_income_ids');
+    final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+    if (deletedIds.contains(entry.id)) {
+      deletedIds.remove(entry.id);
+      LocalCacheService().save('deleted_income_ids', deletedIds);
+    }
     // Optimistic local update
+    final updated = [entry, ...state.entries];
     state = state.copyWith(
-      entries: [entry, ...state.entries],
+      entries: updated,
       selectedCategoryFilter: 'All',
       selectedTypeFilter: 'All',
       selectedBankAccountFilter: 'All',
@@ -95,6 +168,10 @@ class IncomeNotifier extends Notifier<IncomeState> {
       searchQuery: '',
       isSyncing: true,
     );
+    LocalCacheService().save('income_entries', {
+      'entries': updated.map((e) => e.toJson()).toList(),
+      if (state.pagination != null) 'pagination': state.pagination!.toJson(),
+    });
 
     try {
       final created = await _apiService.createEntry(entry);
@@ -106,6 +183,10 @@ class IncomeNotifier extends Notifier<IncomeState> {
           summaryData: summary ?? state.summaryData,
           isSyncing: false,
         );
+        LocalCacheService().save('income_entries', {
+          'entries': updatedList.map((e) => e.toJson()).toList(),
+          if (state.pagination != null) 'pagination': state.pagination!.toJson(),
+        });
         return;
       }
     } catch (_) {}
@@ -115,6 +196,20 @@ class IncomeNotifier extends Notifier<IncomeState> {
 
   /// Update an existing income stream on live backend
   Future<void> updateIncome(IncomeEntry entry) async {
+    final oldEntry = state.entries.firstWhere(
+      (e) => e.id == entry.id,
+      orElse: () => const IncomeEntry(id: '', source: '', category: '', amount: 0, date: '', frequency: 'Monthly'),
+    );
+    final diff = entry.amount - oldEntry.amount;
+    if (diff != 0) {
+      try {
+        ref.read(bankAggregationProvider.notifier).adjustAccountBalance(
+          bankAccount: entry.bankAccount,
+          delta: diff,
+        );
+      } catch (_) {}
+    }
+
     final updated = state.entries.map((e) => e.id == entry.id ? entry : e).toList();
     state = state.copyWith(
       entries: updated,
@@ -125,6 +220,10 @@ class IncomeNotifier extends Notifier<IncomeState> {
       searchQuery: '',
       isSyncing: true,
     );
+    LocalCacheService().save('income_entries', {
+      'entries': updated.map((e) => e.toJson()).toList(),
+      if (state.pagination != null) 'pagination': state.pagination!.toJson(),
+    });
 
     try {
       final remoteUpdated = await _apiService.updateEntry(entry);
@@ -136,6 +235,10 @@ class IncomeNotifier extends Notifier<IncomeState> {
           summaryData: summary ?? state.summaryData,
           isSyncing: false,
         );
+        LocalCacheService().save('income_entries', {
+          'entries': syncedList.map((e) => e.toJson()).toList(),
+          if (state.pagination != null) 'pagination': state.pagination!.toJson(),
+        });
         return;
       }
     } catch (_) {}
@@ -145,21 +248,46 @@ class IncomeNotifier extends Notifier<IncomeState> {
 
   /// Delete income stream on live backend
   Future<void> deleteIncome(String id) async {
+    final entryToDelete = state.entries.firstWhere(
+      (e) => e.id == id,
+      orElse: () => const IncomeEntry(id: '', source: '', category: '', amount: 0, date: '', frequency: 'Monthly'),
+    );
+    if (entryToDelete.amount > 0) {
+      try {
+        ref.read(bankAggregationProvider.notifier).adjustAccountBalance(
+          bankAccount: entryToDelete.bankAccount,
+          delta: -entryToDelete.amount,
+        );
+      } catch (_) {}
+    }
+
+    final deleted = LocalCacheService().get('deleted_income_ids');
+    final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+    if (!deletedIds.contains(id)) {
+      deletedIds.add(id);
+      LocalCacheService().save('deleted_income_ids', deletedIds);
+    }
+
+    final updatedEntries = state.entries.where((e) => e.id != id).toList();
     state = state.copyWith(
-      entries: state.entries.where((e) => e.id != id).toList(),
+      entries: updatedEntries,
       isSyncing: true,
     );
+    LocalCacheService().save('income_entries', {
+      'entries': updatedEntries.map((e) => e.toJson()).toList(),
+      if (state.pagination != null) 'pagination': state.pagination!.toJson(),
+    });
 
     try {
-      final success = await _apiService.deleteEntry(id);
-      if (success) {
-        final summary = await _apiService.getSummary(horizon: state.forecastHorizon);
-        state = state.copyWith(
-          summaryData: summary ?? state.summaryData,
-          isSyncing: false,
-        );
-        return;
-      }
+      await _apiService.deleteEntry(id);
+      if (!ref.mounted) return;
+      final summary = await _apiService.getSummary(horizon: state.forecastHorizon);
+      state = state.copyWith(
+        summaryData: summary ?? state.summaryData,
+        isSyncing: false,
+      );
+      loadLiveIncomeData(force: true);
+      return;
     } catch (_) {}
 
     state = state.copyWith(isSyncing: false);
@@ -274,6 +402,7 @@ class IncomeNotifier extends Notifier<IncomeState> {
       );
       return syncResult;
     } catch (e) {
+      if (!ref.mounted) return null;
       state = state.copyWith(isSyncing: false, errorMessage: 'Sync failed: $e');
     }
     return null;
@@ -289,7 +418,9 @@ class IncomeNotifier extends Notifier<IncomeState> {
     } catch (_) {}
   }
 
-  /// Confirm a detected inflow stream and add to active streams
+  /// Confirm a detected inflow stream and add to active streams via live backend API:
+  /// POST /api/v1/income/detected-inflows/:detectedId/confirm
+  /// Body: { "category": category, "frequency": frequency }
   Future<IncomeEntry?> confirmDetectedInflow(
     String detectedId, {
     required String category,
@@ -304,11 +435,25 @@ class IncomeNotifier extends Notifier<IncomeState> {
       );
       if (created != null) {
         final updatedDetected = state.detectedInflows.where((d) => d.detectedId != detectedId).toList();
+        final filteredEntries = state.entries.where((e) => e.id != created.id).toList();
+        final updatedEntries = [created, ...filteredEntries];
+        try {
+          ref.read(bankAggregationProvider.notifier).adjustAccountBalance(
+            bankAccount: created.bankAccount,
+            delta: created.amount,
+          );
+        } catch (_) {}
+
         state = state.copyWith(
-          entries: [created, ...state.entries],
+          entries: updatedEntries,
           detectedInflows: updatedDetected,
           isSyncing: false,
         );
+        try {
+          LocalCacheService().save('income_entries', {
+            'entries': updatedEntries.map((e) => e.toJson()).toList(),
+          });
+        } catch (_) {}
         final summary = await _apiService.getSummary(horizon: state.forecastHorizon);
         if (summary != null) {
           state = state.copyWith(summaryData: summary);
@@ -318,6 +463,81 @@ class IncomeNotifier extends Notifier<IncomeState> {
     } catch (_) {}
     state = state.copyWith(isSyncing: false);
     return null;
+  }
+
+  /// Prepend an auto-detected or SMS-detected inflow to the pending banner
+  void addDetectedInflow(DetectedInflow inflow) {
+    final exists = state.detectedInflows.any((d) => d.detectedId == inflow.detectedId);
+    if (!exists) {
+      state = state.copyWith(
+        detectedInflows: [inflow, ...state.detectedInflows],
+      );
+    }
+  }
+
+  /// Dismiss / Delete a detected inflow from the banner without adding to streams
+  void dismissDetectedInflow(String detectedId) {
+    final updated = state.detectedInflows.where((d) => d.detectedId != detectedId).toList();
+    state = state.copyWith(detectedInflows: updated);
+    _apiService.dismissDetectedInflow(detectedId);
+  }
+
+  /// Directly approve and convert a detected inflow into an active income stream
+  /// Connects to POST /api/v1/income/detected-inflows/:detectedId/confirm
+  Future<IncomeEntry?> approveDetectedInflow(
+    DetectedInflow inflow, {
+    String? category,
+    String? frequency,
+  }) async {
+    final effectiveCategory = (category != null && category.isNotEmpty)
+        ? category
+        : (inflow.suggestedCategory.isNotEmpty ? inflow.suggestedCategory : 'Salary');
+    final effectiveFrequency = (frequency != null && frequency.isNotEmpty)
+        ? frequency
+        : 'Monthly';
+
+    // 1. Call live backend confirmation API: POST /api/v1/income/detected-inflows/:detectedId/confirm
+    final confirmed = await confirmDetectedInflow(
+      inflow.detectedId,
+      category: effectiveCategory,
+      frequency: effectiveFrequency,
+    );
+
+    if (confirmed != null) {
+      return confirmed;
+    }
+
+    // 2. Resilient fallback if offline or mock endpoint
+    final fallbackEntry = IncomeEntry(
+      id: 'inc_${DateTime.now().millisecondsSinceEpoch}',
+      source: inflow.detectedSource,
+      category: effectiveCategory,
+      amount: inflow.amount,
+      date: inflow.date.isNotEmpty ? inflow.date : 'Today',
+      bankAccount: inflow.bankAccount.isNotEmpty
+          ? inflow.bankAccount
+          : (ref.read(bankAggregationProvider).bankAccounts.isNotEmpty
+              ? '${ref.read(bankAggregationProvider).bankAccounts.first.bankName} ••••${ref.read(bankAggregationProvider).bankAccounts.first.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')}'
+              : 'Primary Account'),
+      paymentMode: inflow.bankAccount.isNotEmpty
+          ? inflow.bankAccount
+          : (ref.read(bankAggregationProvider).bankAccounts.isNotEmpty
+              ? '${ref.read(bankAggregationProvider).bankAccounts.first.bankName} ••••${ref.read(bankAggregationProvider).bankAccounts.first.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')}'
+              : 'Primary Account'),
+      type: 'Active',
+      frequency: effectiveFrequency,
+      notes: 'Confirmed via SMS_ALERT (Ref: ${inflow.referenceId ?? "N/A"})',
+      accountNumber: inflow.bankAccount.contains('••••')
+          ? '••••${inflow.bankAccount.split('••••').last.trim()}'
+          : null,
+      isVerified: true,
+      verificationType: 'Digitally Verified Inflow',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    dismissDetectedInflow(inflow.detectedId);
+    await addIncome(fallbackEntry);
+    return fallbackEntry;
   }
 
   /// Trigger Financial Autopilot (FAP) salary allocation rules

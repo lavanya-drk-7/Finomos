@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/income_models.dart';
 
 class IncomeApiService {
@@ -19,7 +20,9 @@ class IncomeApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] != null) {
-          return IncomeSummaryData.fromJson(body['data'] as Map<String, dynamic>);
+          final data = body['data'] as Map<String, dynamic>;
+          LocalCacheService().save('income_summary', data);
+          return IncomeSummaryData.fromJson(data);
         }
       }
     } catch (e) {
@@ -81,6 +84,10 @@ class IncomeApiService {
                   totalRecords: entries.length,
                   totalPages: (entries.length / limit).ceil().clamp(1, 9999),
                 );
+
+          if (page == 1 && search == null && category == null && type == null) {
+            LocalCacheService().save('income_entries', body['data']);
+          }
 
           return IncomeEntriesResponse(
             entries: entries,
@@ -279,6 +286,8 @@ class IncomeApiService {
   }
 
   /// Confirm a detected inflow and record it as a digitally verified stream
+  /// POST /api/v1/income/detected-inflows/:detectedId/confirm
+  /// Body: { "category": category, "frequency": frequency }
   Future<IncomeEntry?> confirmDetectedInflow(
     String detectedId, {
     required String category,
@@ -292,14 +301,31 @@ class IncomeApiService {
           'frequency': frequency,
         },
       );
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if ((response.statusCode >= 200 && response.statusCode < 300) ||
+          response.statusCode == 400 ||
+          response.statusCode == 409) {
         final Map<String, dynamic> body = jsonDecode(response.body);
-        if (body['success'] == true && body['data'] != null) {
+        if (body['data'] != null && body['data'] is Map<String, dynamic>) {
           return IncomeEntry.fromJson(body['data'] as Map<String, dynamic>);
         }
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Dismiss / Delete a detected inflow
+  /// DELETE /api/v1/income/detected-inflows/:detectedId
+  Future<bool> dismissDetectedInflow(String detectedId) async {
+    try {
+      final response = await _client.delete(
+        ApiConstants.incomeDismissDetectedInflow(detectedId),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        return body['success'] == true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   /// Trigger Financial Autopilot (FAP) salary allocation rules
@@ -382,6 +408,35 @@ class IncomeApiService {
         return IncomeEntry.fromJson(entryJson);
       }
     } catch (_) {}
+    return null;
+  }
+
+  IncomeSummaryData? getCachedSummary() {
+    final cached = LocalCacheService().get('income_summary');
+    if (cached is Map<String, dynamic>) {
+      return IncomeSummaryData.fromJson(cached);
+    }
+    return null;
+  }
+
+  IncomeEntriesResponse? getCachedEntries() {
+    final cached = LocalCacheService().get('income_entries');
+    if (cached is Map<String, dynamic>) {
+      final entriesJson = cached['entries'] as List<dynamic>? ?? [];
+      final entries = entriesJson
+          .whereType<Map<String, dynamic>>()
+          .map((item) => IncomeEntry.fromJson(item))
+          .toList();
+      return IncomeEntriesResponse(
+        entries: entries,
+        pagination: IncomePaginationData(
+          currentPage: 1,
+          perPage: 20,
+          totalRecords: entries.length,
+          totalPages: 1,
+        ),
+      );
+    }
     return null;
   }
 }

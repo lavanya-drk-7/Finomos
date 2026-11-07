@@ -1,0 +1,5 @@
+storePassword=123456
+keyPassword=123456
+keyAlias=finomos
+storeFile=C:\\Users\\DELL\\finomos-upload-key.jks
+

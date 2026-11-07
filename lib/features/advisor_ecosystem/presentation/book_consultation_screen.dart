@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/cache_service.dart';
+import '../../../core/utils/phone_utils.dart';
+import '../../auth_kyc/providers/auth_kyc_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../domain/advisor_models.dart';
 import '../providers/advisor_provider.dart';
@@ -33,9 +36,9 @@ class _BookConsultationScreenState extends ConsumerState<BookConsultationScreen>
 
   late List<String> _grantedPermissions;
 
-  final _nameController = TextEditingController(text: 'Sireesha Bandaru');
-  final _phoneController = TextEditingController(text: '+91 98765 43210');
-  final _emailController = TextEditingController(text: 'sireesha@finomos.io');
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _emailController;
   final _notesController = TextEditingController();
 
   final List<String> _roles = [
@@ -75,6 +78,21 @@ class _BookConsultationScreenState extends ConsumerState<BookConsultationScreen>
   @override
   void initState() {
     super.initState();
+    final user = ref.read(authKycProvider).user;
+    final cachedName = LocalCacheService().get('user_name')?.toString() ?? '';
+    final cachedPhone = LocalCacheService().get('user_mobile_number')?.toString() ?? '';
+    final cachedEmail = LocalCacheService().get('user_email')?.toString() ?? '';
+
+    final initialName = user.fullName.isNotEmpty ? user.fullName : cachedName;
+    final initialPhone = user.mobileNumber.isNotEmpty ? user.mobileNumber : cachedPhone;
+    final initialEmail = user.email.isNotEmpty ? user.email : cachedEmail;
+
+    _nameController = TextEditingController(text: initialName);
+    _phoneController = TextEditingController(
+      text: initialPhone.isNotEmpty ? PhoneUtils.formatWithCountryCode(initialPhone) : '',
+    );
+    _emailController = TextEditingController(text: initialEmail);
+
     _dates = List.generate(7, (i) => DateTime.now().add(Duration(days: i)));
     final allAdvisors = ref.read(advisorProvider).advisors;
     _selectedAdvisor = widget.advisor ?? (allAdvisors.isNotEmpty ? allAdvisors.first : Advisor(
@@ -357,7 +375,13 @@ class _BookConsultationScreenState extends ConsumerState<BookConsultationScreen>
         scrolledUnderElevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: _navyDark),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/advisor-ecosystem');
+            }
+          },
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/cache_service.dart';
+import '../../income_tracking/providers/income_provider.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 import '../domain/plan_models.dart';
 
 class PlanState {
@@ -9,56 +12,66 @@ class PlanState {
     required this.goals,
     required this.retirementPlan,
   });
+
+  PlanState copyWith({
+    List<FinancialGoal>? goals,
+    RetirementPlan? retirementPlan,
+  }) {
+    return PlanState(
+      goals: goals ?? this.goals,
+      retirementPlan: retirementPlan ?? this.retirementPlan,
+    );
+  }
 }
 
 class PlanNotifier extends Notifier<PlanState> {
   @override
   PlanState build() {
+    final incomeState = ref.watch(incomeProvider);
+    final bankState = ref.watch(bankAggregationProvider);
+
+    final cachedGoalsRaw = LocalCacheService().get('financial_goals');
+    List<FinancialGoal> goals = [];
+    if (cachedGoalsRaw is List) {
+      goals = cachedGoalsRaw
+          .whereType<Map>()
+          .map((e) => FinancialGoal.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final double monthlyIncome = incomeState.summaryData?.totalMonthlyIncome ??
+        incomeState.entries.fold(0.0, (s, e) => s + e.amount);
+    final double netWorth = bankState.netWorth;
+
+    final double requiredCorpus = monthlyIncome > 0 ? monthlyIncome * 12 * 25 : 0.0;
+    final double projectedCorpus = netWorth > 0 ? netWorth * 4.5 : 0.0;
+    final double fireScore = requiredCorpus > 0
+        ? ((projectedCorpus / requiredCorpus) * 100).clamp(0.0, 100.0)
+        : 0.0;
+
     return PlanState(
-      goals: [
-        FinancialGoal(
-          id: 'g1',
-          title: 'Child Higher Education Fund',
-          category: 'Education',
-          targetAmount: 5000000,
-          currentCorpus: 1800000,
-          monthlyContribution: 20000,
-          targetYear: '2034',
-          successProbability: 92.0,
-          priority: 'High Priority',
-        ),
-        FinancialGoal(
-          id: 'g2',
-          title: 'Dream Villa Purchase Downpayment',
-          category: 'Real Estate',
-          targetAmount: 3000000,
-          currentCorpus: 1200000,
-          monthlyContribution: 15000,
-          targetYear: '2029',
-          successProbability: 84.0,
-          priority: 'Medium Priority',
-        ),
-        FinancialGoal(
-          id: 'g3',
-          title: 'Europe Family Vacation',
-          category: 'Lifestyle',
-          targetAmount: 600000,
-          currentCorpus: 450000,
-          monthlyContribution: 10000,
-          targetYear: '2027',
-          successProbability: 98.0,
-          priority: 'Optional Priority',
-        ),
-      ],
+      goals: goals,
       retirementPlan: RetirementPlan(
-        currentAge: 32,
-        targetRetirementAge: 52,
-        requiredCorpus: 48000000,
-        projectedCorpus: 51200000,
-        fireReadinessScore: 88.0,
-        monthlyRetirementExpenses: 180000,
+        currentAge: 30,
+        targetRetirementAge: 55,
+        requiredCorpus: requiredCorpus,
+        projectedCorpus: projectedCorpus,
+        fireReadinessScore: fireScore,
+        monthlyRetirementExpenses: monthlyIncome > 0 ? monthlyIncome * 0.7 : 0.0,
       ),
     );
+  }
+
+  void addGoal(FinancialGoal goal) {
+    final updated = [...state.goals, goal];
+    state = state.copyWith(goals: updated);
+    LocalCacheService().save('financial_goals', updated.map((g) => g.toJson()).toList());
+  }
+
+  void deleteGoal(String id) {
+    final updated = state.goals.where((g) => g.id != id).toList();
+    state = state.copyWith(goals: updated);
+    LocalCacheService().save('financial_goals', updated.map((g) => g.toJson()).toList());
   }
 }
 

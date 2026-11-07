@@ -13,6 +13,8 @@ import '../../transaction_detection/presentation/widgets/in_app_transaction_aler
 import '../../../core/services/invoice_pdf_service.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_client.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
+
 
 class ExpenseTrackingScreen extends ConsumerStatefulWidget {
   const ExpenseTrackingScreen({super.key});
@@ -36,6 +38,8 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
     'Subscriptions',
     'Shopping',
     'Entertainment',
+    'Fixed Deposit / RD',
+    'Loan & EMI',
     'Other',
   ];
 
@@ -57,16 +61,54 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
     'Cash',
   ];
 
+  // ignore: unused_field
   static const List<String> _availableBanks = [
-    'HDFC Bank ••••4587',
-    'ICICI Bank ••••9021',
-    'SBI ••••1123',
-    'Axis Bank ••••3301',
+
+
+
+
     'Other / Cash',
   ];
 
   late ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
+
+  List<String> _getUserBankAccountsList({String? existingAccount}) {
+    final bankAccounts = ref.read(bankAggregationProvider).bankAccounts;
+    final List<String> list = [];
+
+    for (final acc in bankAccounts) {
+      final digits = (acc.rawAccountNumber != null && acc.rawAccountNumber!.isNotEmpty)
+          ? acc.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : acc.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final last4 = digits.length >= 4 ? digits.substring(digits.length - 4) : digits;
+      final formatted = last4.isNotEmpty ? '${acc.bankName} ••••$last4' : acc.bankName;
+      if (!list.contains(formatted)) {
+        list.add(formatted);
+      }
+    }
+
+    if (existingAccount != null && existingAccount.trim().isNotEmpty) {
+      final exDigits = existingAccount.replaceAll(RegExp(r'\D'), '');
+      final exLast4 = exDigits.length >= 4 ? exDigits.substring(exDigits.length - 4) : exDigits;
+      final alreadyPresent = list.any((item) {
+        if (item == existingAccount.trim()) return true;
+        if (item == 'Other / Cash') return false;
+        final itDigits = item.replaceAll(RegExp(r'\D'), '');
+        final itLast4 = itDigits.length >= 4 ? itDigits.substring(itDigits.length - 4) : itDigits;
+        return exLast4.isNotEmpty && itLast4.isNotEmpty && exLast4 == itLast4;
+      });
+      if (!alreadyPresent) {
+        list.insert(0, existingAccount.trim());
+      }
+    }
+
+    if (!list.contains('Other / Cash')) {
+      list.add('Other / Cash');
+    }
+
+    return list;
+  }
   String? _highlightedExpenseId;
 
   @override
@@ -830,16 +872,20 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
         ? existingEntry.paymentMode
         : 'UPI';
 
+    final bankList = _getUserBankAccountsList(existingAccount: existingEntry?.bankAccount);
     String selectedBank =
         existingEntry != null &&
-            _availableBanks.contains(existingEntry.bankAccount)
+            bankList.contains(existingEntry.bankAccount)
         ? existingEntry.bankAccount
-        : 'HDFC Bank ••••4587';
+        : bankList.first;
 
     bool isRecurring = existingEntry?.isRecurring ?? false;
+    int selectedRecurringDay = existingEntry?.recurringDayOfMonth ?? 5;
     DateTime selectedDateTime = DateTime.now();
     String selectedDateStr =
         existingEntry?.date ?? _formatDate(selectedDateTime);
+
+    String? amountError;
 
     showModalBottomSheet(
       context: context,
@@ -913,6 +959,11 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        onChanged: (_) {
+                          if (amountError != null) {
+                            setSheetState(() => amountError = null);
+                          }
+                        },
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -924,6 +975,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                             Icons.currency_rupee,
                             color: Color(0xFFEF4444),
                           ),
+                          errorText: amountError,
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
@@ -1035,7 +1087,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                       const SizedBox(height: 12),
 
                       DropdownButtonFormField<String>(
-                        value: selectedCategory,
+                        value: _availableCategories.contains(selectedCategory)
+                            ? selectedCategory
+                            : _availableCategories.first,
                         decoration: InputDecoration(
                           labelText: 'Category',
                           filled: true,
@@ -1064,7 +1118,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                       // Bank Account Dropdown
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: selectedBank,
+                        value: bankList.contains(selectedBank)
+                            ? selectedBank
+                            : (bankList.isNotEmpty ? bankList.first : null),
                         decoration: InputDecoration(
                           labelText: 'Bank / Source Account',
                           filled: true,
@@ -1074,7 +1130,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                             borderSide: BorderSide.none,
                           ),
                         ),
-                        items: _availableBanks
+                        items: bankList
                             .map(
                               (b) => DropdownMenuItem(
                                 value: b,
@@ -1095,7 +1151,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value: selectedPaymentMode,
+                              value: _availablePaymentModes.contains(selectedPaymentMode)
+                                  ? selectedPaymentMode
+                                  : _availablePaymentModes.first,
                               decoration: InputDecoration(
                                 labelText: 'Mode of Payment',
                                 prefixIcon: const Icon(
@@ -1144,6 +1202,74 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+
+                      // Monthly Auto-Debit Schedule switch
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Monthly Auto-Debit Schedule',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0A2540),
+                                ),
+                              ),
+                              Text(
+                                'Enable automatic recurring deduction',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                            ),
+                          ),
+                          Switch(
+                            value: isRecurring,
+                            activeColor: const Color(0xFF0066FF),
+                            onChanged: (val) {
+                              setSheetState(() {
+                                isRecurring = val;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      if (isRecurring) ...[
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<int>(
+                          value: selectedRecurringDay,
+                          decoration: InputDecoration(
+                            labelText: 'Monthly Debit Day',
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          items: List.generate(31, (i) => i + 1).map((d) {
+                            return DropdownMenuItem<int>(
+                              value: d,
+                              child: Text(
+                                '$d${d == 1 ? "st" : (d == 2 ? "nd" : (d == 3 ? "rd" : "th"))} of every month',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() => selectedRecurringDay = val);
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 12),
 
                       // Document Upload Field
@@ -1392,6 +1518,9 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                             );
                             final amount = double.tryParse(cleanStr) ?? 0.0;
                             if (amount <= 0) {
+                              setSheetState(() {
+                                amountError = 'Expense Amount is required (> ₹0)';
+                              });
                               ScaffoldMessenger.of(
                                 context,
                               ).hideCurrentSnackBar();
@@ -1430,6 +1559,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                                 merchant: merchantCtrl.text.trim(),
                                 notes: notesCtrl.text.trim(),
                                 isRecurring: isRecurring,
+                                recurringDayOfMonth: isRecurring ? selectedRecurringDay : null,
                                 documentName: selectedDocumentName.isNotEmpty
                                     ? selectedDocumentName
                                     : null,
@@ -1456,6 +1586,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                                 merchant: merchantCtrl.text.trim(),
                                 notes: notesCtrl.text.trim(),
                                 isRecurring: isRecurring,
+                                recurringDayOfMonth: isRecurring ? selectedRecurringDay : null,
                                 documentName: selectedDocumentName.isNotEmpty
                                     ? selectedDocumentName
                                     : null,
@@ -1463,7 +1594,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                               );
                               ref
                                   .read(expenseProvider.notifier)
-                                  .addExpense(newEntry);
+                                  .addExpense(newEntry, applyToBudget: false);
                               ref
                                   .read(budgetProvider.notifier)
                                   .applyExpense(
@@ -1799,7 +1930,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           child: Row(
-                            children: ['All', ..._availableBanks].map((bank) {
+                            children: ['All', ..._getUserBankAccountsList()].map((bank) {
                               final isSel =
                                   st.selectedBankAccountFilter.toLowerCase() ==
                                   bank.toLowerCase();
@@ -1979,7 +2110,7 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
               ),
               onPressed: () {
                 Navigator.pop(dialogCtx);
-                ref.read(expenseProvider.notifier).deleteExpense(item.id);
+                ref.read(expenseProvider.notifier).deleteExpense(item.id, revertFromBudget: false);
                 final remaining = ref
                     .read(expenseProvider)
                     .expenses
@@ -2333,18 +2464,45 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                               ),
                             ),
                             const SizedBox(height: 4),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFDC2626),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () {
-                                ref.read(expenseProvider.notifier).confirmDetectedExpense(exp.detectionId);
-                              },
-                              child: const Text('Confirm', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFFDC2626),
+                                    side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () {
+                                    ref.read(expenseProvider.notifier).dismissDetectedExpense(exp.detectionId);
+                                  },
+                                  child: const Text('Delete', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 6),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFDC2626),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () async {
+                                    final approved = await ref.read(expenseProvider.notifier).approveDetectedExpense(exp);
+                                    if (mounted && approved != null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Expense "${approved.description}" approved & added to active expenses'),
+                                          backgroundColor: const Color(0xFFDC2626),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: const Text('Approve', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -2412,37 +2570,43 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Text(
-                  'Expense List',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0A2540),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${filteredExpenses.length} records',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0066FF),
+            Expanded(
+              child: Row(
+                children: [
+                  const Flexible(
+                    child: Text(
+                      'Expense List',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A2540),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${filteredExpenses.length} records',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0066FF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             InkWell(
               onTap: () => _showFilterSheet(context),
               borderRadius: BorderRadius.circular(10),
@@ -3174,8 +3338,48 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
                           item.paymentMode,
                           const Color(0xFF64748B),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: item.statusInfo.backgroundColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: item.statusInfo.borderColor),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(item.statusInfo.icon, size: 11, color: item.statusInfo.primaryColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                item.statusInfo.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: item.statusInfo.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
+                    if (item.isRecurring || item.recurringDayOfMonth != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.schedule, size: 12, color: Color(0xFF0066FF)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Scheduled for ${item.recurringDayOfMonth ?? 5}th of every month',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0066FF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -3221,6 +3425,52 @@ class _ExpenseTrackingScreenState extends ConsumerState<ExpenseTrackingScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (item.statusInfo.status != ExpensePaymentStatus.paymentSuccess) ...[
+                InkWell(
+                  onTap: () async {
+                    await ref.read(expenseProvider.notifier).updateExpensePaymentStatus(item.id, 'SUCCESS');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Marked "${item.description}" as Payment Success!'),
+                          backgroundColor: const Color(0xFF059669),
+                        ),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Pay Now',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               InkWell(
                 onTap: () => _showTransactionDetailsSheet(context, item),
                 borderRadius: BorderRadius.circular(10),

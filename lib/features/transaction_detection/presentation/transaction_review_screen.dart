@@ -198,7 +198,7 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
           action: SnackBarAction(
             label: 'View Budget',
             textColor: Colors.white,
-            onPressed: () => context.go('/budget-management'),
+            onPressed: () => context.push('/budget-management'),
           ),
         ),
       );
@@ -224,7 +224,7 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
           action: SnackBarAction(
             label: 'View Income',
             textColor: Colors.white,
-            onPressed: () => context.go('/income-tracking'),
+            onPressed: () => context.push('/income-tracking'),
           ),
         ),
       );
@@ -261,6 +261,7 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
     final bankState = ref.watch(bankAggregationProvider);
     final linkedAccounts = bankState.bankAccounts
         .map((b) => '${b.bankName} ${b.maskedAccountNumber}')
+        .toSet()
         .toList();
 
     if (!linkedAccounts.contains(_selectedBankAccount)) {
@@ -302,7 +303,11 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
                   const SnackBar(content: Text('Transaction dismissed')),
                 );
               }
-              context.pop();
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
             },
             icon: const Icon(Icons.close, size: 16, color: Color(0xFF64748B)),
             label: const Text('Dismiss', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
@@ -481,7 +486,7 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      initialValue: _selectedCategory,
+                      value: categories.contains(_selectedCategory) ? _selectedCategory : categories.first,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
@@ -501,7 +506,9 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
-                      initialValue: _selectedBankAccount,
+                      value: linkedAccounts.contains(_selectedBankAccount)
+                          ? _selectedBankAccount
+                          : (linkedAccounts.isNotEmpty ? linkedAccounts.first : null),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
@@ -583,7 +590,9 @@ class _TransactionReviewScreenState extends ConsumerState<TransactionReviewScree
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
                               const SizedBox(height: 6),
                               DropdownButtonFormField<String>(
-                                initialValue: _selectedPaymentMethod,
+                                value: _paymentMethods.contains(_selectedPaymentMethod)
+                                    ? _selectedPaymentMethod
+                                    : _paymentMethods.first,
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: const Color(0xFFF8FAFC),

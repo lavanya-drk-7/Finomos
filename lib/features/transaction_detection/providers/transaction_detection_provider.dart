@@ -9,6 +9,7 @@ import '../../income_tracking/providers/income_provider.dart';
 import '../../income_tracking/domain/income_models.dart';
 import '../../budget_management/providers/budget_provider.dart';
 import '../../budget_management/domain/budget_models.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 
 class TransactionDetectionState {
   final List<DetectedTransaction> detectedTransactions;
@@ -51,31 +52,8 @@ class TransactionDetectionState {
 class TransactionDetectionNotifier extends Notifier<TransactionDetectionState> {
   @override
   TransactionDetectionState build() {
-    return TransactionDetectionState(
-      detectedTransactions: [
-        DetectedTransaction(
-          id: 'txn_init_1',
-          rawSmsBody:
-              'Rs. 1,000 debited from your HDFC Bank account ••••4587 at TOIT RESTAURANT on 15 Oct 2026. UPI/429182391024',
-          sender: 'VK-HDFCBK',
-          timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-          type: TransactionClassification.expense,
-          amount: 1000.0,
-          currency: '₹',
-          bankName: 'HDFC Bank',
-          accountIdentifier: '••••4587',
-          referenceId: 'UPI/429182391024',
-          merchantOrSource: 'TOIT RESTAURANT',
-          paymentMethod: 'UPI',
-          suggestedCategory: 'Food & Dining',
-          description: 'TOIT RESTAURANT payment via HDFC Bank',
-          source: DetectionSource.sms,
-          status: DetectedTransactionStatus.pendingReview,
-          confidenceScore: 0.95,
-          duplicateFingerprint: 'hdfc_1000.00_expense_upi/429182391024',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
-        ),
-      ],
+    return const TransactionDetectionState(
+      detectedTransactions: [],
       autoDetectionEnabled: true,
       isPermissionGranted: true,
     );
@@ -99,7 +77,17 @@ class TransactionDetectionNotifier extends Notifier<TransactionDetectionState> {
     String rawSms, {
     String sender = 'BANK-ALERT',
   }) {
-    final parseResult = SmsParserEngine.parse(rawSms, sender: sender);
+    final linkedAccounts = ref.read(bankAggregationProvider).bankAccounts;
+    final knownLinked = linkedAccounts.map((a) {
+      final digits = a.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '');
+      return '${a.bankName} ••••$digits';
+    }).toList();
+
+    final parseResult = SmsParserEngine.parse(
+      rawSms,
+      sender: sender,
+      knownLinkedBanks: knownLinked,
+    );
 
     if (!parseResult.isSuccess || parseResult.transaction == null) {
       state = state.copyWith(lastError: parseResult.errorMessage ?? 'Parsing failed');
@@ -183,7 +171,7 @@ class TransactionDetectionNotifier extends Notifier<TransactionDetectionState> {
       documentName: documentName,
       documentPath: documentPath,
     );
-    ref.read(expenseProvider.notifier).addExpense(expenseEntry);
+    ref.read(expenseProvider.notifier).addExpense(expenseEntry, applyToBudget: false);
 
     // 2. Synchronize with Budget Management
     final budgetAlert = ref.read(budgetProvider.notifier).applyExpense(

@@ -31,6 +31,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   void _onSendOtp() {
     if (_formKey.currentState!.validate()) {
+      // Dispatch password reset OTP request (POST /api/auth/forgot-password/request)
+      ref.read(authKycProvider.notifier).forgotPasswordRequest(
+        identifier: _inputController.text.trim(),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Password reset OTP sent to ${_inputController.text.trim()}'),

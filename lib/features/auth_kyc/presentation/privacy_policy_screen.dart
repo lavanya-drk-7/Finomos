@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_kyc_provider.dart';
+import '../domain/auth_onboarding_models.dart';
 import 'flow_header.dart';
 
 class PrivacyPolicyScreen extends ConsumerStatefulWidget {
@@ -40,6 +41,20 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
     ScaffoldMessenger.of(context).clearSnackBars();
     final user = ref.read(authKycProvider).user;
     ref.read(authKycProvider.notifier).updateUserData(user.copyWith(agreePrivacy: true));
+
+    // Commit statutory consent and final privacy acceptance (POST /api/auth/onboarding/consent)
+    ref.read(authKycProvider.notifier).recordOnboardingConsent(
+          const OnboardingConsentRequest(
+            consentTypes: [
+              'ACCOUNT_AGGREGATOR',
+              'DPDP_ACT_2023',
+              'PRIVACY_POLICY',
+            ],
+            isAgreed: true,
+            version: 'v2.1',
+          ),
+        );
+
     ref.read(authKycProvider.notifier).updateStep(8);
     context.go('/kyc-status');
   }

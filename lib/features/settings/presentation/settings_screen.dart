@@ -178,7 +178,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -213,7 +213,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       trailing: OutlinedButton(
                         onPressed: _showChangePasswordDialog,
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           side: const BorderSide(color: Color(0xFF0066FF)),
                         ),
                         child: const Text('Change', style: TextStyle(fontSize: 12)),
@@ -422,9 +422,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Icon(icon, color: const Color(0xFF0066FF), size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

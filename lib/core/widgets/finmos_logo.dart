@@ -30,10 +30,11 @@ class FinmosLogo extends StatelessWidget {
           _buildIconMark(),
           if (showTitle) ...[
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 Text(
                   'FINOMOS',
                   style: TextStyle(
@@ -65,6 +66,7 @@ class FinmosLogo extends StatelessWidget {
                     ),
                   ),
               ],
+            ),
             ),
           ],
         ],

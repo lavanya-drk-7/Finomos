@@ -37,7 +37,7 @@ class _CommunicationPrefsSubScreenState extends ConsumerState<CommunicationPrefs
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -51,7 +51,9 @@ class _CommunicationPrefsSubScreenState extends ConsumerState<CommunicationPrefs
         ),
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
         padding: const EdgeInsets.all(20),
         physics: const BouncingScrollPhysics(),
         children: [
@@ -173,8 +175,10 @@ class _CommunicationPrefsSubScreenState extends ConsumerState<CommunicationPrefs
                   'Receive weekly summary report via email',
                   prefs.emailNotifications,
                   (val) {
-                    ref.read(profileProvider.notifier).updateCommunicationPrefs(
-                          prefs.copyWith(emailNotifications: val),
+                    ref.read(profileProvider.notifier).updateCommunicationPreferences(
+                          email: val,
+                          sms: prefs.smsNotifications,
+                          whatsapp: prefs.whatsappNotifications,
                         );
                   },
                 ),
@@ -185,8 +189,24 @@ class _CommunicationPrefsSubScreenState extends ConsumerState<CommunicationPrefs
                   'Critical security & transaction SMS',
                   prefs.smsNotifications,
                   (val) {
-                    ref.read(profileProvider.notifier).updateCommunicationPrefs(
-                          prefs.copyWith(smsNotifications: val),
+                    ref.read(profileProvider.notifier).updateCommunicationPreferences(
+                          email: prefs.emailNotifications,
+                          sms: val,
+                          whatsapp: prefs.whatsappNotifications,
+                        );
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                _buildToggleRow(
+                  Icons.chat_bubble_outline,
+                  'WhatsApp Alerts',
+                  'Real-time account & transaction alerts on WhatsApp',
+                  prefs.whatsappNotifications,
+                  (val) {
+                    ref.read(profileProvider.notifier).updateCommunicationPreferences(
+                          email: prefs.emailNotifications,
+                          sms: prefs.smsNotifications,
+                          whatsapp: val,
                         );
                   },
                 ),
@@ -249,6 +269,7 @@ class _CommunicationPrefsSubScreenState extends ConsumerState<CommunicationPrefs
           ),
           const SizedBox(height: 24),
         ],
+        ),
       ),
     );
   }

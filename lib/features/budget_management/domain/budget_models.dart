@@ -593,11 +593,23 @@ class BudgetState {
     this.error,
   });
 
-  double get totalBudget => summary?.totalBudget ?? budgets.fold(0.0, (sum, b) => sum + b.amount);
-  double get totalSpent => summary?.totalSpent ?? budgets.fold(0.0, (sum, b) => sum + b.spent);
-  double get totalRemaining => summary?.remaining ?? ((totalBudget - totalSpent) >= 0 ? (totalBudget - totalSpent) : 0.0);
-  double get totalOverspent => summary?.overspent ?? (totalSpent > totalBudget ? (totalSpent - totalBudget) : 0.0);
-  double get overallUsagePercentage => summary?.overallUsage ?? (totalBudget > 0 ? ((totalSpent / totalBudget) * 100).clamp(0.0, 999.0) : 0.0);
+  double get totalBudget {
+    if (budgets.isNotEmpty) {
+      return budgets.fold(0.0, (sum, b) => sum + b.amount);
+    }
+    return summary?.totalBudget ?? 0.0;
+  }
+
+  double get totalSpent {
+    if (budgets.isNotEmpty) {
+      return budgets.fold(0.0, (sum, b) => sum + b.spent);
+    }
+    return summary?.totalSpent ?? 0.0;
+  }
+
+  double get totalRemaining => (totalBudget - totalSpent) >= 0 ? (totalBudget - totalSpent) : 0.0;
+  double get totalOverspent => totalSpent > totalBudget ? (totalSpent - totalBudget) : 0.0;
+  double get overallUsagePercentage => totalBudget > 0 ? ((totalSpent / totalBudget) * 100).clamp(0.0, 999.0) : (summary?.overallUsage ?? 0.0);
 
   List<BudgetItem> get exceededBudgets => budgets.where((b) => b.isExceeded).toList();
   List<BudgetItem> get warningBudgets => budgets.where((b) => b.isApproachingLimit).toList();

@@ -119,7 +119,10 @@ class _GrowScreenState extends ConsumerState<GrowScreen> with SingleTickerProvid
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total Investment Portfolio Value', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const Expanded(
+                    child: Text('Total Investment Portfolio Value', style: TextStyle(color: Colors.white70, fontSize: 13), overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -147,7 +150,10 @@ class _GrowScreenState extends ConsumerState<GrowScreen> with SingleTickerProvid
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Investment Holdings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
+            const Expanded(
+              child: Text('Investment Holdings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
             TextButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.add, size: 18),

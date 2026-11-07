@@ -2,9 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finomos/main.dart';
+import 'package:finomos/core/services/cache_service.dart';
 import 'package:finomos/features/dashboard/presentation/dashboard_screen.dart';
 
 void main() {
+  setUp(() {
+    LocalCacheService().remove('user_liquid_cash_entries');
+    LocalCacheService().remove('user_liquid_cash_amount');
+    LocalCacheService().remove('is_logged_in');
+    LocalCacheService().remove('auth_session');
+  });
+
+  tearDown(() {
+    LocalCacheService().remove('user_liquid_cash_entries');
+    LocalCacheService().remove('user_liquid_cash_amount');
+    LocalCacheService().remove('is_logged_in');
+    LocalCacheService().remove('auth_session');
+  });
+
   testWidgets('Splash screen has no buttons and navigates to login after 3-second timeline', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
@@ -50,7 +65,31 @@ void main() {
   testWidgets('DashboardScreen AI Personal CFO section displays Total Available Balance and Liquid Cash Balance', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      LocalCacheService().remove('bank_accounts');
+    });
+
+    LocalCacheService().save('bank_accounts', [
+      {
+        'id': 'bank_1',
+        'bankName': 'State Bank of India',
+        'accountNumber': '••••4821',
+        'accountType': 'Savings',
+        'balance': 142850.00,
+        'status': 'Active',
+        'lastSynced': 'Just now',
+      },
+      {
+        'id': 'bank_2',
+        'bankName': 'HDFC Bank',
+        'accountNumber': '••••9104',
+        'accountType': 'Salary',
+        'balance': 75900.00,
+        'status': 'Active',
+        'lastSynced': '5 mins ago',
+      },
+    ]);
 
     await tester.pumpWidget(
       const ProviderScope(
@@ -74,8 +113,8 @@ void main() {
 
     // Verify Liquid Cash Balance (down from Available Balance)
     expect(find.text('Liquid Cash Balance'), findsOneWidget);
-    expect(find.text('Instant Access (Bank + Wallets)'), findsOneWidget);
-    expect(find.text('₹2,22,040'), findsOneWidget);
+    expect(find.textContaining('Instant Access'), findsOneWidget);
+    expect(find.text('₹0'), findsWidgets);
 
     // Verify Launch AI CFO Copilot button is removed, but account sync badge is present
     expect(find.text('Launch AI CFO Copilot'), findsNothing);

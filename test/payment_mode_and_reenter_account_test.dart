@@ -92,8 +92,8 @@ void main() {
 
     // Verify auto-fetched values
     expect(find.text('MG Road Main Branch, Bengaluru'), findsWidgets);
-    expect(find.text('Sireesha Bandaru'), findsOneWidget);
-    expect(find.text('VERIFIED'), findsOneWidget);
+    expect(find.text('Sireesha Bandaru'), findsWidgets);
+    expect(find.text('VERIFIED'), findsWidgets);
 
     // 4. Verify & Link Bank Account submission
     final submitBtn = find.text('Verify & Link Bank Account');

@@ -5,23 +5,54 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../constants/api_constants.dart';
+import 'cache_service.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
-  ApiClient._internal();
+  ApiClient._internal() {
+    try {
+      final session = LocalCacheService().get('auth_session');
+      if (session is Map && session['isLoggedIn'] == true) {
+        final token = session['token']?.toString() ?? '';
+        if (token.isNotEmpty) _token = token;
+        final refToken = session['refreshToken']?.toString() ?? '';
+        if (refToken.isNotEmpty) _refreshToken = refToken;
+      }
+    } catch (_) {}
+  }
 
-  // Default to Sireesha's live session token, updated upon login/switch
-  String _token = 'jwt-token-cmuzhxi5a000asr4p9f6jcndp';
+  // Persistent shared HTTP client instance with HTTP keep-alive connection reuse
+  final http.Client _client = http.Client();
+
+  // Session tokens are empty by default; populated upon login or restored from active session
+  String _token = '';
+
+  // Refresh token for session renewal
+  String _refreshToken = '';
 
   String get token => _token;
+  String get refreshToken => _refreshToken;
 
   void setToken(String token) {
     _token = token;
   }
 
+  void setRefreshToken(String refreshToken) {
+    _refreshToken = refreshToken;
+  }
+
   void clearToken() {
     _token = '';
+  }
+
+  void clearRefreshToken() {
+    _refreshToken = '';
+  }
+
+  void clearSession() {
+    _token = '';
+    _refreshToken = '';
   }
 
   Map<String, String> get _headers {
@@ -47,16 +78,16 @@ class ApiClient {
   Future<http.Response> get(
     String endpoint, {
     Map<String, String>? queryParams,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = _buildUri(endpoint, queryParams);
-    return await http.get(uri, headers: _headers).timeout(timeout);
+    return await _client.get(uri, headers: _headers).timeout(timeout);
   }
 
   Future<Uint8List?> getBytes(
     String endpointOrUrl, {
     Map<String, String>? queryParams,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 20),
   }) async {
     try {
       final Uri uri;
@@ -65,7 +96,7 @@ class ApiClient {
       } else {
         uri = _buildUri(endpointOrUrl, queryParams);
       }
-      final response = await http.get(uri, headers: {
+      final response = await _client.get(uri, headers: {
         'Accept': 'application/pdf, application/octet-stream, */*',
         if (_token.isNotEmpty) 'Authorization': 'Bearer $_token',
       }).timeout(timeout);
@@ -80,10 +111,10 @@ class ApiClient {
   Future<http.Response> post(
     String endpoint, {
     Map<String, dynamic>? body,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = _buildUri(endpoint);
-    return await http
+    return await _client
         .post(
           uri,
           headers: _headers,
@@ -95,10 +126,10 @@ class ApiClient {
   Future<http.Response> put(
     String endpoint, {
     Map<String, dynamic>? body,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = _buildUri(endpoint);
-    return await http
+    return await _client
         .put(
           uri,
           headers: _headers,
@@ -110,10 +141,10 @@ class ApiClient {
   Future<http.Response> patch(
     String endpoint, {
     Map<String, dynamic>? body,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = _buildUri(endpoint);
-    return await http
+    return await _client
         .patch(
           uri,
           headers: _headers,
@@ -124,10 +155,10 @@ class ApiClient {
 
   Future<http.Response> delete(
     String endpoint, {
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     final uri = _buildUri(endpoint);
-    return await http.delete(uri, headers: _headers).timeout(timeout);
+    return await _client.delete(uri, headers: _headers).timeout(timeout);
   }
 
   MediaType _resolveMediaType(String path) {
@@ -138,7 +169,8 @@ class ApiClient {
     return MediaType('image', 'jpeg');
   }
 
-  Future<http.Response> multipartPost(
+  Future<http.Response> _sendMultipart(
+    String method,
     String endpoint, {
     required File file,
     required String fileFieldName,
@@ -146,7 +178,7 @@ class ApiClient {
     Duration timeout = const Duration(seconds: 45),
   }) async {
     final uri = _buildUri(endpoint);
-    final request = http.MultipartRequest('POST', uri);
+    final request = http.MultipartRequest(method, uri);
 
     if (_token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $_token';
@@ -172,5 +204,38 @@ class ApiClient {
     final streamedResponse = await request.send().timeout(timeout);
     return await http.Response.fromStream(streamedResponse);
   }
-}
 
+  Future<http.Response> multipartPost(
+    String endpoint, {
+    required File file,
+    required String fileFieldName,
+    Map<String, String>? fields,
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    return _sendMultipart(
+      'POST',
+      endpoint,
+      file: file,
+      fileFieldName: fileFieldName,
+      fields: fields,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> multipartPut(
+    String endpoint, {
+    required File file,
+    required String fileFieldName,
+    Map<String, String>? fields,
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    return _sendMultipart(
+      'PUT',
+      endpoint,
+      file: file,
+      fileFieldName: fileFieldName,
+      fields: fields,
+      timeout: timeout,
+    );
+  }
+}

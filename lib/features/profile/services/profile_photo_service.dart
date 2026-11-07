@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,7 +10,7 @@ class ProfilePhotoService {
 
   static const List<Map<String, String>> sampleAvatars = [
     {
-      'name': 'Sireesha (Default Professional)',
+      'name': 'Professional Portrait',
       'url': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200',
     },
     {
@@ -253,6 +254,8 @@ class ProfilePhotoService {
       );
       if (file != null) {
         updatePhoto(ref, file.path);
+        // Upload to backend POST /api/v1/user/profile/photo
+        ref.read(profileProvider.notifier).uploadProfilePhoto(File(file.path));
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

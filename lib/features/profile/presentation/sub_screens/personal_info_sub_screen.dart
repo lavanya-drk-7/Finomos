@@ -18,8 +18,11 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
   late TextEditingController emailCtrl;
   late TextEditingController phoneCtrl;
   late TextEditingController dobCtrl;
+  late TextEditingController occupationCtrl;
+  late TextEditingController annualIncomeCtrl;
   late TextEditingController panCtrl;
   late TextEditingController aadhaarCtrl;
+  bool _isSaving = false;
 
   String selectedGender = 'Female';
   String selectedMarital = 'Married';
@@ -33,6 +36,12 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
     emailCtrl = TextEditingController(text: personal.email);
     phoneCtrl = TextEditingController(text: personal.mobileNumber);
     dobCtrl = TextEditingController(text: personal.dob);
+    occupationCtrl = TextEditingController(text: personal.occupation);
+    annualIncomeCtrl = TextEditingController(
+      text: personal.annualIncome > 0
+          ? personal.annualIncome.toStringAsFixed(0)
+          : '',
+    );
     panCtrl = TextEditingController(text: personal.panNumber);
     aadhaarCtrl = TextEditingController(text: personal.aadhaarNumber);
 
@@ -52,33 +61,54 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
     emailCtrl.dispose();
     phoneCtrl.dispose();
     dobCtrl.dispose();
+    occupationCtrl.dispose();
+    annualIncomeCtrl.dispose();
     panCtrl.dispose();
     aadhaarCtrl.dispose();
     super.dispose();
   }
 
-  void _saveDetails() {
+  Future<void> _saveDetails() async {
+    setState(() => _isSaving = true);
     final current = ref.read(profileProvider).personalInfo;
+    final parsedIncome = double.tryParse(
+          annualIncomeCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
+        ) ??
+        current.annualIncome;
+
     final updated = current.copyWith(
       fullName: nameCtrl.text.trim(),
       email: emailCtrl.text.trim(),
       mobileNumber: phoneCtrl.text.trim(),
       dob: dobCtrl.text.trim(),
       gender: selectedGender,
+      occupation: occupationCtrl.text.trim().isNotEmpty
+          ? occupationCtrl.text.trim()
+          : current.occupation,
+      annualIncome: parsedIncome,
       maritalStatus: selectedMarital,
       panNumber: panCtrl.text.trim(),
       aadhaarNumber: aadhaarCtrl.text.trim(),
       nationality: selectedNationality,
     );
 
-    ref.read(profileProvider.notifier).updatePersonalInfo(updated);
+    final success =
+        await ref.read(profileProvider.notifier).updatePersonalInfo(updated);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Personal information updated successfully!'),
-        backgroundColor: Color(0xFF10B981),
-      ),
-    );
+    if (mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Personal details updated successfully!'
+                : 'Failed to update personal details. Please retry.',
+          ),
+          backgroundColor:
+              success ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   @override
@@ -97,7 +127,7 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -118,7 +148,9 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
         padding: const EdgeInsets.all(20),
         physics: const BouncingScrollPhysics(),
         children: [
@@ -239,6 +271,25 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
                       },
                     ),
                     const SizedBox(height: 14),
+                    TextField(
+                      controller: occupationCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Occupation / Role',
+                        prefixIcon: Icon(Icons.work_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: annualIncomeCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Annual Income (₹)',
+                        prefixIcon: Icon(Icons.currency_rupee),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
                       initialValue: selectedMarital,
                       decoration: const InputDecoration(
@@ -295,21 +346,31 @@ class _PersonalInfoSubScreenState extends ConsumerState<PersonalInfoSubScreen> {
                           backgroundColor: const Color(0xFF0066FF),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: _saveDetails,
-                        child: const Text(
-                          'Save Personal Details',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        onPressed: _isSaving ? null : _saveDetails,
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Save Personal Details',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
                 ),
               ),
         ],
+        ),
       ),
     );
   }

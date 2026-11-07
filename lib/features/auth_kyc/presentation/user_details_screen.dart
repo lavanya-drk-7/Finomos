@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/validators.dart';
+import '../../../core/services/cache_service.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../profile/domain/profile_models.dart';
 import '../providers/auth_kyc_provider.dart';
+import '../domain/auth_onboarding_models.dart';
 import 'flow_header.dart';
 
 class UserDetailsScreen extends ConsumerStatefulWidget {
@@ -36,12 +41,12 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
   void initState() {
     super.initState();
     final user = ref.read(authKycProvider).user;
-    _nameController = TextEditingController(text: user.fullName.isEmpty ? 'Sireesha' : user.fullName);
-    _dobController = TextEditingController(text: user.dob.isEmpty ? '1995-08-15' : user.dob);
-    _selectedGender = user.gender.isEmpty ? 'Female' : user.gender;
-    _addressController = TextEditingController(text: user.address.isEmpty ? '101, Tech Park Avenue, Hitech City' : user.address);
-    _cityController = TextEditingController(text: user.city.isEmpty ? 'Hyderabad' : user.city);
-    _pinController = TextEditingController(text: user.pinCode.isEmpty ? '500081' : user.pinCode);
+    _nameController = TextEditingController(text: user.fullName);
+    _dobController = TextEditingController(text: user.dob);
+    _selectedGender = user.gender.isNotEmpty ? user.gender : 'Female';
+    _addressController = TextEditingController(text: user.address);
+    _cityController = TextEditingController(text: user.city);
+    _pinController = TextEditingController(text: user.pinCode);
     _selectedState = _states.contains(user.state) ? user.state : 'Telangana';
   }
 
@@ -63,16 +68,86 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
   void _onNext() {
     if (_formKey.currentState!.validate()) {
       final user = ref.read(authKycProvider).user;
+      final enteredName = _nameController.text.trim();
+      final enteredDob = _dobController.text.trim();
+      final enteredAddress = _addressController.text.trim();
+      final enteredCity = _cityController.text.trim();
+      final enteredPin = _pinController.text.trim();
+      final occ = user.occupation.isNotEmpty ? user.occupation : 'Software Professional';
+      final inc = user.annualIncome > 0 ? user.annualIncome.toDouble() : 1200000.0;
+
       final updated = user.copyWith(
-        fullName: _nameController.text.trim(),
-        dob: _dobController.text.trim(),
+        fullName: enteredName,
+        dob: enteredDob,
         gender: _selectedGender,
-        address: _addressController.text.trim(),
-        city: _cityController.text.trim(),
+        address: enteredAddress,
+        city: enteredCity,
         state: _selectedState,
-        pinCode: _pinController.text.trim(),
+        pinCode: enteredPin,
+        occupation: occ,
+        annualIncome: inc,
       );
       ref.read(authKycProvider.notifier).updateUserData(updated);
+
+      // Save user profile record in local persistent cache immediately
+      LocalCacheService().saveUserProfileRecord(
+        phone: user.mobileNumber,
+        email: user.email,
+        userId: user.userId,
+        data: {
+          'fullName': enteredName,
+          'email': user.email,
+          'phone': user.mobileNumber,
+          'dob': enteredDob,
+          'gender': _selectedGender,
+          'address': enteredAddress,
+          'city': enteredCity,
+          'state': _selectedState,
+          'pinCode': enteredPin,
+          'occupation': occ,
+          'annualIncome': inc,
+        },
+      );
+      if (enteredName.isNotEmpty) {
+        LocalCacheService().save('user_name', enteredName);
+      }
+
+      // Synchronize with ProfileNotifier
+      ref.read(profileProvider.notifier).updatePersonalInfo(
+        PersonalInfo(
+          fullName: enteredName,
+          email: user.email,
+          mobileNumber: user.mobileNumber,
+          dob: enteredDob,
+          gender: _selectedGender,
+          occupation: occ,
+          annualIncome: inc,
+        ),
+      );
+      ref.read(profileProvider.notifier).updateAddressInfo(
+        AddressInfo(
+          residentialAddress: enteredAddress,
+          city: enteredCity,
+          state: _selectedState,
+          pinCode: enteredPin,
+          permanentAddress: enteredAddress,
+        ),
+      );
+
+      // Save onboarding user details (PUT /api/auth/onboarding/user-details)
+      ref.read(authKycProvider.notifier).saveOnboardingUserDetails(
+        OnboardingUserDetailsRequest(
+          dob: enteredDob,
+          gender: _selectedGender,
+          address: enteredAddress,
+          city: enteredCity,
+          state: _selectedState,
+          pinCode: enteredPin,
+          occupation: occ,
+          annualIncome: inc,
+        ),
+      );
+
       ref.read(authKycProvider.notifier).updateStep(3);
       context.go('/kyc-details');
     }
@@ -155,7 +230,7 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                     ),
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Please enter full name' : null,
+                                  validator: (v) => FormValidators.validateFullName(v),
                                 ),
                                 const SizedBox(height: 16),
 
@@ -173,7 +248,7 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                     ),
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Please select date of birth' : null,
+                                  validator: (v) => v == null || v.trim().isEmpty ? 'Please select Date of Birth' : null,
                                 ),
                                 const SizedBox(height: 16),
 
@@ -219,7 +294,7 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                     ),
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Please enter address' : null,
+                                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter Address' : null,
                                 ),
                                 const SizedBox(height: 16),
 
@@ -236,7 +311,7 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                     ),
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Please enter city' : null,
+                                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter City' : null,
                                 ),
                                 const SizedBox(height: 16),
 
@@ -279,7 +354,7 @@ class _UserDetailsScreenState extends ConsumerState<UserDetailsScreen> {
                                       borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                     ),
                                   ),
-                                  validator: (v) => v == null || v.length < 6 ? 'Please enter 6-digit PIN code' : null,
+                                  validator: (v) => FormValidators.validatePinCode(v),
                                 ),
                                 const SizedBox(height: 28),
 

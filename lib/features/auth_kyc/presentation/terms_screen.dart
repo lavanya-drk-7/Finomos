@@ -128,9 +128,12 @@ class _TermsScreenState extends ConsumerState<TermsScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text(
-                              'I agree to the Terms & Conditions',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                            const Expanded(
+                              child: Text(
+                                'I agree to the Terms & Conditions',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -170,7 +173,13 @@ class _TermsScreenState extends ConsumerState<TermsScreen> {
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      Flexible(
+                                        child: Text(
+                                          'Continue',
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                       SizedBox(width: 6),
                                       Icon(Icons.arrow_forward, size: 18),
                                     ],

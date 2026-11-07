@@ -157,7 +157,7 @@ class _FamilyHouseholdSubScreenState extends ConsumerState<FamilyHouseholdSubScr
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -178,10 +178,12 @@ class _FamilyHouseholdSubScreenState extends ConsumerState<FamilyHouseholdSubScr
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        physics: const BouncingScrollPhysics(),
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
           // Family Members Card
           Container(
                 padding: const EdgeInsets.all(20),
@@ -391,6 +393,7 @@ class _FamilyHouseholdSubScreenState extends ConsumerState<FamilyHouseholdSubScr
               ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

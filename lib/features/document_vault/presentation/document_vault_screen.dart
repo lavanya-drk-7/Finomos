@@ -18,7 +18,6 @@ class DocumentVaultScreen extends ConsumerStatefulWidget {
 
 class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   final _searchController = TextEditingController();
-  bool _isInitializedWithKyc = false;
 
   final List<String> _idTypes = [
     'PAN Card',
@@ -38,21 +37,9 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
   @override
   void initState() {
     super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isInitializedWithKyc) {
-      _isInitializedWithKyc = true;
-      // Sync KYC uploaded documents from registration
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final kycDocs = ref.read(authKycProvider).user.kycDocuments;
-        if (kycDocs.isNotEmpty) {
-          ref.read(documentVaultProvider.notifier).syncKycDocuments(kycDocs);
-        }
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(documentVaultProvider.notifier).loadLiveVaultData(force: true);
+    });
   }
 
   @override
@@ -667,10 +654,6 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authKycProvider, (previous, next) {
-      ref.read(documentVaultProvider.notifier).syncKycDocuments(next.user.kycDocuments);
-    });
-
     final state = ref.watch(documentVaultProvider);
 
     final filteredDocs = state.documents.where((d) {
@@ -684,14 +667,12 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
     }).toList();
 
     return PopScope(
-      canPop: false,
+      canPop: (ModalRoute.of(context)?.canPop ?? false),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/profile');
-        }
+        try {
+          context.go('/dashboard');
+        } catch (_) {}
       },
       child: Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -702,10 +683,12 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF0066FF)),
           onPressed: () {
-            if (context.canPop()) {
-              context.pop();
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
             } else {
-              context.go('/profile');
+              try {
+                context.go('/dashboard');
+              } catch (_) {}
             }
           },
         ),
@@ -719,12 +702,15 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(documentVaultProvider.notifier).loadLiveVaultData(force: true),
+        color: const Color(0xFF0066FF),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Page Title Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -966,9 +952,12 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
                   children: [
                     Icon(Icons.add, color: Color(0xFF0066FF), size: 18),
                     SizedBox(width: 4),
-                    Text(
-                      '+ Add Another ID Document',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0066FF)),
+                    Flexible(
+                      child: Text(
+                        '+ Add Another ID Document',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0066FF)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -978,6 +967,7 @@ class _DocumentVaultScreenState extends ConsumerState<DocumentVaultScreen> {
           ],
         ),
       ),
+    ),
     ),
   );
 }

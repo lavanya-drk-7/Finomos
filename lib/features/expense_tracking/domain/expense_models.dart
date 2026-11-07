@@ -1,11 +1,41 @@
+import 'package:flutter/material.dart';
+
+enum ExpensePaymentStatus {
+  paymentSuccess, // Payment Success
+  dueInDays, // Due in 7 Days (or X days)
+  payImmediately, // Pay Immediately (Overdue)
+  paymentFailed, // Payment Failed
+}
+
+class ExpenseStatusInfo {
+  final ExpensePaymentStatus status;
+  final String label;
+  final Color primaryColor;
+  final Color backgroundColor;
+  final Color borderColor;
+  final IconData icon;
+
+  const ExpenseStatusInfo({
+    required this.status,
+    required this.label,
+    required this.primaryColor,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.icon,
+  });
+}
+
 class ExpenseEntry {
   final String id;
   final String description;
-  final String category; // Housing, Food, Utilities, Transport, Healthcare, Shopping, Entertainment, Subscriptions, Bills, Other, Food & Dining
+  final String
+  category; // Housing, Food, Utilities, Transport, Healthcare, Shopping, Entertainment, Subscriptions, Bills, Other, Food & Dining, Fixed Deposit / RD, Loan & EMI
   final double amount;
   final String date;
-  final String paymentMode; // UPI, Credit Card, Debit Card, Net Banking, Cash, HDFC Bank (**** 8754)
-  final String priority; // P1 - Survival, P2 - Protection, P3 - Obligations, P4 - Growth, P5 - Lifestyle, P6 - Luxury
+  final String
+  paymentMode; // UPI, Credit Card, Debit Card, Net Banking, Cash, HDFC Bank (**** 8754)
+  final String
+  priority; // P1 - Survival, P2 - Protection, P3 - Obligations, P4 - Growth, P5 - Lifestyle, P6 - Luxury
   final bool isRecurring;
   final String merchant;
   final String notes;
@@ -24,6 +54,9 @@ class ExpenseEntry {
   final String? accountId;
   final double? remainingBalanceOrCredit;
   final String? transactionStatus;
+  final String? paymentStatus; // SUCCESS, DUE_SOON, OVERDUE, FAILED
+  final int? recurringDayOfMonth; // e.g., 5 for 5th of every month
+  final String? dueDate;
   final ExpenseAccountDetail? account;
 
   const ExpenseEntry({
@@ -37,7 +70,7 @@ class ExpenseEntry {
     this.isRecurring = false,
     this.merchant = '',
     this.notes = '',
-    this.bankAccount = 'HDFC Bank ••••4587',
+    this.bankAccount = '',
     this.documentName,
     this.documentPath,
     this.invoiceNumber,
@@ -52,12 +85,17 @@ class ExpenseEntry {
     this.accountId,
     this.remainingBalanceOrCredit,
     this.transactionStatus,
+    this.paymentStatus,
+    this.recurringDayOfMonth,
+    this.dueDate,
     this.account,
   });
 
   factory ExpenseEntry.fromJson(Map<String, dynamic> json) {
-    final desc = (json['description'] ?? json['merchant'] ?? '')?.toString() ?? '';
-    final merchantStr = (json['merchant'] ?? json['description'] ?? '')?.toString() ?? '';
+    final desc =
+        (json['description'] ?? json['merchant'] ?? '')?.toString() ?? '';
+    final merchantStr =
+        (json['merchant'] ?? json['description'] ?? '')?.toString() ?? '';
     return ExpenseEntry(
       id: json['id']?.toString() ?? '',
       description: desc.isNotEmpty ? desc : 'Expense',
@@ -69,7 +107,8 @@ class ExpenseEntry {
       isRecurring: json['isRecurring'] as bool? ?? false,
       merchant: merchantStr,
       notes: json['notes']?.toString() ?? '',
-      bankAccount: (json['bankAccount'] ?? json['paymentMode'])?.toString() ?? 'HDFC Bank ••••4587',
+      bankAccount:
+          (json['bankAccount'] ?? json['paymentMode'])?.toString() ?? '',
       documentName: json['documentName'] as String?,
       documentPath: (json['documentPath'] ?? json['receiptUrl']) as String?,
       invoiceNumber: json['invoiceNumber'] as String?,
@@ -82,9 +121,19 @@ class ExpenseEntry {
       budgetImpact: json['budgetImpact']?.toString(),
       createdAt: json['createdAt'] as String?,
       accountId: json['accountId'] as String?,
-      remainingBalanceOrCredit: (json['remainingBalanceOrCredit'] as num?)?.toDouble(),
+      remainingBalanceOrCredit: (json['remainingBalanceOrCredit'] as num?)
+          ?.toDouble(),
       transactionStatus: json['transactionStatus'] as String?,
-      account: json['account'] is Map<String, dynamic> ? ExpenseAccountDetail.fromJson(json['account'] as Map<String, dynamic>) : null,
+      paymentStatus:
+          (json['paymentStatus'] ?? json['status'] ?? json['transactionStatus'])
+              ?.toString(),
+      recurringDayOfMonth: (json['recurringDayOfMonth'] as num?)?.toInt(),
+      dueDate: json['dueDate']?.toString(),
+      account: json['account'] is Map<String, dynamic>
+          ? ExpenseAccountDetail.fromJson(
+              json['account'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -102,6 +151,10 @@ class ExpenseEntry {
       if (bankAccount.isNotEmpty) 'bankAccount': bankAccount,
       if (documentName != null) 'documentName': documentName,
       if (documentPath != null) 'documentPath': documentPath,
+      if (paymentStatus != null) 'paymentStatus': paymentStatus,
+      if (recurringDayOfMonth != null)
+        'recurringDayOfMonth': recurringDayOfMonth,
+      if (dueDate != null) 'dueDate': dueDate,
     };
   }
 
@@ -128,6 +181,9 @@ class ExpenseEntry {
     String? rawDate,
     String? budgetImpact,
     String? createdAt,
+    String? paymentStatus,
+    int? recurringDayOfMonth,
+    String? dueDate,
   }) {
     return ExpenseEntry(
       id: id ?? this.id,
@@ -152,6 +208,182 @@ class ExpenseEntry {
       rawDate: rawDate ?? this.rawDate,
       budgetImpact: budgetImpact ?? this.budgetImpact,
       createdAt: createdAt ?? this.createdAt,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      recurringDayOfMonth: recurringDayOfMonth ?? this.recurringDayOfMonth,
+      dueDate: dueDate ?? this.dueDate,
+    );
+  }
+
+  /// Calculates dynamic payment status for expense sources & commitments:
+  /// - Payment Success
+  /// - Due in 7 Days (or X days)
+  /// - Pay Immediately (Overdue)
+  /// - Payment Failed
+  ExpenseStatusInfo get statusInfo {
+    // 1. Explicit status check
+    final raw = (paymentStatus ?? transactionStatus ?? '').toUpperCase();
+    if (raw == 'FAILED' || raw.contains('FAIL')) {
+      return const ExpenseStatusInfo(
+        status: ExpensePaymentStatus.paymentFailed,
+        label: 'Payment Failed',
+        primaryColor: Color(0xFFDC2626),
+        backgroundColor: Color(0xFFFEF2F2),
+        borderColor: Color(0xFFFCA5A5),
+        icon: Icons.cancel_rounded,
+      );
+    }
+
+    if (raw == 'OVERDUE' || raw == 'PAY_IMMEDIATELY') {
+      return const ExpenseStatusInfo(
+        status: ExpensePaymentStatus.payImmediately,
+        label: 'Pay Immediately',
+        primaryColor: Color(0xFFDC2626),
+        backgroundColor: Color(0xFFFEF2F2),
+        borderColor: Color(0xFFFECACA),
+        icon: Icons.warning_amber_rounded,
+      );
+    }
+
+    if (raw == 'DUE_SOON' || raw == 'DUE_IN_7_DAYS') {
+      return const ExpenseStatusInfo(
+        status: ExpensePaymentStatus.dueInDays,
+        label: 'Due in 7 Days',
+        primaryColor: Color(0xFFD97706),
+        backgroundColor: Color(0xFFFFFBEB),
+        borderColor: Color(0xFFFDE68A),
+        icon: Icons.schedule_rounded,
+      );
+    }
+
+    if (raw == 'SUCCESS' ||
+        raw == 'PAID' ||
+        raw == 'COMPLETED' ||
+        raw == 'SETTLED') {
+      return const ExpenseStatusInfo(
+        status: ExpensePaymentStatus.paymentSuccess,
+        label: 'Payment Success',
+        primaryColor: Color(0xFF059669),
+        backgroundColor: Color(0xFFECFDF5),
+        borderColor: Color(0xFFA7F3D0),
+        icon: Icons.check_circle_rounded,
+      );
+    }
+
+    // 2. Calculation based on recurringDayOfMonth (e.g. 5th of every month)
+    final now = DateTime.now();
+    int? targetDay = recurringDayOfMonth;
+
+    // If recurringDayOfMonth not set but notes or date mentions day
+    if (targetDay == null && isRecurring) {
+      final match = RegExp(
+        r'(\d{1,2})(?:st|nd|rd|th)?\b',
+      ).firstMatch(notes.isNotEmpty ? notes : date);
+      if (match != null) {
+        final parsed = int.tryParse(match.group(1)!);
+        if (parsed != null && parsed >= 1 && parsed <= 31) {
+          targetDay = parsed;
+        }
+      }
+    }
+
+    if (targetDay != null && targetDay >= 1 && targetDay <= 31) {
+      DateTime targetDueDate;
+      try {
+        targetDueDate = DateTime(now.year, now.month, targetDay);
+      } catch (_) {
+        targetDueDate = DateTime(now.year, now.month + 1, 0);
+      }
+
+      final todayMidnight = DateTime(now.year, now.month, now.day);
+      final diff = targetDueDate.difference(todayMidnight).inDays;
+
+      if (diff < 0) {
+        // Due date has completed / passed and user has not paid
+        return const ExpenseStatusInfo(
+          status: ExpensePaymentStatus.payImmediately,
+          label: 'Pay Immediately',
+          primaryColor: Color(0xFFDC2626),
+          backgroundColor: Color(0xFFFEF2F2),
+          borderColor: Color(0xFFFECACA),
+          icon: Icons.warning_amber_rounded,
+        );
+      } else if (diff == 0) {
+        return const ExpenseStatusInfo(
+          status: ExpensePaymentStatus.dueInDays,
+          label: 'Due Today',
+          primaryColor: Color(0xFFD97706),
+          backgroundColor: Color(0xFFFFFBEB),
+          borderColor: Color(0xFFFDE68A),
+          icon: Icons.schedule_rounded,
+        );
+      } else if (diff == 1) {
+        return const ExpenseStatusInfo(
+          status: ExpensePaymentStatus.dueInDays,
+          label: 'Due Tomorrow',
+          primaryColor: Color(0xFFD97706),
+          backgroundColor: Color(0xFFFFFBEB),
+          borderColor: Color(0xFFFDE68A),
+          icon: Icons.schedule_rounded,
+        );
+      } else if (diff <= 7) {
+        return ExpenseStatusInfo(
+          status: ExpensePaymentStatus.dueInDays,
+          label: 'Due in $diff Days',
+          primaryColor: const Color(0xFFD97706),
+          backgroundColor: const Color(0xFFFFFBEB),
+          borderColor: const Color(0xFFFDE68A),
+          icon: Icons.schedule_rounded,
+        );
+      } else {
+        return ExpenseStatusInfo(
+          status: ExpensePaymentStatus.dueInDays,
+          label: 'Due in $diff Days',
+          primaryColor: const Color(0xFF2563EB),
+          backgroundColor: const Color(0xFFEFF6FF),
+          borderColor: const Color(0xFFBFDBFE),
+          icon: Icons.calendar_today_outlined,
+        );
+      }
+    }
+
+    // 3. Calculation based on dueDate string if provided
+    if (dueDate != null && dueDate!.isNotEmpty) {
+      final parsedDate = DateTime.tryParse(dueDate!);
+      if (parsedDate != null) {
+        final todayMidnight = DateTime(now.year, now.month, now.day);
+        final diff = parsedDate.difference(todayMidnight).inDays;
+        if (diff < 0) {
+          return const ExpenseStatusInfo(
+            status: ExpensePaymentStatus.payImmediately,
+            label: 'Pay Immediately',
+            primaryColor: Color(0xFFDC2626),
+            backgroundColor: Color(0xFFFEF2F2),
+            borderColor: Color(0xFFFECACA),
+            icon: Icons.warning_amber_rounded,
+          );
+        } else if (diff <= 7) {
+          return ExpenseStatusInfo(
+            status: ExpensePaymentStatus.dueInDays,
+            label: diff == 0
+                ? 'Due Today'
+                : (diff == 1 ? 'Due Tomorrow' : 'Due in $diff Days'),
+            primaryColor: const Color(0xFFD97706),
+            backgroundColor: const Color(0xFFFFFBEB),
+            borderColor: const Color(0xFFFDE68A),
+            icon: Icons.schedule_rounded,
+          );
+        }
+      }
+    }
+
+    // 4. Fallback for past recorded expenses
+    return const ExpenseStatusInfo(
+      status: ExpensePaymentStatus.paymentSuccess,
+      label: 'Payment Success',
+      primaryColor: Color(0xFF059669),
+      backgroundColor: Color(0xFFECFDF5),
+      borderColor: Color(0xFFA7F3D0),
+      icon: Icons.check_circle_rounded,
     );
   }
 }
@@ -177,6 +409,15 @@ class ExpensePagination {
       totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'currentPage': currentPage,
+      'perPage': perPage,
+      'totalRecords': totalRecords,
+      'totalPages': totalPages,
+    };
+  }
 }
 
 class ExpenseEntriesResponse {
@@ -189,23 +430,33 @@ class ExpenseEntriesResponse {
   });
 
   factory ExpenseEntriesResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'];
+    dynamic data = json['data'] ?? json['expenses'] ?? json['entries'];
     List<ExpenseEntry> expList = [];
     ExpensePagination pag = const ExpensePagination();
 
     if (data is Map<String, dynamic>) {
-      if (data['expenses'] is List) {
-        expList = (data['expenses'] as List)
-            .map((e) => ExpenseEntry.fromJson(e as Map<String, dynamic>))
+      final rawList = data['expenses'] ?? data['entries'] ?? data['items'];
+      if (rawList is List) {
+        expList = rawList
+            .whereType<Map<String, dynamic>>()
+            .map((e) => ExpenseEntry.fromJson(e))
             .toList();
       }
       if (data['pagination'] is Map<String, dynamic>) {
-        pag = ExpensePagination.fromJson(data['pagination'] as Map<String, dynamic>);
+        pag = ExpensePagination.fromJson(
+          data['pagination'] as Map<String, dynamic>,
+        );
       }
     } else if (data is List) {
       expList = data
-          .map((e) => ExpenseEntry.fromJson(e as Map<String, dynamic>))
+          .whereType<Map<String, dynamic>>()
+          .map((e) => ExpenseEntry.fromJson(e))
           .toList();
+    }
+    if (json['pagination'] is Map<String, dynamic>) {
+      pag = ExpensePagination.fromJson(
+        json['pagination'] as Map<String, dynamic>,
+      );
     }
 
     return ExpenseEntriesResponse(expenses: expList, pagination: pag);
@@ -265,10 +516,8 @@ class ExpenseSummaryData {
       monthlyInflow: (json['monthlyInflow'] as num?)?.toDouble() ?? 0.0,
       netCashFlow: (json['netCashFlow'] as num?)?.toDouble() ?? 0.0,
       savingsRate: (json['savingsRate'] as num?)?.toDouble() ?? 0.0,
-      cashRunwayMonths:
-          (json['cashRunwayMonths'] as num?)?.toDouble() ?? 0.0,
-      recurringExpenses:
-          (json['recurringExpenses'] as num?)?.toDouble() ?? 0.0,
+      cashRunwayMonths: (json['cashRunwayMonths'] as num?)?.toDouble() ?? 0.0,
+      recurringExpenses: (json['recurringExpenses'] as num?)?.toDouble() ?? 0.0,
       discretionaryExpenses:
           (json['discretionaryExpenses'] as num?)?.toDouble() ?? 0.0,
       priorityBreakdown: priMap,
@@ -276,8 +525,8 @@ class ExpenseSummaryData {
       wantsRatio: (json['wantsRatio'] as num?)?.toDouble() ?? 0.0,
       expenseHealthScore:
           (json['expenseHealthScore'] as num?)?.toDouble() ?? 75.0,
-      healthScoreRating: json['healthScoreRating']?.toString() ??
-          'Good Financial Health',
+      healthScoreRating:
+          json['healthScoreRating']?.toString() ?? 'Good Financial Health',
       totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
       aiCfoInsight: json['aiCfoInsight']?.toString() ?? '',
     );
@@ -349,6 +598,9 @@ class DetectedExpense {
   final bool isDebit;
   final double confidenceScore;
   final String channel;
+  final String? rawSms;
+  final String? referenceId;
+  final String? status;
 
   const DetectedExpense({
     required this.detectionId,
@@ -358,27 +610,58 @@ class DetectedExpense {
     required this.amount,
     required this.date,
     this.paymentMode = 'UPI',
-    this.bankAccount = 'Axis Bank ••••3301',
+    this.bankAccount = 'Other / Cash',
     this.merchant = '',
     this.isDebit = true,
     this.confidenceScore = 0.94,
     this.channel = 'SMS_ALERT',
+    this.rawSms,
+    this.referenceId,
+    this.status = 'UNCONFIRMED',
   });
 
   factory DetectedExpense.fromJson(Map<String, dynamic> json) {
+    double amt = (json['amount'] as num?)?.toDouble() ?? 0.0;
+    final raw = json['rawSms']?.toString();
+    if (amt <= 0.0 && raw != null && raw.isNotEmpty) {
+      final match = RegExp(
+        r'(?:Rs\.?|INR)\s*[:.]?\s*([\d,]+\.?\d*)',
+        caseSensitive: false,
+      ).firstMatch(raw);
+      if (match != null) {
+        final clean = match.group(1)!.replaceAll(',', '');
+        amt = double.tryParse(clean) ?? amt;
+      }
+    }
+
     return DetectedExpense(
-      detectionId: json['detectionId']?.toString() ?? '',
-      description: json['description']?.toString() ?? 'Detected Outflow',
-      suggestedCategory: json['suggestedCategory']?.toString() ?? 'Other',
-      suggestedPriority: json['suggestedPriority']?.toString() ?? 'P1 - Survival',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      detectionId: (json['detectionId'] ?? json['id'])?.toString() ?? '',
+      description:
+          (json['description'] ?? json['merchant'])?.toString() ??
+          'Detected Outflow',
+      suggestedCategory:
+          (json['suggestedCategory'] ?? json['category'])?.toString() ??
+          'Other',
+      suggestedPriority:
+          (json['suggestedPriority'] ?? json['priority'])?.toString() ??
+          'P1 - Survival',
+      amount: amt,
       date: json['date']?.toString() ?? '',
       paymentMode: json['paymentMode']?.toString() ?? 'UPI',
-      bankAccount: (json['bankAccount'] ?? json['paymentMode'])?.toString() ?? 'UPI',
-      merchant: json['merchant']?.toString() ?? '',
+      bankAccount:
+          (json['bankAccount'] ?? json['paymentMode'] ?? json['bankName'])
+              ?.toString() ??
+          'Other / Cash',
+      merchant: (json['merchant'] ?? json['description'])?.toString() ?? '',
       isDebit: json['isDebit'] as bool? ?? true,
-      confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0.9,
+      confidenceScore:
+          ((json['confidenceScore'] ?? json['confidence']) as num?)
+              ?.toDouble() ??
+          0.9,
       channel: json['channel']?.toString() ?? 'SMS_ALERT',
+      rawSms: raw,
+      referenceId: json['referenceId']?.toString(),
+      status: json['status']?.toString() ?? 'UNCONFIRMED',
     );
   }
 
@@ -396,6 +679,9 @@ class DetectedExpense {
       'isDebit': isDebit,
       'confidenceScore': confidenceScore,
       'channel': channel,
+      if (rawSms != null) 'rawSms': rawSms,
+      if (referenceId != null) 'referenceId': referenceId,
+      if (status != null) 'status': status,
     };
   }
 }
@@ -439,8 +725,7 @@ class ExpenseState {
       summaryData?.totalMonthlyExpenses ??
       expenses.fold(0.0, (sum, e) => sum + e.amount);
 
-  double get monthlyAverage =>
-      summaryData?.monthlyAverage ?? totalExpenses;
+  double get monthlyAverage => summaryData?.monthlyAverage ?? totalExpenses;
 
   double get dailyAverage =>
       summaryData?.dailyAverage ?? (totalExpenses / 30.0);
@@ -459,7 +744,10 @@ class ExpenseState {
   double get savingsRate {
     if (summaryData != null) return summaryData!.savingsRate;
     if (monthlyInflow <= 0) return 0.0;
-    return (((monthlyInflow - totalExpenses) / monthlyInflow) * 100).clamp(-100.0, 100.0);
+    return (((monthlyInflow - totalExpenses) / monthlyInflow) * 100).clamp(
+      -100.0,
+      100.0,
+    );
   }
 
   double get cashRunwayMonths {
@@ -470,30 +758,42 @@ class ExpenseState {
 
   double get survivalP1Total {
     if (priorityBreakdown != null) return priorityBreakdown!.p1Survival;
-    return expenses.where((e) => e.priority.startsWith('P1')).fold(0.0, (sum, e) => sum + e.amount);
+    return expenses
+        .where((e) => e.priority.startsWith('P1'))
+        .fold(0.0, (sum, e) => sum + e.amount);
   }
 
   double get protectionP2Total {
     if (priorityBreakdown != null) return priorityBreakdown!.p2Protection;
-    return expenses.where((e) => e.priority.startsWith('P2')).fold(0.0, (sum, e) => sum + e.amount);
+    return expenses
+        .where((e) => e.priority.startsWith('P2'))
+        .fold(0.0, (sum, e) => sum + e.amount);
   }
 
   double get obligationsP3Total {
     if (priorityBreakdown != null) return priorityBreakdown!.p3Obligations;
-    return expenses.where((e) => e.priority.startsWith('P3')).fold(0.0, (sum, e) => sum + e.amount);
+    return expenses
+        .where((e) => e.priority.startsWith('P3'))
+        .fold(0.0, (sum, e) => sum + e.amount);
   }
 
   double get lifestyleP5Total {
     if (priorityBreakdown != null) {
       return priorityBreakdown!.p5Lifestyle + priorityBreakdown!.p6Luxury;
     }
-    return expenses.where((e) => e.priority.startsWith('P5') || e.priority.startsWith('P6')).fold(0.0, (sum, e) => sum + e.amount);
+    return expenses
+        .where(
+          (e) => e.priority.startsWith('P5') || e.priority.startsWith('P6'),
+        )
+        .fold(0.0, (sum, e) => sum + e.amount);
   }
 
   double get needsRatio {
     if (summaryData != null) return summaryData!.needsRatio;
     if (totalExpenses <= 0) return 0.0;
-    return (((survivalP1Total + protectionP2Total + obligationsP3Total) / totalExpenses) * 100)
+    return (((survivalP1Total + protectionP2Total + obligationsP3Total) /
+                totalExpenses) *
+            100)
         .clamp(0.0, 100.0);
   }
 
@@ -551,9 +851,12 @@ class ExpenseState {
     return ExpenseState(
       expenses: expenses ?? this.expenses,
       searchQuery: searchQuery ?? this.searchQuery,
-      selectedCategoryFilter: selectedCategoryFilter ?? this.selectedCategoryFilter,
-      selectedPriorityFilter: selectedPriorityFilter ?? this.selectedPriorityFilter,
-      selectedBankAccountFilter: selectedBankAccountFilter ?? this.selectedBankAccountFilter,
+      selectedCategoryFilter:
+          selectedCategoryFilter ?? this.selectedCategoryFilter,
+      selectedPriorityFilter:
+          selectedPriorityFilter ?? this.selectedPriorityFilter,
+      selectedBankAccountFilter:
+          selectedBankAccountFilter ?? this.selectedBankAccountFilter,
       selectedDateFilter: selectedDateFilter ?? this.selectedDateFilter,
       monthlyInflow: monthlyInflow ?? this.monthlyInflow,
       isLoading: isLoading ?? this.isLoading,
@@ -639,7 +942,8 @@ class ExpenseInvoiceDetails {
     return ExpenseInvoiceDetails(
       invoiceNumber: json['invoiceNumber']?.toString() ?? '',
       id: json['id']?.toString() ?? '',
-      particularsTitle: json['particularsTitle']?.toString() ?? 'EXPENSE OUTFLOW DETAILS',
+      particularsTitle:
+          json['particularsTitle']?.toString() ?? 'EXPENSE OUTFLOW DETAILS',
       description: json['description']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,

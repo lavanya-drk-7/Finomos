@@ -10,6 +10,7 @@ import '../domain/income_models.dart';
 import '../providers/income_provider.dart';
 import '../../../core/services/invoice_pdf_service.dart';
 import '../../../core/services/api_client.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 
 class IncomeTrackingScreen extends ConsumerStatefulWidget {
   const IncomeTrackingScreen({super.key});
@@ -24,14 +25,50 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
 
-  static const List<String> _availableBanks = [
-    'HDFC Bank ••••4587',
-    'ICICI Bank ••••9021',
-    'SBI ••••1123',
-    'State Bank of India (**** 4587)',
-    'Axis Bank ••••3301',
-    'Other / Cash',
-  ];
+  List<String> _getUserBankAccountsList({String? existingAccount}) {
+    final bankAccounts = ref.read(bankAggregationProvider).bankAccounts;
+    final List<String> list = [];
+
+    for (final acc in bankAccounts) {
+      final digits =
+          (acc.rawAccountNumber != null && acc.rawAccountNumber!.isNotEmpty)
+          ? acc.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : acc.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final last4 = digits.length >= 4
+          ? digits.substring(digits.length - 4)
+          : digits;
+      final formatted = last4.isNotEmpty
+          ? '${acc.bankName} ••••$last4'
+          : acc.bankName;
+      if (!list.contains(formatted)) {
+        list.add(formatted);
+      }
+    }
+
+    if (existingAccount != null && existingAccount.trim().isNotEmpty) {
+      final exDigits = existingAccount.replaceAll(RegExp(r'\D'), '');
+      final exLast4 = exDigits.length >= 4 ? exDigits.substring(exDigits.length - 4) : exDigits;
+      final alreadyPresent = list.any((item) {
+        if (item == existingAccount.trim()) return true;
+        if (item == 'Other / Cash') return false;
+        final itDigits = item.replaceAll(RegExp(r'\D'), '');
+        final itLast4 = itDigits.length >= 4 ? itDigits.substring(itDigits.length - 4) : itDigits;
+        return exLast4.isNotEmpty && itLast4.isNotEmpty && exLast4 == itLast4;
+      });
+      if (!alreadyPresent) {
+        list.insert(0, existingAccount.trim());
+      }
+    }
+
+    if (!list.contains('Other / Cash')) {
+      list.add('Other / Cash');
+    }
+
+    return list;
+  }
+
+  // ignore: unused_field
+  static const List<String> _availableBanks = ['Other / Cash'];
 
   static const List<String> _availableCategories = [
     'Salary',
@@ -116,7 +153,8 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     String resolvedPath = docPath ?? '';
     String fileSize = '1.2 MB';
 
-    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+    if (resolvedPath.startsWith('http://') ||
+        resolvedPath.startsWith('https://')) {
       try {
         final bytes = await ApiClient().getBytes(resolvedPath);
         if (bytes != null && bytes.isNotEmpty) {
@@ -142,20 +180,29 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
 
     if (!context.mounted) return;
 
-    final isVoucher = docName.toUpperCase().contains('VOUCHER') || docName.toUpperCase().startsWith('FIN-INC');
+    final isVoucher =
+        docName.toUpperCase().contains('VOUCHER') ||
+        docName.toUpperCase().startsWith('FIN-INC');
 
     DocumentActionHelper.showDocumentPreviewDialog(
       context: context,
-      idType: isVoucher ? 'Official Section 65B Receipt Voucher' : 'Income Proof Document',
-      idNumber: isVoucher ? docName.replaceAll('.pdf', '') : 'Finomos Attached Proof',
+      idType: isVoucher
+          ? 'Official Section 65B Receipt Voucher'
+          : 'Income Proof Document',
+      idNumber: isVoucher
+          ? docName.replaceAll('.pdf', '')
+          : 'Finomos Attached Proof',
       fileName: docName,
       fileSize: fileSize,
       localPath: resolvedPath,
       uploadDate: 'Today',
       uploadSource: isVoucher
           ? 'RBI Account Aggregator & Section 65B Cloud Vault'
-          : (resolvedPath.contains('cache') ? 'Camera / Gallery' : 'Attached Document'),
-      onDownload: () => _downloadUploadedDocument(context, docName, resolvedPath),
+          : (resolvedPath.contains('cache')
+                ? 'Camera / Gallery'
+                : 'Attached Document'),
+      onDownload: () =>
+          _downloadUploadedDocument(context, docName, resolvedPath),
     );
   }
 
@@ -165,7 +212,8 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     String? docPath,
   ) async {
     String resolvedPath = docPath ?? '';
-    if (resolvedPath.startsWith('http://') || resolvedPath.startsWith('https://')) {
+    if (resolvedPath.startsWith('http://') ||
+        resolvedPath.startsWith('https://')) {
       try {
         final bytes = await ApiClient().getBytes(resolvedPath);
         if (bytes != null && bytes.isNotEmpty) {
@@ -212,11 +260,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
 
   void _showTransactionDetailsSheet(BuildContext context, IncomeEntry item) {
     IncomeEntry currentEntry = item;
-    final invoiceNumber = item.voucherNumber ??
-        InvoicePdfService.generateInvoiceNumber(
-          isExpense: false,
-          id: item.id,
-        );
+    final invoiceNumber =
+        item.voucherNumber ??
+        InvoicePdfService.generateInvoiceNumber(isExpense: false, id: item.id);
 
     IncomeVoucherData? voucherData;
     bool hasFetchedVoucher = false;
@@ -233,14 +279,19 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
           builder: (modalCtx, setModalState) {
             if (!hasFetchedVoucher) {
               hasFetchedVoucher = true;
-              ref.read(incomeProvider.notifier).fetchVoucherDetails(item.id).then((v) {
-                if (v != null && modalCtx.mounted) {
-                  setModalState(() {
-                    voucherData = v;
+              ref
+                  .read(incomeProvider.notifier)
+                  .fetchVoucherDetails(item.id)
+                  .then((v) {
+                    if (v != null && modalCtx.mounted) {
+                      setModalState(() {
+                        voucherData = v;
+                      });
+                    }
                   });
-                }
-              });
-              ref.read(incomeProvider.notifier).fetchSingleEntry(item.id).then((fresh) {
+              ref.read(incomeProvider.notifier).fetchSingleEntry(item.id).then((
+                fresh,
+              ) {
                 if (fresh != null && modalCtx.mounted) {
                   setModalState(() {
                     currentEntry = fresh;
@@ -248,11 +299,13 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                 }
               });
             }
-            final attachedDocName = currentEntry.documentName ??
+            final attachedDocName =
+                currentEntry.documentName ??
                 (voucherData?.attachedDocumentUrl != null
                     ? voucherData!.attachedDocumentUrl!.split('/').last
                     : null);
-            final attachedDocPath = currentEntry.documentPath ?? voucherData?.attachedDocumentUrl;
+            final attachedDocPath =
+                currentEntry.documentPath ?? voucherData?.attachedDocumentUrl;
 
             return Container(
               constraints: BoxConstraints(
@@ -321,7 +374,10 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Color(0xFF64748B),
+                            ),
                             onPressed: () => Navigator.pop(sheetCtx),
                           ),
                         ],
@@ -342,14 +398,19 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF0A2540), Color(0xFF059669)],
+                                  colors: [
+                                    Color(0xFF0A2540),
+                                    Color(0xFF059669),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0A2540).withOpacity(0.18),
+                                    color: const Color(
+                                      0xFF0A2540,
+                                    ).withOpacity(0.18),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -359,7 +420,8 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
                                         'TOTAL AMOUNT RECEIVED',
@@ -376,8 +438,12 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                           vertical: 3,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF10B981).withOpacity(0.25),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: const Color(
+                                            0xFF10B981,
+                                          ).withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                           border: Border.all(
                                             color: const Color(0xFF10B981),
                                             width: 1,
@@ -453,7 +519,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,22 +535,37 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                       letterSpacing: 0.5,
                                     ),
                                   ),
-                                  const Divider(height: 16, color: Color(0xFFE2E8F0)),
-                                  _buildDetailRow('Source / Payee', item.source),
+                                  const Divider(
+                                    height: 16,
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                  _buildDetailRow(
+                                    'Source / Payee',
+                                    item.source,
+                                  ),
                                   const SizedBox(height: 8),
                                   if (voucherData?.amountInWords != null &&
-                                      voucherData!.amountInWords.isNotEmpty) ...[
-                                    _buildDetailRow('Amount in Words', voucherData!.amountInWords),
+                                      voucherData!
+                                          .amountInWords
+                                          .isNotEmpty) ...[
+                                    _buildDetailRow(
+                                      'Amount in Words',
+                                      voucherData!.amountInWords,
+                                    ),
                                     const SizedBox(height: 8),
                                   ],
                                   _buildDetailRow('Category', item.category),
                                   const SizedBox(height: 8),
                                   _buildDetailRow('Date Credited', item.date),
                                   const SizedBox(height: 8),
-                                  _buildDetailRow('Inflow Frequency', item.frequency),
+                                  _buildDetailRow(
+                                    'Inflow Frequency',
+                                    item.frequency,
+                                  ),
                                   const SizedBox(height: 8),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
                                         'Bank Account',
@@ -494,7 +577,10 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          BankLogo(bankName: item.bankAccount, size: 14),
+                                          BankLogo(
+                                            bankName: item.bankAccount,
+                                            size: 14,
+                                          ),
                                           const SizedBox(width: 6),
                                           Text(
                                             item.bankAccount,
@@ -509,7 +595,10 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  _buildDetailRow('Stream Nature', '${item.type} Income'),
+                                  _buildDetailRow(
+                                    'Stream Nature',
+                                    '${item.type} Income',
+                                  ),
                                   const SizedBox(height: 8),
                                   _buildDetailRow(
                                     'Verification Status',
@@ -519,7 +608,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                             : 'Manual Entry Inflow'),
                                   ),
                                   if (currentEntry.voucherNumber != null &&
-                                      currentEntry.voucherNumber!.isNotEmpty) ...[
+                                      currentEntry
+                                          .voucherNumber!
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     _buildDetailRow(
                                       'Voucher Number',
@@ -532,18 +623,26 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                     _buildDetailRow(
                                       'Recorded Date',
                                       currentEntry.createdAt!.length >= 10
-                                          ? currentEntry.createdAt!.substring(0, 10)
+                                          ? currentEntry.createdAt!.substring(
+                                              0,
+                                              10,
+                                            )
                                           : currentEntry.createdAt!,
                                     ),
                                   ],
                                   if (item.notes.isNotEmpty) ...[
                                     const SizedBox(height: 8),
-                                    _buildDetailRow('Notes / Remarks', item.notes),
+                                    _buildDetailRow(
+                                      'Notes / Remarks',
+                                      item.notes,
+                                    ),
                                   ],
-                                  if (attachedDocName != null && attachedDocName.isNotEmpty) ...[
+                                  if (attachedDocName != null &&
+                                      attachedDocName.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
                                           'Attached Document',
@@ -574,12 +673,15 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                                     attachedDocName,
                                                     style: const TextStyle(
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       color: Color(0xFF0066FF),
-                                                      decoration: TextDecoration.underline,
+                                                      decoration: TextDecoration
+                                                          .underline,
                                                     ),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -600,7 +702,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEFF6FF),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                                border: Border.all(
+                                  color: const Color(0xFFBFDBFE),
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -651,7 +755,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text('Download failed: $e'),
-                                        backgroundColor: const Color(0xFFEF4444),
+                                        backgroundColor: const Color(
+                                          0xFFEF4444,
+                                        ),
                                       ),
                                     );
                                   }
@@ -775,7 +881,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                   backgroundColor: const Color(0xFFECFDF5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    side: const BorderSide(color: Color(0xFFA7F3D0)),
+                                    side: const BorderSide(
+                                      color: Color(0xFFA7F3D0),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -832,7 +940,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         ? existingEntry.frequency
         : 'Monthly';
 
-    final bankList = <String>[..._availableBanks];
+    final bankList = _getUserBankAccountsList(
+      existingAccount: existingEntry?.bankAccount,
+    );
     if (existingEntry != null &&
         existingEntry.bankAccount.isNotEmpty &&
         !bankList.contains(existingEntry.bankAccount)) {
@@ -841,11 +951,13 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
 
     String selectedBank =
         existingEntry != null && bankList.contains(existingEntry.bankAccount)
-            ? existingEntry.bankAccount
-            : (bankList.contains('HDFC Bank ••••4587') ? 'HDFC Bank ••••4587' : bankList.first);
+        ? existingEntry.bankAccount
+        : bankList.first;
 
     bool isVerified = existingEntry?.isVerified ?? true;
-    String selectedDateStr = existingEntry?.date ?? '25 Aug 2025';
+    String selectedDateStr = existingEntry?.date ?? _formatDate(DateTime.now());
+
+    String? amountError;
 
     showModalBottomSheet(
       context: context,
@@ -916,6 +1028,11 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        onChanged: (_) {
+                          if (amountError != null) {
+                            setSheetState(() => amountError = null);
+                          }
+                        },
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -927,6 +1044,7 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                             Icons.currency_rupee,
                             color: Color(0xFF10B981),
                           ),
+                          errorText: amountError,
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
@@ -960,7 +1078,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedCategory,
+                              value: _availableCategories.contains(selectedCategory)
+                                  ? selectedCategory
+                                  : _availableCategories.first,
                               decoration: InputDecoration(
                                 labelText: 'Category',
                                 filled: true,
@@ -988,7 +1108,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedFrequency,
+                              value: _availableFrequencies.contains(selectedFrequency)
+                                  ? selectedFrequency
+                                  : _availableFrequencies.first,
                               decoration: InputDecoration(
                                 labelText: 'Frequency',
                                 filled: true,
@@ -1019,7 +1141,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
 
                       DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: selectedBank,
+                        value: bankList.contains(selectedBank)
+                            ? selectedBank
+                            : (bankList.isNotEmpty ? bankList.first : null),
                         decoration: InputDecoration(
                           labelText: 'Deposit Account',
                           filled: true,
@@ -1049,9 +1173,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                         onTap: () async {
                           final picked = await showDatePicker(
                             context: context,
-                            initialDate: DateTime(2025, 8, 25),
+                            initialDate: DateTime.now(),
                             firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
+                            lastDate: DateTime(2035),
                           );
                           if (picked != null) {
                             setSheetState(() {
@@ -1132,18 +1256,23 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                                 selectedDocumentName = res.fileName;
                                 selectedDocumentPath = res.localPath;
                               });
-                              if (res.localPath != null && res.localPath!.isNotEmpty) {
+                              if (res.localPath != null &&
+                                  res.localPath!.isNotEmpty) {
                                 try {
                                   final file = File(res.localPath!);
                                   if (file.existsSync()) {
-                                    final uploaded = await ref.read(incomeProvider.notifier).uploadProof(
-                                      file,
-                                      entryId: existingEntry?.id,
-                                    );
+                                    final uploaded = await ref
+                                        .read(incomeProvider.notifier)
+                                        .uploadProof(
+                                          file,
+                                          entryId: existingEntry?.id,
+                                        );
                                     if (uploaded != null) {
                                       setSheetState(() {
-                                        selectedDocumentName = uploaded.documentName;
-                                        selectedDocumentPath = uploaded.documentPath;
+                                        selectedDocumentName =
+                                            uploaded.documentName;
+                                        selectedDocumentPath =
+                                            uploaded.documentPath;
                                       });
                                     }
                                   }
@@ -1354,6 +1483,9 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                             );
                             final amount = double.tryParse(cleanStr) ?? 0.0;
                             if (amount <= 0) {
+                              setSheetState(() {
+                                amountError = 'Income Amount is required (> ₹0)';
+                              });
                               ScaffoldMessenger.of(
                                 context,
                               ).hideCurrentSnackBar();
@@ -1462,7 +1594,7 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
     );
   }
 
-
+  // ignore: unused_element
   void _showConfirmInflowSheet(BuildContext context, DetectedInflow inflow) {
     String selectedCategory = inflow.suggestedCategory;
     if (!_availableCategories.contains(selectedCategory)) {
@@ -1555,7 +1687,11 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                       children: [
                         Text(
                           inflow.detectedSource,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Row(
@@ -1563,11 +1699,18 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                           children: [
                             Text(
                               '${inflow.bankAccount} • ${inflow.date}',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
                             ),
                             Text(
                               '+${_formatRupees(inflow.amount)}',
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF10B981)),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                color: Color(0xFF10B981),
+                              ),
                             ),
                           ],
                         ),
@@ -1575,33 +1718,61 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Confirm Category', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A2540))),
+                  const Text(
+                    'Confirm Category',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0A2540),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: selectedCategory,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
                     ),
-                    items: _availableCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    items: _availableCategories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
                     onChanged: (val) {
-                      if (val != null) setModalState(() => selectedCategory = val);
+                      if (val != null) {
+                        setModalState(() => selectedCategory = val);
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
-                  const Text('Inflow Frequency', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0A2540))),
+                  const Text(
+                    'Inflow Frequency',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0A2540),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: selectedFrequency,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
                     ),
-                    items: _availableFrequencies.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                    items: _availableFrequencies
+                        .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                        .toList(),
                     onChanged: (val) {
-                      if (val != null) setModalState(() => selectedFrequency = val);
+                      if (val != null) {
+                        setModalState(() => selectedFrequency = val);
+                      }
                     },
                   ),
                   const SizedBox(height: 20),
@@ -1612,15 +1783,19 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: () async {
                         Navigator.pop(sheetCtx);
-                        final created = await ref.read(incomeProvider.notifier).confirmDetectedInflow(
-                          inflow.detectedId,
-                          category: selectedCategory,
-                          frequency: selectedFrequency,
-                        );
+                        final created = await ref
+                            .read(incomeProvider.notifier)
+                            .confirmDetectedInflow(
+                              inflow.detectedId,
+                              category: selectedCategory,
+                              frequency: selectedFrequency,
+                            );
                         if (context.mounted && created != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -1632,7 +1807,10 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                           );
                         }
                       },
-                      child: const Text('Confirm & Add to Income Streams', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Confirm & Add to Income Streams',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
@@ -1734,34 +1912,46 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           child: Row(
-                            children: ['All', 'Active', 'Passive', 'Windfall'].map((type) {
-                              final isSel = st.selectedTypeFilter.toLowerCase() == type.toLowerCase();
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: ChoiceChip(
-                                  label: Text(type),
-                                  selected: isSel,
-                                  onSelected: (v) {
-                                    ref.read(incomeProvider.notifier).setTypeFilter(v ? type : 'All');
-                                    setSheetState(() {});
-                                  },
-                                  selectedColor: const Color(0xFF10B981),
-                                  backgroundColor: Colors.white,
-                                  labelStyle: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                                    color: isSel ? Colors.white : const Color(0xFF475569),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    side: BorderSide(
-                                      color: isSel ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                            children: ['All', 'Active', 'Passive', 'Windfall']
+                                .map((type) {
+                                  final isSel =
+                                      st.selectedTypeFilter.toLowerCase() ==
+                                      type.toLowerCase();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: ChoiceChip(
+                                      label: Text(type),
+                                      selected: isSel,
+                                      onSelected: (v) {
+                                        ref
+                                            .read(incomeProvider.notifier)
+                                            .setTypeFilter(v ? type : 'All');
+                                        setSheetState(() {});
+                                      },
+                                      selectedColor: const Color(0xFF10B981),
+                                      backgroundColor: Colors.white,
+                                      labelStyle: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isSel
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: isSel
+                                            ? Colors.white
+                                            : const Color(0xFF475569),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(
+                                          color: isSel
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFFCBD5E1),
+                                        ),
+                                      ),
+                                      showCheckmark: false,
                                     ),
-                                  ),
-                                  showCheckmark: false,
-                                ),
-                              );
-                            }).toList(),
+                                  );
+                                })
+                                .toList(),
                           ),
                         );
                       },
@@ -1965,10 +2155,27 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                     Consumer(
                       builder: (_, ref2, __) {
                         final st = ref2.watch(incomeProvider);
-                        final bankFilterOptions = <String>['All', ..._availableBanks];
+                        final bankFilterOptions = <String>[
+                          'All',
+                          ..._getUserBankAccountsList(),
+                        ];
                         for (final e in st.entries) {
-                          if (e.bankAccount.isNotEmpty && !bankFilterOptions.contains(e.bankAccount)) {
-                            bankFilterOptions.insert(bankFilterOptions.length - 1, e.bankAccount);
+                          if (e.bankAccount.trim().isNotEmpty) {
+                            final eDigits = e.bankAccount.replaceAll(RegExp(r'\D'), '');
+                            final eLast4 = eDigits.length >= 4 ? eDigits.substring(eDigits.length - 4) : eDigits;
+                            final alreadyExists = bankFilterOptions.any((opt) {
+                              if (opt == e.bankAccount) return true;
+                              if (opt == 'All' || opt == 'Other / Cash') return false;
+                              final optDigits = opt.replaceAll(RegExp(r'\D'), '');
+                              final optLast4 = optDigits.length >= 4 ? optDigits.substring(optDigits.length - 4) : optDigits;
+                              return eLast4.isNotEmpty && optLast4.isNotEmpty && eLast4 == optLast4;
+                            });
+                            if (!alreadyExists) {
+                              bankFilterOptions.insert(
+                                bankFilterOptions.length - 1,
+                                e.bankAccount,
+                              );
+                            }
                           }
                         }
                         return SingleChildScrollView(
@@ -2315,223 +2522,27 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-        // Total Inflow Card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF064E3B), Color(0xFF047857), Color(0xFF10B981)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF064E3B).withOpacity(0.25),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Flexible(
-                    child: Text(
-                      'Total Monthly Inflow',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white30, width: 0.8),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: ['30D', '90D', '1Y', '5Y'].contains(state.forecastHorizon)
-                            ? state.forecastHorizon
-                            : '30D',
-                        isDense: true,
-                        dropdownColor: const Color(0xFF047857),
-                        borderRadius: BorderRadius.circular(14),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: '30D',
-                            child: Text('30 Days (30D)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: '90D',
-                            child: Text('90 Days (90D)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: '1Y',
-                            child: Text('1 Year (1Y)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ),
-                          DropdownMenuItem(
-                            value: '5Y',
-                            child: Text('5 Years (5Y)', style: TextStyle(color: Colors.white, fontSize: 12)),
-                          ),
-                        ],
-                        selectedItemBuilder: (BuildContext context) {
-                          return const [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
-                                SizedBox(width: 4),
-                                Text(
-                                  '30D Horizon',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
-                                SizedBox(width: 4),
-                                Text(
-                                  '90D Horizon',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
-                                SizedBox(width: 4),
-                                Text(
-                                  '1Y Horizon',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.calendar_today_outlined, size: 11, color: Colors.white70),
-                                SizedBox(width: 4),
-                                Text(
-                                  '5Y Horizon',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ];
-                        },
-                        onChanged: (val) {
-                          if (val != null) {
-                            ref.read(incomeProvider.notifier).setForecastHorizon(val);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _formatRupees(state.totalMonthlyIncome),
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.trending_up,
-                          size: 14,
-                          color: Color(0xFF34D399),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Projected Inflow (${state.forecastHorizon}): ${_formatRupees(state.getForecastAmount(state.forecastHorizon))}',
-                            style: const TextStyle(
-                              color: Color(0xFFD1FAE5),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (state.forecastData != null) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      state.forecastData!.compoundingRate,
-                      style: const TextStyle(
-                        color: Color(0xFFA7F3D0),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Detected Inflow Banner from Account Aggregator feed
-        if (state.detectedInflows.isNotEmpty)
+          // Total Inflow Card
           Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF93C5FD)),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF064E3B),
+                  Color(0xFF047857),
+                  Color(0xFF10B981),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF064E3B).withOpacity(0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2539,547 +2550,951 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.auto_awesome, color: Color(0xFF2563EB), size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${state.detectedInflows.length} Inflow Detected',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E3A8A),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDBEAFE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'ACCOUNT AGGREGATOR',
+                    const Flexible(
+                      child: Text(
+                        'Total Monthly Inflow',
                         style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1D4ED8),
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white30, width: 0.8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value:
+                              [
+                                '30D',
+                                '90D',
+                                '1Y',
+                                '5Y',
+                              ].contains(state.forecastHorizon)
+                              ? state.forecastHorizon
+                              : '30D',
+                          isDense: true,
+                          dropdownColor: const Color(0xFF047857),
+                          borderRadius: BorderRadius.circular(14),
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: '30D',
+                              child: Text(
+                                '30 Days (30D)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: '90D',
+                              child: Text(
+                                '90 Days (90D)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: '1Y',
+                              child: Text(
+                                '1 Year (1Y)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: '5Y',
+                              child: Text(
+                                '5 Years (5Y)',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                          selectedItemBuilder: (BuildContext context) {
+                            return const [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 11,
+                                    color: Colors.white70,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '30D Horizon',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 11,
+                                    color: Colors.white70,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '90D Horizon',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 11,
+                                    color: Colors.white70,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '1Y Horizon',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 11,
+                                    color: Colors.white70,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '5Y Horizon',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ];
+                          },
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setForecastHorizon(val);
+                            }
+                          },
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                for (final inflow in state.detectedInflows) ...[
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                inflow.detectedSource,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Color(0xFF0F172A),
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                '${inflow.bankAccount} • ${inflow.date} • ${(inflow.confidenceScore * 100).round()}% match',
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '+${_formatRupees(inflow.amount)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14,
-                                color: Color(0xFF059669),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF059669),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () => _showConfirmInflowSheet(context, inflow),
-                              child: const Text('Confirm', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                Text(
+                  _formatRupees(state.totalMonthlyIncome),
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
-                ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.trending_up,
+                            size: 14,
+                            color: Color(0xFF34D399),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Projected Inflow (${state.forecastHorizon}): ${_formatRupees(state.getForecastAmount(state.forecastHorizon))}',
+                              style: const TextStyle(
+                                color: Color(0xFFD1FAE5),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (state.forecastData != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        state.forecastData!.compoundingRate,
+                        style: const TextStyle(
+                          color: Color(0xFFA7F3D0),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
 
-        // Search Box (Queries live backend by source, company or notes)
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (val) {
-              ref.read(incomeProvider.notifier).setSearchQuery(val);
-            },
-            decoration: InputDecoration(
-              hintText: 'Search by source, company or notes...',
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
-              suffixIcon: state.searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Color(0xFF64748B)),
-                      onPressed: () {
-                        _searchController.clear();
-                        ref.read(incomeProvider.notifier).setSearchQuery('');
-                      },
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            ),
-          ),
-        ),
-
-        // Section Title: Income History (REQUIRED BY TEST SUITE)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+          // Detected Inflow Banner from Account Aggregator feed
+          if (state.detectedInflows.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF93C5FD)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Flexible(
-                    child: Text(
-                      'Income History',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0A2540),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            color: Color(0xFF2563EB),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${state.detectedInflows.length} Inflow Detected',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E3A8A),
+                            ),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDBEAFE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'ACCOUNT AGGREGATOR',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1D4ED8),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFECFDF5),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${filteredEntries.length} records',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF047857),
+                  const SizedBox(height: 10),
+                  for (final inflow in state.detectedInflows) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      inflow.detectedSource,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${inflow.bankAccount} • ${inflow.date} • ${(inflow.confidenceScore * 100).round()}% match',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEFF6FF),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(0xFFBFDBFE),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            inflow.suggestedCategory.isNotEmpty
+                                                ? inflow.suggestedCategory
+                                                : 'Salary',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1D4ED8),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(0xFFA7F3D0),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Monthly',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF047857),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '+${_formatRupees(inflow.amount)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFDC2626),
+                                  side: const BorderSide(
+                                    color: Color(0xFFFCA5A5),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () {
+                                  ref
+                                      .read(incomeProvider.notifier)
+                                      .dismissDetectedInflow(inflow.detectedId);
+                                },
+                                child: const Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () async {
+                                  final approved = await ref
+                                      .read(incomeProvider.notifier)
+                                      .approveDetectedInflow(inflow);
+                                  if (mounted && approved != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Inflow "${approved.source}" approved & added to active streams',
+                                        ),
+                                        backgroundColor: const Color(
+                                          0xFF10B981,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Approve',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-            InkWell(
-              onTap: () => _showFilterSheet(context),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+
+          // Search Box (Queries live backend by source, company or notes)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (val) {
+                ref.read(incomeProvider.notifier).setSearchQuery(val);
+              },
+              decoration: InputDecoration(
+                hintText: 'Search by source, company or notes...',
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF94A3B8),
                 ),
-                decoration: BoxDecoration(
-                  color:
-                      (state.selectedCategoryFilter != 'All' ||
-                          state.selectedBankAccountFilter != 'All' ||
-                          state.selectedDateFilter != 'All' ||
-                          state.selectedTypeFilter != 'All')
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
+                suffixIcon: state.searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(incomeProvider.notifier).setSearchQuery('');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+
+          // Section Title: Income History (REQUIRED BY TEST SUITE)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Flexible(
+                      child: Text(
+                        'Income History',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0A2540),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${filteredEntries.length} records',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF047857),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              InkWell(
+                onTap: () => _showFilterSheet(context),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
                     color:
                         (state.selectedCategoryFilter != 'All' ||
                             state.selectedBankAccountFilter != 'All' ||
                             state.selectedDateFilter != 'All' ||
                             state.selectedTypeFilter != 'All')
                         ? const Color(0xFF10B981)
-                        : const Color(0xFFA7F3D0),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.tune_rounded,
-                      size: 15,
+                        : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
                       color:
                           (state.selectedCategoryFilter != 'All' ||
                               state.selectedBankAccountFilter != 'All' ||
                               state.selectedDateFilter != 'All' ||
                               state.selectedTypeFilter != 'All')
-                          ? Colors.white
-                          : const Color(0xFF059669),
+                          ? const Color(0xFF10B981)
+                          : const Color(0xFFA7F3D0),
                     ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'Filter',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        size: 15,
                         color:
                             (state.selectedCategoryFilter != 'All' ||
                                 state.selectedBankAccountFilter != 'All' ||
                                 state.selectedDateFilter != 'All' ||
                                 state.selectedTypeFilter != 'All')
                             ? Colors.white
-                            : const Color(0xFF047857),
+                            : const Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Filter',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              (state.selectedCategoryFilter != 'All' ||
+                                  state.selectedBankAccountFilter != 'All' ||
+                                  state.selectedDateFilter != 'All' ||
+                                  state.selectedTypeFilter != 'All')
+                              ? Colors.white
+                              : const Color(0xFF047857),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Active Filter Banner with badges (if any filter is active)
+          if (state.selectedCategoryFilter != 'All' ||
+              state.selectedBankAccountFilter != 'All' ||
+              state.selectedDateFilter != 'All' ||
+              state.selectedTypeFilter != 'All' ||
+              state.searchQuery.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.filter_alt,
+                          size: 16,
+                          color: Color(0xFF059669),
+                        ),
+                        Text(
+                          '${filteredEntries.length} of ${state.entries.length} shown',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF065F46),
+                          ),
+                        ),
+                        if (state.selectedCategoryFilter != 'All')
+                          _buildFilterBadge(
+                            'Cat: ${state.selectedCategoryFilter}',
+                            () {
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setCategoryFilter('All');
+                            },
+                          ),
+                        if (state.selectedBankAccountFilter != 'All')
+                          _buildFilterBadge(
+                            'Bank: ${state.selectedBankAccountFilter.split(' ').first}',
+                            () {
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setBankAccountFilter('All');
+                            },
+                          ),
+                        if (state.selectedDateFilter != 'All')
+                          _buildFilterBadge(
+                            'Date: ${state.selectedDateFilter}',
+                            () {
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setDateFilter('All');
+                            },
+                          ),
+                        if (state.selectedTypeFilter != 'All')
+                          _buildFilterBadge(
+                            'Type: ${state.selectedTypeFilter}',
+                            () {
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setTypeFilter('All');
+                            },
+                          ),
+                        if (state.searchQuery.isNotEmpty)
+                          _buildFilterBadge(
+                            'Search: "${state.searchQuery}"',
+                            () {
+                              _searchController.clear();
+                              ref
+                                  .read(incomeProvider.notifier)
+                                  .setSearchQuery('');
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      ref.read(incomeProvider.notifier).resetFilters();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Text(
+                        'Clear All',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF059669),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Income Streams Cards
+          if (state.isLoading && state.entries.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF047857)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Loading live income streams...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // Active Filter Banner with badges (if any filter is active)
-        if (state.selectedCategoryFilter != 'All' ||
-            state.selectedBankAccountFilter != 'All' ||
-            state.selectedDateFilter != 'All' ||
-            state.selectedTypeFilter != 'All' ||
-            state.searchQuery.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFECFDF5),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFA7F3D0)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.filter_alt,
-                        size: 16,
-                        color: Color(0xFF059669),
-                      ),
-                      Text(
-                        '${filteredEntries.length} of ${state.entries.length} shown',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF065F46),
-                        ),
-                      ),
-                      if (state.selectedCategoryFilter != 'All')
-                        _buildFilterBadge(
-                          'Cat: ${state.selectedCategoryFilter}',
-                          () {
-                            ref
-                                .read(incomeProvider.notifier)
-                                .setCategoryFilter('All');
-                          },
-                        ),
-                      if (state.selectedBankAccountFilter != 'All')
-                        _buildFilterBadge(
-                          'Bank: ${state.selectedBankAccountFilter.split(' ').first}',
-                          () {
-                            ref
-                                .read(incomeProvider.notifier)
-                                .setBankAccountFilter('All');
-                          },
-                        ),
-                      if (state.selectedDateFilter != 'All')
-                        _buildFilterBadge(
-                          'Date: ${state.selectedDateFilter}',
-                          () {
-                            ref
-                                .read(incomeProvider.notifier)
-                                .setDateFilter('All');
-                          },
-                        ),
-                      if (state.selectedTypeFilter != 'All')
-                        _buildFilterBadge(
-                          'Type: ${state.selectedTypeFilter}',
-                          () {
-                            ref
-                                .read(incomeProvider.notifier)
-                                .setTypeFilter('All');
-                          },
-                        ),
-                      if (state.searchQuery.isNotEmpty)
-                        _buildFilterBadge(
-                          'Search: "${state.searchQuery}"',
-                          () {
-                            _searchController.clear();
-                            ref
-                                .read(incomeProvider.notifier)
-                                .setSearchQuery('');
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-                InkWell(
-                  onTap: () {
-                    ref.read(incomeProvider.notifier).resetFilters();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Text(
-                      'Clear All',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF059669),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Income Streams Cards
-        if (state.isLoading && state.entries.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: Color(0xFF047857)),
-                  SizedBox(height: 12),
-                  Text(
-                    'Loading live income streams...',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else if (filteredEntries.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.inbox_outlined,
-                    size: 36,
-                    color: Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'No streams match this filter',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 6),
-                  TextButton(
-                    onPressed: () {
-                      ref.read(incomeProvider.notifier).resetFilters();
-                    },
-                    child: const Text('Reset Filters'),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          for (final item in filteredEntries)
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => _showTransactionDetailsSheet(context, item),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
+            )
+          else if (filteredEntries.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: _getTypeColor(item.type).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.inbox_outlined,
+                      size: 36,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No streams match this filter',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(incomeProvider.notifier).resetFilters();
+                      },
+                      child: const Text('Reset Filters'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            for (final item in filteredEntries)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _showTransactionDetailsSheet(context, item),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Icon(
-                          _getCategoryIcon(item.category),
-                          color: _getTypeColor(item.type),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    item.source,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Color(0xFF0A2540),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (item.isVerified) ...[
-                                  const SizedBox(width: 4),
-                                  const Icon(
-                                    Icons.verified,
-                                    size: 14,
-                                    color: Color(0xFF10B981),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${item.category} • ${item.frequency}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF64748B),
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: _getTypeColor(
+                                  item.type,
+                                ).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                _getCategoryIcon(item.category),
+                                color: _getTypeColor(item.type),
+                                size: 20,
                               ),
                             ),
-                            Row(
-                              children: [
-                                BankLogo(bankName: item.bankAccount, size: 12),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    '${item.bankAccount} • ${item.date}',
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF94A3B8),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          item.source,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: Color(0xFF0A2540),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (item.isVerified) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.verified,
+                                          size: 14,
+                                          color: Color(0xFF10B981),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${item.category} • ${item.frequency}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      BankLogo(
+                                        bankName: item.bankAccount,
+                                        size: 12,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${item.bankAccount} • ${item.date}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Color(0xFF94A3B8),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '+${_formatRupees(item.amount)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: Color(0xFF10B981),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      Text(
-                        '+${_formatRupees(item.amount)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                          color: Color(0xFF10B981),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          if (state.pagination != null && state.pagination!.totalPages > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.chevron_left, size: 16),
+                    label: const Text(
+                      'Previous',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    onPressed: state.pagination!.currentPage > 1
+                        ? () => ref
+                              .read(incomeProvider.notifier)
+                              .setPage(state.pagination!.currentPage - 1)
+                        : null,
+                  ),
+                  Text(
+                    'Page ${state.pagination!.currentPage} of ${state.pagination!.totalPages} (${state.pagination!.totalRecords} total)',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.chevron_right, size: 16),
+                    label: const Text('Next', style: TextStyle(fontSize: 12)),
+                    onPressed:
+                        state.pagination!.currentPage <
+                            state.pagination!.totalPages
+                        ? () => ref
+                              .read(incomeProvider.notifier)
+                              .setPage(state.pagination!.currentPage + 1)
+                        : null,
                   ),
                 ],
               ),
             ),
-            ),
-            ),
-        if (state.pagination != null && state.pagination!.totalPages > 1)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.chevron_left, size: 16),
-                  label: const Text('Previous', style: TextStyle(fontSize: 12)),
-                  onPressed: state.pagination!.currentPage > 1
-                      ? () => ref.read(incomeProvider.notifier).setPage(state.pagination!.currentPage - 1)
-                      : null,
-                ),
-                Text(
-                  'Page ${state.pagination!.currentPage} of ${state.pagination!.totalPages} (${state.pagination!.totalRecords} total)',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.chevron_right, size: 16),
-                  label: const Text('Next', style: TextStyle(fontSize: 12)),
-                  onPressed: state.pagination!.currentPage < state.pagination!.totalPages
-                      ? () => ref.read(incomeProvider.notifier).setPage(state.pagination!.currentPage + 1)
-                      : null,
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 24),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
 
   Widget _buildIncomeSourcesTab(IncomeState state) {
     return RefreshIndicator(
@@ -3088,193 +3503,193 @@ class _IncomeTrackingScreenState extends ConsumerState<IncomeTrackingScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-        // Master Overview Card
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0A2540), Color(0xFF0066FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0A2540).withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+          // Master Overview Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0A2540), Color(0xFF0066FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Active Income Sources',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${state.entries.length} Sources',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0A2540).withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Active Income Sources',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _formatRupees(state.totalMonthlyIncome),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${state.entries.length} Sources',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 4),
+                const SizedBox(height: 12),
+                Text(
+                  _formatRupees(state.totalMonthlyIncome),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Total Monthly Realized Inflow across all sources',
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11),
+                ),
+                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF0066FF),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () => _showAddIncomeSheet(context),
+                  icon: const Icon(Icons.add_circle, size: 18),
+                  label: const Text(
+                    'Add New Income Source',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section Title
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               const Text(
-                'Total Monthly Realized Inflow across all sources',
-                style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11),
-              ),
-              const SizedBox(height: 14),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0066FF),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
+                'Configured Income Sources',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0A2540),
                 ),
-                onPressed: () => _showAddIncomeSheet(context),
-                icon: const Icon(Icons.add_circle, size: 18),
-                label: const Text(
-                  'Add New Income Source',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              Text(
+                '${state.entries.length} items',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
-        // Section Title
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Configured Income Sources',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0A2540),
-              ),
-            ),
-            Text(
-              '${state.entries.length} items',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-
-        // Sources list
-        if (state.isLoading && state.entries.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: Color(0xFF047857)),
-                  SizedBox(height: 12),
-                  Text(
-                    'Loading live income sources...',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
+          // Sources list
+          if (state.isLoading && state.entries.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF047857)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Loading live income sources...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          )
-        else if (state.entries.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 40,
-                    color: Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'No Income Sources Added Yet',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A2540),
+            )
+          else if (state.entries.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 40,
+                      color: Color(0xFF94A3B8),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Add your salary, rental, business, or other income sources to track earnings.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 14),
-                  ElevatedButton(
-                    onPressed: () => _showAddIncomeSheet(context),
-                    child: const Text('Add Income Source'),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    const Text(
+                      'No Income Sources Added Yet',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A2540),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Add your salary, rental, business, or other income sources to track earnings.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton(
+                      onPressed: () => _showAddIncomeSheet(context),
+                      child: const Text('Add Income Source'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          )
-        else
-          for (final item in state.entries) _buildIncomeSourceCard(item),
+            )
+          else
+            for (final item in state.entries) _buildIncomeSourceCard(item),
 
-        const SizedBox(height: 28),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 28),
+        ],
+      ),
+    );
+  }
 
   Widget _buildIncomeSourceCard(IncomeEntry item) {
     final catColor = _getCategoryColor(item.category);

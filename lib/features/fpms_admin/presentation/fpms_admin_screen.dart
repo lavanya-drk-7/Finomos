@@ -22,7 +22,7 @@ class FpmsAdminScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -68,7 +68,7 @@ class FpmsAdminScreen extends ConsumerWidget {
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.5,
+                  childAspectRatio: 1.15,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
                   children: [
@@ -83,11 +83,15 @@ class FpmsAdminScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(kpi.label, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                            Text(kpi.label, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)), maxLines: 1, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 4),
-                            Text(kpi.value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(kpi.value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ),
                             const SizedBox(height: 2),
-                            Text(kpi.changeText, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                            Text(kpi.changeText, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981)), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ],
                         ),
                       ),

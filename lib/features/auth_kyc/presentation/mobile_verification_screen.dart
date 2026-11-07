@@ -21,9 +21,8 @@ class _MobileVerificationScreenState extends ConsumerState<MobileVerificationScr
   @override
   void initState() {
     super.initState();
-    final demoDigits = ['1', '2', '3', '4', '5', '6'];
     for (int i = 0; i < 6; i++) {
-      _controllers[i].text = demoDigits[i];
+      _controllers[i].text = '';
     }
     _startResendTimer();
   }
@@ -56,15 +55,45 @@ class _MobileVerificationScreenState extends ConsumerState<MobileVerificationScr
     super.dispose();
   }
 
-  void _onVerify() {
-    ref.read(authKycProvider.notifier).setMobileVerified(true);
-    ref.read(authKycProvider.notifier).setOtpVerified(true);
-    final isExistingUser = ref.read(authKycProvider).isExistingUser;
-    if (isExistingUser) {
-      context.go('/dashboard');
+  Future<void> _onVerify() async {
+    final otp = _controllers.map((c) => c.text.trim()).join();
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 6-digit OTP'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    final user = ref.read(authKycProvider).user;
+    final res = await ref.read(authKycProvider.notifier).verifyOtp(
+      phone: user.mobileNumber,
+      otp: otp,
+    );
+    if (res != null && res.verified) {
+      ref.read(authKycProvider.notifier).setMobileVerified(true);
+      ref.read(authKycProvider.notifier).setOtpVerified(true);
+      final isExistingUser = ref.read(authKycProvider).isExistingUser;
+      if (mounted) {
+        if (isExistingUser) {
+          context.go('/dashboard');
+        } else {
+          ref.read(authKycProvider.notifier).updateStep(4);
+          context.go('/user-details');
+        }
+      }
     } else {
-      ref.read(authKycProvider.notifier).updateStep(4);
-      context.go('/user-details');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res?.message.isNotEmpty == true
+                ? res!.message
+                : 'Invalid OTP. Please check the code and try again.'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
@@ -123,45 +152,48 @@ class _MobileVerificationScreenState extends ConsumerState<MobileVerificationScr
                         const SizedBox(height: 28),
 
                         // 6 OTP Box Inputs
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: List.generate(6, (index) {
-                            return SizedBox(
-                              width: 44,
-                              height: 52,
-                              child: TextFormField(
-                                controller: _controllers[index],
-                                focusNode: _focusNodes[index],
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                maxLength: 1,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0A2540),
-                                ),
-                                decoration: InputDecoration(
-                                  counterText: '',
-                                  contentPadding: EdgeInsets.zero,
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(6, (index) {
+                              return SizedBox(
+                                width: 44,
+                                height: 52,
+                                child: TextFormField(
+                                  controller: _controllers[index],
+                                  focusNode: _focusNodes[index],
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  maxLength: 1,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0A2540),
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
+                                  decoration: InputDecoration(
+                                    counterText: '',
+                                    contentPadding: EdgeInsets.zero,
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
+                                    ),
                                   ),
+                                  onChanged: (val) {
+                                    if (val.isNotEmpty && index < 5) {
+                                      _focusNodes[index + 1].requestFocus();
+                                    } else if (val.isEmpty && index > 0) {
+                                      _focusNodes[index - 1].requestFocus();
+                                    }
+                                  },
                                 ),
-                                onChanged: (val) {
-                                  if (val.isNotEmpty && index < 5) {
-                                    _focusNodes[index + 1].requestFocus();
-                                  } else if (val.isEmpty && index > 0) {
-                                    _focusNodes[index - 1].requestFocus();
-                                  }
-                                },
-                              ),
-                            );
-                          }),
+                              );
+                            }),
+                          ),
                         ),
                         const SizedBox(height: 24),
 

@@ -92,7 +92,7 @@ class _AdvisorEcosystemScreenState extends ConsumerState<AdvisorEcosystemScreen>
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -260,9 +260,12 @@ class _AdvisorEcosystemScreenState extends ConsumerState<AdvisorEcosystemScreen>
           // 4 Governance Tools Grid
           Row(
             children: const [
-              Text(
-                'Advisory Management & Controls',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark),
+              Expanded(
+                child: Text(
+                  'Advisory Management & Controls',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _navyDark),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

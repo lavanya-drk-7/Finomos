@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth_kyc/providers/auth_kyc_provider.dart';
 import '../../features/profile/providers/profile_provider.dart';
 import '../../features/profile/services/profile_photo_service.dart';
+import '../constants/api_constants.dart';
+import '../services/cache_service.dart';
 
 class FinmosUserAvatar extends ConsumerWidget {
   final double radius;
@@ -29,15 +31,66 @@ class FinmosUserAvatar extends ConsumerWidget {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return NetworkImage(path);
     }
+    // Check local device storage first (Android / iOS / Desktop cache & file paths)
     if (!kIsWeb) {
       try {
-        final file = File(path);
-        if (file.existsSync()) {
-          return FileImage(file);
+        final cleanPath = path.startsWith('file://') ? path.substring(7) : path;
+        final file = File(cleanPath);
+        if (file.existsSync() ||
+            cleanPath.startsWith('/data/') ||
+            cleanPath.startsWith('/storage/') ||
+            cleanPath.startsWith('/var/') ||
+            cleanPath.startsWith('C:\\') ||
+            cleanPath.startsWith('D:\\')) {
+          if (file.existsSync()) {
+            return FileImage(file);
+          }
         }
-      } catch (_) {
-        return null;
-      }
+
+        // Check if there is an active local avatar path cached on device
+        final cachedLocal = LocalCacheService().get('active_local_avatar') as String?;
+        if (cachedLocal != null && cachedLocal.isNotEmpty) {
+          final localFile = File(cachedLocal);
+          if (localFile.existsSync()) {
+            return FileImage(localFile);
+          }
+        }
+
+        // Check if mapped specifically for this upload URL
+        final cachedForUrl = LocalCacheService().get('avatar_local_$path') as String?;
+        if (cachedForUrl != null && cachedForUrl.isNotEmpty) {
+          final localFile = File(cachedForUrl);
+          if (localFile.existsSync()) {
+            return FileImage(localFile);
+          }
+        }
+
+        // If path references a local device scaled photo (e.g. scaled_1000161603.jpg)
+        final match = RegExp(r'(scaled_[0-9]+\.jpe?g)').firstMatch(path);
+        if (match != null) {
+          final localCandidate = File('/data/user/0/com.finomos/cache/${match.group(1)}');
+          if (localCandidate.existsSync()) {
+            return FileImage(localCandidate);
+          }
+          final legacyCandidate = File('/data/user/0/com.example.finomos/cache/${match.group(1)}');
+          if (legacyCandidate.existsSync()) {
+            return FileImage(legacyCandidate);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Relative /uploads/ server paths:
+    // Render does not mount a static file route for /uploads, which causes 404s.
+    // If no local file copy was found on this device, cleanly return null to display
+    // the user's initial monogram circle without making a failing HTTP GET request.
+    if (path.startsWith('/uploads/')) {
+      return null;
+    }
+
+    // Only prepend baseUrl for other relative server endpoints
+    if (path.startsWith('/api/') || path.startsWith('/static/')) {
+      return NetworkImage('${ApiConstants.baseUrl}$path');
     }
     return null;
   }

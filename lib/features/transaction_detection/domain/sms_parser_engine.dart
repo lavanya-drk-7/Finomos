@@ -204,27 +204,27 @@ class SmsParserEngine {
   ) {
     final lower = text.toLowerCase();
     String detectedBank = 'Linked Bank Account';
-    String detectedAccount = '••••4587';
+    String detectedAccount = '••••XXXX';
 
     // 1. Check for specific bank names
     if (lower.contains('hdfc')) {
       detectedBank = 'HDFC Bank';
-      detectedAccount = '••••4587';
     } else if (lower.contains('sbi') || lower.contains('state bank')) {
       detectedBank = 'State Bank of India';
-      detectedAccount = '••••4821';
     } else if (lower.contains('icici')) {
       detectedBank = 'ICICI Bank';
-      detectedAccount = '••••9021';
     } else if (lower.contains('axis')) {
       detectedBank = 'Axis Bank';
-      detectedAccount = '••••3301';
     } else if (lower.contains('kotak')) {
       detectedBank = 'Kotak Mahindra Bank';
-      detectedAccount = '••••5520';
     } else if (lower.contains('pnb') || lower.contains('punjab national')) {
       detectedBank = 'Punjab National Bank';
-      detectedAccount = '••••7812';
+    } else if (lower.contains('union bank') || lower.contains('union')) {
+      detectedBank = 'Union Bank of India';
+    } else if (lower.contains('canara')) {
+      detectedBank = 'Canara Bank';
+    } else if (lower.contains('bank of baroda') || lower.contains('bob')) {
+      detectedBank = 'Bank of Baroda';
     }
 
     // 2. Extract account digits if present in SMS (e.g. "A/c **4587", "A/C XXXXXX4821", "Card ending 9021")

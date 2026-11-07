@@ -73,9 +73,50 @@ void main() {
     });
   });
 
+
+ProviderContainer createBudgetTestContainer() {
+  final container = ProviderContainer();
+  container.read(budgetProvider.notifier).seedBudgets(const [
+    BudgetItem(
+      id: 'b_food',
+      name: 'Food & Dining',
+      type: 'Category-wise Budget',
+      category: 'Food & Dining',
+      amount: 10000.0,
+      spent: 0.0,
+      startDate: '01/10/2026',
+      endDate: '31/10/2026',
+      period: 'October 2026',
+    ),
+    BudgetItem(
+      id: 'b_groceries',
+      name: 'Groceries',
+      type: 'Category-wise Budget',
+      category: 'Groceries',
+      amount: 8000.0,
+      spent: 0.0,
+      startDate: '01/10/2026',
+      endDate: '31/10/2026',
+      period: 'October 2026',
+    ),
+    BudgetItem(
+      id: 'b_travel',
+      name: 'Transportation & Travel',
+      type: 'Category-wise Budget',
+      category: 'Transportation',
+      amount: 5000.0,
+      spent: 2000.0,
+      startDate: '01/10/2026',
+      endDate: '31/10/2026',
+      period: 'October 2026',
+    ),
+  ]);
+  return container;
+}
+
   group('Budget Management & Overspending Alert Tests', () {
     test('Scenario 4 & 5: ₹10,000 budget decreases to ₹9,000 after ₹1,000 expense & updates on second expense', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       // Initial food budget is ₹10,000 with spent = ₹0
@@ -113,7 +154,7 @@ void main() {
     });
 
     test('Spending in other category (Groceries) does NOT deduct from Food & Dining budget', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       container.read(budgetProvider.notifier).applyExpense(
@@ -131,7 +172,7 @@ void main() {
     });
 
     test('Scenario 6: Spending ₹11,000 against ₹10,000 budget triggers prominent red overspending alert for ₹1,000', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       final alert = container.read(budgetProvider.notifier).applyExpense(
@@ -153,7 +194,7 @@ void main() {
     });
 
     test('Scenario 10 & 11: Deleting or recalculating expenses updates budget totals correctly', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       final expenses = [
@@ -189,7 +230,7 @@ void main() {
 
   group('End-to-End Transaction Confirmation Tests', () {
     test('Scenario 2: Confirming expense persists in expenseProvider and updates budget', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       final initialExpenses = container.read(expenseProvider).expenses.length;
@@ -274,7 +315,7 @@ void main() {
     });
 
     test('Scenario 15: Budget alerts are not repeatedly generated during ordinary refreshes', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       // Trigger initial crossing
@@ -300,7 +341,7 @@ void main() {
     });
 
     test('Scenario 16: Transactions are associated with correct bank, category, and period', () {
-      final container = ProviderContainer();
+      final container = createBudgetTestContainer();
       addTearDown(container.dispose);
 
       container.read(transactionDetectionProvider.notifier).confirmAsExpense(

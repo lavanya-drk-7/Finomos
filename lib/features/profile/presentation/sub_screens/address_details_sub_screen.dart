@@ -14,7 +14,11 @@ class AddressDetailsSubScreen extends ConsumerStatefulWidget {
 class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScreen> {
   late TextEditingController resAddressCtrl;
   late TextEditingController permAddressCtrl;
+  late TextEditingController cityCtrl;
+  late TextEditingController stateCtrl;
+  late TextEditingController pinCodeCtrl;
   bool isSameAsResidential = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -22,6 +26,9 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
     final address = ref.read(profileProvider).addressInfo;
     resAddressCtrl = TextEditingController(text: address.residentialAddress);
     permAddressCtrl = TextEditingController(text: address.permanentAddress);
+    cityCtrl = TextEditingController(text: address.city);
+    stateCtrl = TextEditingController(text: address.state);
+    pinCodeCtrl = TextEditingController(text: address.pinCode);
     if (address.residentialAddress == address.permanentAddress) {
       isSameAsResidential = true;
     }
@@ -31,24 +38,36 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
   void dispose() {
     resAddressCtrl.dispose();
     permAddressCtrl.dispose();
+    cityCtrl.dispose();
+    stateCtrl.dispose();
+    pinCodeCtrl.dispose();
     super.dispose();
   }
 
-  void _saveAddress() {
+  Future<void> _saveAddress() async {
+    setState(() => _isSaving = true);
     final current = ref.read(profileProvider).addressInfo;
     final updated = current.copyWith(
       residentialAddress: resAddressCtrl.text.trim(),
+      city: cityCtrl.text.trim().isNotEmpty ? cityCtrl.text.trim() : current.city,
+      state: stateCtrl.text.trim().isNotEmpty ? stateCtrl.text.trim() : current.state,
+      pinCode: pinCodeCtrl.text.trim().isNotEmpty ? pinCodeCtrl.text.trim() : current.pinCode,
       permanentAddress: isSameAsResidential ? resAddressCtrl.text.trim() : permAddressCtrl.text.trim(),
     );
 
-    ref.read(profileProvider.notifier).updateAddressInfo(updated);
+    final success = await ref.read(profileProvider.notifier).updateAddressInfo(updated);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Address details saved successfully!'),
-        backgroundColor: Color(0xFF10B981),
-      ),
-    );
+    if (mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success ? 'Residential address updated successfully!' : 'Failed to update address. Please retry.',
+          ),
+          backgroundColor: success ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+        ),
+      );
+    }
   }
 
   @override
@@ -65,7 +84,7 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -86,7 +105,9 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
         padding: const EdgeInsets.all(20),
         physics: const BouncingScrollPhysics(),
         children: [
@@ -111,12 +132,15 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
                       children: [
                         Icon(Icons.home_work_outlined, color: Color(0xFF0066FF), size: 24),
                         SizedBox(width: 10),
-                        Text(
-                          'Residential Information',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0A2540),
+                        Expanded(
+                          child: Text(
+                            'Residential Information',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0A2540),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -124,7 +148,7 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
                     const SizedBox(height: 16),
                     TextField(
                       controller: resAddressCtrl,
-                      maxLines: 3,
+                      maxLines: 2,
                       decoration: const InputDecoration(
                         labelText: 'Current Residential Address',
                         prefixIcon: Icon(Icons.home_outlined),
@@ -132,23 +156,62 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: isSameAsResidential,
-                      activeColor: const Color(0xFF0066FF),
-                      title: const Text(
-                        'Permanent address is same as residential address',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0A2540)),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: cityCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'City',
+                              prefixIcon: Icon(Icons.location_city_outlined),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: pinCodeCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'PIN Code',
+                              prefixIcon: Icon(Icons.pin_drop_outlined),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: stateCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'State / Province',
+                        prefixIcon: Icon(Icons.map_outlined),
+                        border: OutlineInputBorder(),
                       ),
-                      onChanged: (val) {
-                        setState(() {
-                          isSameAsResidential = val ?? false;
-                          if (isSameAsResidential) {
-                            permAddressCtrl.text = resAddressCtrl.text;
-                          }
-                        });
-                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Material(
+                      color: Colors.transparent,
+                      child: CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: isSameAsResidential,
+                        activeColor: const Color(0xFF0066FF),
+                        title: const Text(
+                          'Permanent address is same as residential address',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0A2540)),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            isSameAsResidential = val ?? false;
+                            if (isSameAsResidential) {
+                              permAddressCtrl.text = resAddressCtrl.text;
+                            }
+                          });
+                        },
+                      ),
                     ),
                     if (!isSameAsResidential) ...[
                       const SizedBox(height: 12),
@@ -172,21 +235,31 @@ class _AddressDetailsSubScreenState extends ConsumerState<AddressDetailsSubScree
                           backgroundColor: const Color(0xFF0066FF),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: _saveAddress,
-                        child: const Text(
-                          'Save Address Details',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        onPressed: _isSaving ? null : _saveAddress,
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Save Address Details',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
                 ),
               ),
         ],
+        ),
       ),
     );
   }

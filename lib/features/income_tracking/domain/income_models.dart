@@ -16,6 +16,7 @@ class IncomeEntry {
   final String? createdAt;
   final String? updatedAt;
   final String? userId;
+  final String? accountId;
   final String? accountNumber;
   final double? balanceAfter;
   final String? paymentMode;
@@ -31,7 +32,7 @@ class IncomeEntry {
     required this.frequency,
     this.notes = '',
     this.isVerified = true,
-    this.bankAccount = 'HDFC Bank ••••4587',
+    this.bankAccount = '',
     this.documentName,
     this.documentPath,
     this.voucherNumber,
@@ -39,6 +40,7 @@ class IncomeEntry {
     this.createdAt,
     this.updatedAt,
     this.userId,
+    this.accountId,
     this.accountNumber,
     this.balanceAfter,
     this.paymentMode,
@@ -56,7 +58,7 @@ class IncomeEntry {
       frequency: json['frequency']?.toString() ?? 'Monthly',
       notes: json['notes']?.toString() ?? '',
       isVerified: json['isVerified'] as bool? ?? true,
-      bankAccount: (json['bankAccount'] ?? json['paymentMode'])?.toString() ?? 'HDFC Bank ••••4587',
+      bankAccount: (json['bankAccount'] ?? json['paymentMode'])?.toString() ?? '',
       documentName: json['documentName'] as String?,
       documentPath: (json['documentPath'] ?? json['receiptUrl']) as String?,
       voucherNumber: json['voucherNumber'] as String?,
@@ -64,6 +66,7 @@ class IncomeEntry {
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
       userId: json['userId'] as String?,
+      accountId: json['accountId'] as String?,
       accountNumber: json['accountNumber'] as String?,
       balanceAfter: (json['balanceAfter'] as num?)?.toDouble(),
       paymentMode: json['paymentMode'] as String?,
@@ -80,8 +83,16 @@ class IncomeEntry {
       'bankAccount': bankAccount,
       'date': date,
       'notes': notes,
+      if (userId != null) 'userId': userId,
+      if (accountId != null) 'accountId': accountId,
+      if (accountNumber != null) 'accountNumber': accountNumber,
+      if (paymentMode != null) 'paymentMode': paymentMode,
+      if (voucherNumber != null) 'voucherNumber': voucherNumber,
+      if (verificationType != null) 'verificationType': verificationType,
       if (documentName != null) 'documentName': documentName,
       if (documentPath != null) 'documentPath': documentPath,
+      if (receiptUrl != null) 'receiptUrl': receiptUrl,
+      if (createdAt != null) 'createdAt': createdAt,
     };
   }
 
@@ -102,6 +113,12 @@ class IncomeEntry {
     String? verificationType,
     String? createdAt,
     String? updatedAt,
+    String? userId,
+    String? accountId,
+    String? accountNumber,
+    double? balanceAfter,
+    String? paymentMode,
+    String? receiptUrl,
   }) {
     return IncomeEntry(
       id: id ?? this.id,
@@ -120,6 +137,12 @@ class IncomeEntry {
       verificationType: verificationType ?? this.verificationType,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
+      accountId: accountId ?? this.accountId,
+      accountNumber: accountNumber ?? this.accountNumber,
+      balanceAfter: balanceAfter ?? this.balanceAfter,
+      paymentMode: paymentMode ?? this.paymentMode,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
     );
   }
 }
@@ -458,6 +481,9 @@ class DetectedInflow {
   final String bankAccount;
   final double confidenceScore;
   final String detectionChannel;
+  final String? rawSms;
+  final String? referenceId;
+  final String? status;
 
   const DetectedInflow({
     required this.detectedId,
@@ -468,19 +494,51 @@ class DetectedInflow {
     required this.bankAccount,
     required this.confidenceScore,
     required this.detectionChannel,
+    this.rawSms,
+    this.referenceId,
+    this.status = 'UNCONFIRMED',
   });
 
   factory DetectedInflow.fromJson(Map<String, dynamic> json) {
+    double amt = (json['amount'] as num?)?.toDouble() ?? 0.0;
+    final raw = json['rawSms']?.toString();
+    if (amt <= 0.0 && raw != null && raw.isNotEmpty) {
+      final match = RegExp(r'(?:Rs\.?|INR)\s*[:.]?\s*([\d,]+\.?\d*)', caseSensitive: false).firstMatch(raw);
+      if (match != null) {
+        final clean = match.group(1)!.replaceAll(',', '');
+        amt = double.tryParse(clean) ?? amt;
+      }
+    }
+
     return DetectedInflow(
-      detectedId: json['detectedId']?.toString() ?? '',
-      detectedSource: json['detectedSource']?.toString() ?? '',
-      suggestedCategory: json['suggestedCategory']?.toString() ?? 'Salary',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      detectedId: (json['detectedId'] ?? json['id'] ?? json['detectionId'])?.toString() ?? '',
+      detectedSource: (json['detectedSource'] ?? json['sourceName'] ?? json['merchantOrSource'] ?? json['source'])?.toString() ?? '',
+      suggestedCategory: (json['suggestedCategory'] ?? json['category'])?.toString() ?? 'Salary',
+      amount: amt,
       date: json['date']?.toString() ?? '',
-      bankAccount: json['bankAccount']?.toString() ?? '',
-      confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0.95,
+      bankAccount: (json['bankAccount'] ?? json['paymentMode'] ?? json['bankName'])?.toString() ?? '',
+      confidenceScore: ((json['confidenceScore'] ?? json['confidence']) as num?)?.toDouble() ?? 0.95,
       detectionChannel: json['detectionChannel']?.toString() ?? 'ACCOUNT_AGGREGATOR',
+      rawSms: raw,
+      referenceId: json['referenceId']?.toString(),
+      status: json['status']?.toString() ?? 'UNCONFIRMED',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'detectedId': detectedId,
+      'detectedSource': detectedSource,
+      'suggestedCategory': suggestedCategory,
+      'amount': amount,
+      'date': date,
+      'bankAccount': bankAccount,
+      'confidenceScore': confidenceScore,
+      'detectionChannel': detectionChannel,
+      if (rawSms != null) 'rawSms': rawSms,
+      if (referenceId != null) 'referenceId': referenceId,
+      if (status != null) 'status': status,
+    };
   }
 }
 

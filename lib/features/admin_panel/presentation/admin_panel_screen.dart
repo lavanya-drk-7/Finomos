@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/finmos_logo.dart';
 import '../../../core/widgets/finmos_bottom_nav_bar.dart';
 import '../providers/admin_provider.dart';
+import '../../../core/constants/feature_flags.dart';
 
 class AdminPanelScreen extends ConsumerStatefulWidget {
   const AdminPanelScreen({super.key});
@@ -39,14 +40,18 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF0066FF)),
           onPressed: () {
-            context.go('/profile');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
           },
         ),
         title: const FinmosLogo(size: 26, showTagline: false, isHorizontal: true),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Color(0xFF0066FF)),
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -101,22 +106,23 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
                         ActionChip(
                           avatar: const Icon(Icons.gavel_outlined, size: 16, color: Color(0xFF0066FF)),
                           label: const Text('FPMS Governance (Module 1)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          onPressed: () => context.go('/fpms-admin'),
+                          onPressed: () => context.push('/fpms-admin'),
                         ),
-                        ActionChip(
-                          avatar: const Icon(Icons.people_outline, size: 16, color: Color(0xFF10B981)),
-                          label: const Text('Advisor Ecosystem', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          onPressed: () => context.go('/advisor-ecosystem'),
-                        ),
+                        if (AppFeatureFlags.showAdvisorsModule)
+                          ActionChip(
+                            avatar: const Icon(Icons.people_outline, size: 16, color: Color(0xFF10B981)),
+                            label: const Text('Advisor Ecosystem', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            onPressed: () => context.push('/advisor-ecosystem'),
+                          ),
                         ActionChip(
                           avatar: const Icon(Icons.folder_open_outlined, size: 16, color: Color(0xFF6366F1)),
                           label: const Text('Document Vault', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          onPressed: () => context.go('/document-vault'),
+                          onPressed: () => context.push('/document-vault'),
                         ),
                         ActionChip(
                           avatar: const Icon(Icons.verified_user_outlined, size: 16, color: Color(0xFFF59E0B)),
                           label: const Text('KYC Management', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          onPressed: () => context.go('/kyc-status'),
+                          onPressed: () => context.push('/kyc-status'),
                         ),
                       ],
                     ),

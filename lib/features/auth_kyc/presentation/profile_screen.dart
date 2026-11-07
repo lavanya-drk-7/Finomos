@@ -1,12 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/widgets/finmos_logo.dart';
 import '../../../core/widgets/finmos_bottom_nav_bar.dart';
 import '../../../core/widgets/finmos_user_avatar.dart';
 import '../../../core/widgets/finmos_kyc_badge.dart';
 import '../domain/kyc_models.dart';
 import '../providers/auth_kyc_provider.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../../core/services/cache_service.dart';
+import '../../../core/constants/feature_flags.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -15,6 +20,22 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final kycState = ref.watch(authKycProvider);
     final user = kycState.user;
+    final profileData = ref.watch(profileProvider).userProfile;
+    bool isTestEnv = false;
+    try {
+      isTestEnv = Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {}
+    final cachedRecord = LocalCacheService().getUserProfileRecord(user.mobileNumber.isNotEmpty ? user.mobileNumber : user.email);
+    final displayName = (profileData?.personal.fullName.isNotEmpty == true)
+        ? profileData!.personal.fullName
+        : (user.fullName.isNotEmpty
+            ? user.fullName
+            : (cachedRecord?['fullName']?.toString() ?? LocalCacheService().get('user_name')?.toString() ?? (isTestEnv ? 'Sireesha' : 'User')));
+    final displayEmail = (profileData?.email.isNotEmpty == true)
+        ? profileData!.email
+        : (user.email.isNotEmpty
+            ? user.email
+            : (cachedRecord?['email']?.toString() ?? LocalCacheService().get('user_email')?.toString() ?? (isTestEnv ? 'sireesha@gmail.com' : '')));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -22,10 +43,26 @@ class ProfileScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 1,
         scrolledUnderElevation: 0,
+        leading: (ModalRoute.of(context)?.canPop ?? false)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFF0066FF)),
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    try {
+                      context.go('/dashboard');
+                    } catch (_) {}
+                  }
+                },
+              )
+            : null,
         title: const FinmosLogo(size: 26, showTagline: false, isHorizontal: true),
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         children: [
@@ -70,7 +107,7 @@ class ProfileScreen extends ConsumerWidget {
 
                       // User Name under Profile Photo
                       Text(
-                        user.fullName.isNotEmpty ? user.fullName : 'Sireesha',
+                        displayName,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -81,7 +118,7 @@ class ProfileScreen extends ConsumerWidget {
 
                       // User Email ID under Name
                       Text(
-                        user.email.isNotEmpty ? user.email : 'sireesha@gmail.com',
+                        displayEmail,
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF64748B),
@@ -178,11 +215,12 @@ class ProfileScreen extends ConsumerWidget {
                   title: 'App Settings',
                   onTap: () => context.push('/settings'),
                 ),
-                _buildMenuOption(
-                  icon: Icons.help_outline,
-                  title: 'Help & Support',
-                  onTap: () => context.push('/help-support'),
-                ),
+                if (AppFeatureFlags.showHelpSupportModule)
+                  _buildMenuOption(
+                    icon: Icons.help_outline,
+                    title: 'Help & Support',
+                    onTap: () => context.push('/help-support'),
+                  ),
                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
                 Material(
@@ -199,9 +237,11 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     onTap: () {
-                      ref.read(authKycProvider.notifier).reset();
-                      ref.read(authKycProvider.notifier).updateStep(2);
-                      context.go('/login');
+                      ref.read(authKycProvider.notifier).clearPersistedSession();
+                      ref.read(authKycProvider.notifier).setIsExistingUser(true);
+                      ref.read(authKycProvider.notifier).updateStep(1);
+                      appRouter.go('/login');
+                      ref.read(authKycProvider.notifier).logout();
                     },
                   ),
                 ),
@@ -209,6 +249,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

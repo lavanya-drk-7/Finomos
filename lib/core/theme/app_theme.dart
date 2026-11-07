@@ -70,7 +70,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryBlue,
-        minimumSize: const Size(double.infinity, 50),
+        minimumSize: const Size(64, 44),
         side: const BorderSide(color: primaryBlue, width: 1.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

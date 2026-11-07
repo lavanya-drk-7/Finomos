@@ -41,7 +41,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> with SingleTickerProvid
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -104,7 +104,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> with SingleTickerProvid
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Active Life Goals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
+            const Expanded(
+              child: Text('Active Life Goals', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
             TextButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.add_task, size: 18),
@@ -113,7 +116,34 @@ class _PlanScreenState extends ConsumerState<PlanScreen> with SingleTickerProvid
           ],
         ),
         const SizedBox(height: 12),
-        for (final goal in planState.goals)
+        if (planState.goals.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: const Center(
+              child: Column(
+                children: [
+                  Icon(Icons.flag_outlined, size: 40, color: Color(0xFF94A3B8)),
+                  SizedBox(height: 10),
+                  Text(
+                    'No financial goals created yet.',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Tap Create Goal to set up your financial targets.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          for (final goal in planState.goals)
           Container(
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
@@ -143,22 +173,28 @@ class _PlanScreenState extends ConsumerState<PlanScreen> with SingleTickerProvid
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Corpus / Target', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        Text(
-                          '₹${(goal.currentCorpus / 100000).toStringAsFixed(1)}L / ₹${(goal.targetAmount / 100000).toStringAsFixed(1)}L',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Corpus / Target', style: TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                          Text(
+                            '₹${(goal.currentCorpus / 100000).toStringAsFixed(1)}L / ₹${(goal.targetAmount / 100000).toStringAsFixed(1)}L',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('Monthly Auto Funding', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        Text('₹${goal.monthlyContribution.toInt()}/mo', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0066FF))),
-                      ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Monthly Auto Funding', style: TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                          Text('₹${goal.monthlyContribution.toInt()}/mo', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0066FF)), overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
                   ],
                 ),

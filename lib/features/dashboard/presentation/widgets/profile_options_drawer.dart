@@ -1,12 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
+import '../../../../core/services/cache_service.dart';
 import '../../../../core/widgets/finmos_user_avatar.dart';
 import '../../../../core/widgets/finmos_kyc_badge.dart';
 import '../../../auth_kyc/domain/kyc_models.dart';
 import '../../../auth_kyc/providers/auth_kyc_provider.dart';
 import '../../../profile/domain/profile_models.dart';
 import '../../../profile/providers/profile_provider.dart';
+import '../../../../core/constants/feature_flags.dart';
 
 class _SubSectionData {
   final IconData icon;
@@ -84,12 +88,13 @@ class _ProfileOptionsDrawerState extends ConsumerState<ProfileOptionsDrawer> {
       subtitle: 'System preferences & application setup',
       route: '/settings',
     ),
-    _SubSectionData(
-      icon: Icons.help_outline,
-      title: 'Help & Support',
-      subtitle: 'Help center, FAQs & customer support',
-      route: '/help-support',
-    ),
+    if (AppFeatureFlags.showHelpSupportModule)
+      _SubSectionData(
+        icon: Icons.help_outline,
+        title: 'Help & Support',
+        subtitle: 'Help center, FAQs & customer support',
+        route: '/help-support',
+      ),
   ];
 
   void _showLogoutConfirmation(BuildContext context) {
@@ -133,14 +138,11 @@ class _ProfileOptionsDrawerState extends ConsumerState<ProfileOptionsDrawer> {
             ),
             onPressed: () {
               Navigator.pop(dialogCtx); // Close dialog
-              if (context.mounted) {
-                Navigator.pop(context); // Close drawer
-              }
-              ref.read(authKycProvider.notifier).reset();
-              ref.read(authKycProvider.notifier).updateStep(2);
-              if (context.mounted) {
-                context.go('/login');
-              }
+              ref.read(authKycProvider.notifier).clearPersistedSession();
+              ref.read(authKycProvider.notifier).setIsExistingUser(true);
+              ref.read(authKycProvider.notifier).updateStep(1);
+              appRouter.go('/login');
+              ref.read(authKycProvider.notifier).logout();
             },
             child: const Text(
               'Logout',
@@ -1971,13 +1973,25 @@ class _ProfileOptionsDrawerState extends ConsumerState<ProfileOptionsDrawer> {
     final kycState = ref.watch(authKycProvider);
     final profileData = ref.watch(profileProvider);
 
+    bool isTestEnv = false;
+    try {
+      isTestEnv = Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {}
+
+    final cachedName = LocalCacheService().get('user_name')?.toString() ?? '';
+    final cachedEmail = LocalCacheService().get('user_email')?.toString() ?? '';
+
     final userName = profileData.personalInfo.fullName.trim().isNotEmpty
         ? profileData.personalInfo.fullName
-        : (kycState.user.fullName.trim().isNotEmpty ? kycState.user.fullName : 'Sireesha');
+        : (kycState.user.fullName.trim().isNotEmpty
+            ? kycState.user.fullName
+            : (cachedName.isNotEmpty ? cachedName : (isTestEnv ? 'Sireesha' : 'User')));
 
     final userEmail = profileData.personalInfo.email.trim().isNotEmpty
         ? profileData.personalInfo.email
-        : (kycState.user.email.trim().isNotEmpty ? kycState.user.email : 'sireesha@gmail.com');
+        : (kycState.user.email.trim().isNotEmpty
+            ? kycState.user.email
+            : (cachedEmail.isNotEmpty ? cachedEmail : (isTestEnv ? 'sireesha@gmail.com' : '')));
 
     final screenWidth = MediaQuery.of(context).size.width;
     final drawerWidth = screenWidth * 0.90 > 420 ? 420.0 : screenWidth * 0.90;

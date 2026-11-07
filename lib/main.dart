@@ -78,6 +78,18 @@ class FinomosApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
+      builder: (context, child) {
+        return Container(
+          color: Colors.white,
+          child: SafeArea(
+            top: true,
+            bottom: true,
+            left: true,
+            right: true,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
     );
   }
 }

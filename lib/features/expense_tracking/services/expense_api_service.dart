@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/expense_models.dart';
 
 class ExpenseApiService {
@@ -32,6 +33,12 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final dynamic body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
+          if (page == 1 &&
+              search == null &&
+              category == null &&
+              priority == null) {
+            LocalCacheService().save('expenses_entries', body);
+          }
           return ExpenseEntriesResponse.fromJson(body);
         }
       }
@@ -51,7 +58,9 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final dynamic body = jsonDecode(response.body);
         if (body is List) {
-          return body.map((e) => ExpenseEntry.fromJson(e as Map<String, dynamic>)).toList();
+          return body
+              .map((e) => ExpenseEntry.fromJson(e as Map<String, dynamic>))
+              .toList();
         } else if (body is Map && body['data'] is List) {
           return (body['data'] as List)
               .map((e) => ExpenseEntry.fromJson(e as Map<String, dynamic>))
@@ -142,9 +151,13 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] != null) {
-          return ExpenseSummaryData.fromJson(body['data'] as Map<String, dynamic>);
+          final data = body['data'] as Map<String, dynamic>;
+          LocalCacheService().save('expenses_summary', data);
+          return ExpenseSummaryData.fromJson(data);
         } else if (body['data'] != null) {
-          return ExpenseSummaryData.fromJson(body['data'] as Map<String, dynamic>);
+          final data = body['data'] as Map<String, dynamic>;
+          LocalCacheService().save('expenses_summary', data);
+          return ExpenseSummaryData.fromJson(data);
         }
       }
     } catch (_) {}
@@ -160,11 +173,19 @@ class ExpenseApiService {
         final dynamic body = jsonDecode(response.body);
         if (body is Map && body['data'] is List) {
           return (body['data'] as List)
-              .map((e) => ExpenseCategoryBreakdown.fromJson(e as Map<String, dynamic>))
+              .map(
+                (e) => ExpenseCategoryBreakdown.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
               .toList();
         } else if (body is List) {
           return body
-              .map((e) => ExpenseCategoryBreakdown.fromJson(e as Map<String, dynamic>))
+              .map(
+                (e) => ExpenseCategoryBreakdown.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
               .toList();
         }
       }
@@ -180,7 +201,9 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final dynamic body = jsonDecode(response.body);
         if (body is Map && body['data'] is Map<String, dynamic>) {
-          return ExpensePriorityBreakdown.fromJson(body['data'] as Map<String, dynamic>);
+          return ExpensePriorityBreakdown.fromJson(
+            body['data'] as Map<String, dynamic>,
+          );
         } else if (body is Map<String, dynamic>) {
           return ExpensePriorityBreakdown.fromJson(body);
         }
@@ -190,10 +213,10 @@ class ExpenseApiService {
   }
 
   /// Fetch unconfirmed detected expenses from live backend
-  /// GET /api/v1/expenses/detected
-  Future<List<DetectedExpense>> getDetectedExpenses() async {
+  /// GET /api/v1/expense/detected-expenses
+  Future<List<DetectedExpense>?> getDetectedExpenses() async {
     try {
-      final response = await _client.get(ApiConstants.expenseDetected);
+      final response = await _client.get(ApiConstants.expenseDetectedExpenses);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final dynamic body = jsonDecode(response.body);
         if (body is Map && body['data'] is List) {
@@ -207,24 +230,56 @@ class ExpenseApiService {
         }
       }
     } catch (_) {}
-    return const [];
+    return null;
   }
 
   /// Confirm a detected expense on live backend
-  /// POST /api/v1/expenses/detected/:detectionId/confirm
-  Future<ExpenseEntry?> confirmDetectedExpense(String detectionId) async {
+  /// POST /api/v1/expense/detected-expenses/:detectionId/confirm
+  /// Body: { "category": category, "priority": priority }
+  Future<ExpenseEntry?> confirmDetectedExpense(
+    String detectionId, {
+    String? category,
+    String? priority,
+  }) async {
     try {
-      final response = await _client.post(ApiConstants.expenseConfirmDetected(detectionId));
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final cleanId = detectionId.trim();
+      final response = await _client.post(
+        ApiConstants.expenseConfirmDetectedExpense(cleanId),
+        body: {
+          'category': category ?? 'Food & Dining',
+          'priority': priority ?? 'P4 - Discretionary',
+        },
+      );
+      if ((response.statusCode >= 200 && response.statusCode < 300) ||
+          response.statusCode == 400 ||
+          response.statusCode == 409) {
         final Map<String, dynamic> body = jsonDecode(response.body);
-        if (body['success'] == true && body['data'] != null) {
-          return ExpenseEntry.fromJson(body['data'] as Map<String, dynamic>);
-        } else if (body['data'] != null) {
-          return ExpenseEntry.fromJson(body['data'] as Map<String, dynamic>);
+        if (body['data'] != null) {
+          final data = body['data'];
+          if (data is Map<String, dynamic>) {
+            final expJson = data['expense'] ?? data;
+            return ExpenseEntry.fromJson(expJson as Map<String, dynamic>);
+          }
         }
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Dismiss / Delete a detected expense on live backend
+  /// DELETE /api/v1/expense/detected-expenses/:detectionId
+  Future<bool> dismissDetectedExpense(String detectionId) async {
+    try {
+      final cleanId = detectionId.trim();
+      final response = await _client.delete(
+        ApiConstants.expenseDismissDetectedExpense(cleanId),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        return body['success'] == true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   /// Upload expense receipt proof file
@@ -239,7 +294,9 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] != null) {
-          return ExpenseReceiptUploadResult.fromJson(body['data'] as Map<String, dynamic>);
+          return ExpenseReceiptUploadResult.fromJson(
+            body['data'] as Map<String, dynamic>,
+          );
         }
       }
     } catch (_) {}
@@ -254,10 +311,28 @@ class ExpenseApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] != null) {
-          return ExpenseInvoiceDetails.fromJson(body['data'] as Map<String, dynamic>);
+          return ExpenseInvoiceDetails.fromJson(
+            body['data'] as Map<String, dynamic>,
+          );
         }
       }
     } catch (_) {}
+    return null;
+  }
+
+  ExpenseSummaryData? getCachedSummary() {
+    final cached = LocalCacheService().get('expenses_summary');
+    if (cached is Map<String, dynamic>) {
+      return ExpenseSummaryData.fromJson(cached);
+    }
+    return null;
+  }
+
+  ExpenseEntriesResponse? getCachedEntries() {
+    final cached = LocalCacheService().get('expenses_entries');
+    if (cached is Map<String, dynamic>) {
+      return ExpenseEntriesResponse.fromJson(cached);
+    }
     return null;
   }
 }

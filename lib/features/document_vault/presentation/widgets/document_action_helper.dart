@@ -488,7 +488,7 @@ class DocumentActionHelper {
       builder: (ctx) {
         final docsList = [
           {
-            'name': '${idType.replaceAll(' ', '_')}_Sireesha.pdf',
+            'name': '${idType.replaceAll(' ', '_')}.pdf',
             'desc': 'Verified Official PDF Document',
             'size': '1.8 MB',
             'date': 'Today, 11:30 AM',
@@ -2083,7 +2083,7 @@ class DocumentActionHelper {
     try {
       if (Platform.isAndroid) {
         try {
-          const platform = MethodChannel('com.example.finomos/download');
+          const platform = MethodChannel('com.finomos/download');
           Uint8List? fileBytes;
           if (localPath != null && localPath.isNotEmpty && File(localPath).existsSync()) {
             fileBytes = await File(localPath).readAsBytes();
@@ -2109,7 +2109,7 @@ class DocumentActionHelper {
 
       Directory? targetDir;
       if (Platform.isAndroid) {
-        final appExt = Directory('/storage/emulated/0/Android/data/com.example.finomos/files/Download');
+        final appExt = Directory('/storage/emulated/0/Android/data/com.finomos/files/Download');
         if (!appExt.existsSync()) {
           try {
             appExt.createSync(recursive: true);

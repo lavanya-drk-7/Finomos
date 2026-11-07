@@ -1,131 +1,149 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/budget_models.dart';
 import '../services/budget_api_service.dart';
 import '../../expense_tracking/domain/expense_models.dart';
 
 class BudgetNotifier extends Notifier<BudgetState> {
   final BudgetApiService _apiService = BudgetApiService();
+  Future<void>? _inFlightFetch;
 
   @override
   BudgetState build() {
     // Schedule background fetch from live backend API
     Future.microtask(() => loadLiveBudgets());
 
-    return const BudgetState(
-      budgets: [
-        BudgetItem(
-          id: 'b_food',
-          name: 'Food & Dining',
-          type: 'Category-wise Budget',
-          category: 'Food & Dining',
-          amount: 10000.0,
-          spent: 0.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-        BudgetItem(
-          id: 'b_groceries',
-          name: 'Groceries',
-          type: 'Category-wise Budget',
-          category: 'Groceries',
-          amount: 8000.0,
-          spent: 0.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-        BudgetItem(
-          id: 'b_travel',
-          name: 'Transportation & Travel',
-          type: 'Category-wise Budget',
-          category: 'Transportation',
-          amount: 5000.0,
-          spent: 2000.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-        BudgetItem(
-          id: 'b_shopping',
-          name: 'Shopping & Retail',
-          type: 'Category-wise Budget',
-          category: 'Shopping',
-          amount: 6000.0,
-          spent: 3450.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-        BudgetItem(
-          id: 'b_utilities',
-          name: 'Utilities & Bills',
-          type: 'Category-wise Budget',
-          category: 'Utilities',
-          amount: 4000.0,
-          spent: 2350.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-        BudgetItem(
-          id: 'b_ent',
-          name: 'Entertainment',
-          type: 'Category-wise Budget',
-          category: 'Entertainment',
-          amount: 3000.0,
-          spent: 1199.0,
-          startDate: '01/10/2026',
-          endDate: '31/10/2026',
-          period: 'October 2026',
-        ),
-      ],
+    final cachedSummary = _apiService.getCachedSummary();
+    final cachedBudgets = _apiService.getCachedBudgets();
+    final cachedGuardrails = _apiService.getCachedGuardrails();
+
+    final deleted = LocalCacheService().get('deleted_budget_ids');
+    final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+    final activeBudgets = (cachedBudgets ?? const <BudgetItem>[])
+        .where((b) => !deletedIds.contains(b.id))
+        .toList();
+
+    return BudgetState(
+      budgets: activeBudgets,
+      summary: cachedSummary,
+      guardrails: cachedGuardrails ?? const GuardrailSettings(),
+      isLoading: false,
+      isSyncing: true,
       alertEnabled: true,
     );
   }
 
+  /// Helper for unit testing or seeding budgets directly
+  void seedBudgets(List<BudgetItem> items) {
+    state = state.copyWith(budgets: items, isLoading: false);
+  }
+
   /// Load live budget summary, list, analytics, active alerts & guardrail settings
   Future<void> loadLiveBudgets() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final summaryFuture = _apiService.getSummary();
-      final budgetsFuture = _apiService.getBudgets();
-      final alertsFuture = _apiService.getActiveAlerts();
-      final analyticsFuture = _apiService.getUtilizationAnalytics();
-      final guardrailsFuture = _apiService.getGuardrailSettings();
+    if (_inFlightFetch != null) return _inFlightFetch!;
 
-      final results = await Future.wait([
-        summaryFuture,
-        budgetsFuture,
-        alertsFuture,
-        analyticsFuture,
-        guardrailsFuture,
-      ]);
+    state = state.copyWith(
+      isSyncing: true,
+      isLoading: state.budgets.isEmpty && state.summary == null,
+    );
 
-      final summary = results[0] as BudgetSummaryData?;
-      final liveBudgets = results[1] as List<BudgetItem>?;
-      final activeAlerts = results[2] as List<ActiveBudgetAlert>?;
-      final analytics = results[3] as BudgetAnalyticsResponse?;
-      final guardrails = results[4] as GuardrailSettings?;
+    _inFlightFetch = () async {
+      try {
+        final summaryFuture = _apiService.getSummary().then((summary) {
+          if (!ref.mounted) return null;
+          if (summary != null) {
+            state = state.copyWith(summary: summary);
+          }
+          return summary;
+        });
 
-      state = state.copyWith(
-        budgets: (liveBudgets != null && liveBudgets.isNotEmpty)
-            ? liveBudgets
-            : state.budgets,
-        summary: summary ?? state.summary,
-        activeAlerts: activeAlerts ?? state.activeAlerts,
-        analytics: analytics ?? state.analytics,
-        guardrails: guardrails ?? state.guardrails,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
-    }
+        final deleted = LocalCacheService().get('deleted_budget_ids');
+        final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+
+        final budgetsFuture = _apiService.getBudgets().then((budgets) {
+          if (!ref.mounted) return null;
+          if (budgets != null) {
+            final activeServer = budgets.where((b) => !deletedIds.contains(b.id)).toList();
+            final Map<String, BudgetItem> merged = {};
+            for (final loc in state.budgets) {
+              if (!deletedIds.contains(loc.id)) {
+                merged[loc.id] = loc;
+              }
+            }
+            for (final s in activeServer) {
+              merged[s.id] = s;
+            }
+            final finalBudgets = merged.values.toList();
+            state = state.copyWith(budgets: finalBudgets);
+            LocalCacheService().save(
+              'budgets_list',
+              finalBudgets.map((b) => b.toJson()).toList(),
+            );
+          }
+          return budgets;
+        });
+
+        final alertsFuture = _apiService.getActiveAlerts().then((alerts) {
+          if (!ref.mounted) return null;
+          if (alerts != null) {
+            state = state.copyWith(activeAlerts: alerts);
+          }
+          return alerts;
+        });
+
+        final analyticsFuture = _apiService.getUtilizationAnalytics().then((analytics) {
+          if (!ref.mounted) return null;
+          if (analytics != null) {
+            state = state.copyWith(analytics: analytics);
+          }
+          return analytics;
+        });
+
+        final guardrailsFuture = _apiService.getGuardrailSettings().then((guardrails) {
+          if (!ref.mounted) return null;
+          if (guardrails != null) {
+            state = state.copyWith(guardrails: guardrails);
+          }
+          return guardrails;
+        });
+
+        await Future.wait([
+          summaryFuture,
+          budgetsFuture,
+          alertsFuture,
+          analyticsFuture,
+          guardrailsFuture,
+        ]);
+
+        if (!ref.mounted) return;
+
+        state = state.copyWith(
+          isLoading: false,
+          isSyncing: false,
+        );
+      } catch (e) {
+        if (!ref.mounted) return;
+        state = state.copyWith(
+          isLoading: false,
+          isSyncing: false,
+          error: e.toString(),
+        );
+      } finally {
+        _inFlightFetch = null;
+      }
+    }();
+
+    return _inFlightFetch!;
   }
 
   /// Create a budget locally and sync to live backend
   Future<void> addBudget(BudgetItem item) async {
-    state = state.copyWith(budgets: [...state.budgets, item], isSyncing: true);
+    final updated = [...state.budgets, item];
+    state = state.copyWith(budgets: updated, isSyncing: true);
+    LocalCacheService().save(
+      'budgets_list',
+      updated.map((b) => b.toJson()).toList(),
+    );
 
     try {
       final created = await _apiService.createBudget(
@@ -143,7 +161,11 @@ class BudgetNotifier extends Notifier<BudgetState> {
             .map((b) => b.id == item.id ? created : b)
             .toList();
         state = state.copyWith(budgets: updatedBudgets, isSyncing: false);
-        loadLiveBudgets();
+        LocalCacheService().save(
+          'budgets_list',
+          updatedBudgets.map((b) => b.toJson()).toList(),
+        );
+        if (ref.mounted) loadLiveBudgets();
         return;
       }
     } catch (_) {}
@@ -157,6 +179,10 @@ class BudgetNotifier extends Notifier<BudgetState> {
         .map((b) => b.id == item.id ? item : b)
         .toList();
     state = state.copyWith(budgets: updated, isSyncing: true);
+    LocalCacheService().save(
+      'budgets_list',
+      updated.map((b) => b.toJson()).toList(),
+    );
 
     try {
       final res = await _apiService.updateBudget(
@@ -174,7 +200,11 @@ class BudgetNotifier extends Notifier<BudgetState> {
             .map((b) => b.id == item.id ? res : b)
             .toList();
         state = state.copyWith(budgets: list, isSyncing: false);
-        loadLiveBudgets();
+        LocalCacheService().save(
+          'budgets_list',
+          list.map((b) => b.toJson()).toList(),
+        );
+        if (ref.mounted) loadLiveBudgets();
         return;
       }
     } catch (_) {}
@@ -184,14 +214,25 @@ class BudgetNotifier extends Notifier<BudgetState> {
 
   /// Delete a budget locally and sync to live backend
   Future<void> deleteBudget(String id) async {
+    final deleted = LocalCacheService().get('deleted_budget_ids');
+    final deletedIds = deleted is List ? deleted.cast<String>() : <String>[];
+    if (!deletedIds.contains(id)) {
+      deletedIds.add(id);
+      LocalCacheService().save('deleted_budget_ids', deletedIds);
+    }
+    final updated = state.budgets.where((b) => b.id != id).toList();
     state = state.copyWith(
-      budgets: state.budgets.where((b) => b.id != id).toList(),
+      budgets: updated,
       isSyncing: true,
+    );
+    LocalCacheService().save(
+      'budgets_list',
+      updated.map((b) => b.toJson()).toList(),
     );
 
     try {
       await _apiService.deleteBudget(id);
-      loadLiveBudgets();
+      if (ref.mounted) await loadLiveBudgets();
     } catch (_) {}
 
     state = state.copyWith(isSyncing: false);
@@ -266,6 +307,7 @@ class BudgetNotifier extends Notifier<BudgetState> {
   /// Evaluates an expense against all relevant budgets.
   /// Deducts eligible amounts and triggers budget alerts if thresholds (80%, 100%, >100%) are crossed.
   BudgetAlertEvent? applyExpense({
+    String? budgetId,
     required String category,
     required double amount,
     String description = '',
@@ -276,9 +318,36 @@ class BudgetNotifier extends Notifier<BudgetState> {
     final updatedBudgets = <BudgetItem>[];
 
     for (final budget in state.budgets) {
-      if (_isCategoryMatch(budget.category, category)) {
+      final isTarget = (budgetId != null && budget.id == budgetId) ||
+          (budgetId == null && _isCategoryMatch(budget.category, category));
+      if (isTarget) {
         final newSpent = budget.spent + amount;
-        final updatedBudget = budget.copyWith(spent: newSpent);
+
+        // Determine expense date clamped within the budget's cycle range so backend persists it
+        String expenseDate = DateTime.now().toIso8601String().split('T').first;
+        if (budget.startDate.isNotEmpty && budget.endDate.isNotEmpty) {
+          if (expenseDate.compareTo(budget.startDate) < 0) {
+            expenseDate = budget.startDate;
+          } else if (expenseDate.compareTo(budget.endDate) > 0) {
+            expenseDate = budget.endDate;
+          }
+        }
+
+        final newTx = EligibleBudgetTransaction(
+          id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
+          amount: amount,
+          date: expenseDate,
+          category: budget.category,
+          description: description.isNotEmpty ? description : budget.category,
+          paymentMode: 'UPI',
+        );
+        final updatedTxs = [newTx, ...budget.eligibleTransactions];
+
+        final updatedBudget = budget.copyWith(
+          spent: newSpent,
+          eligibleTransactions: updatedTxs,
+          recentTransactionsCount: updatedTxs.length,
+        );
 
         // Check threshold crossing
         final oldLevel = budget.currentAlertLevel;
@@ -336,10 +405,10 @@ class BudgetNotifier extends Notifier<BudgetState> {
                     ? description
                     : 'Expense on ${budget.category}',
                 category: category,
-                date: DateTime.now().toIso8601String().split('T').first,
+                date: expenseDate,
                 paymentMode: 'UPI',
               )
-              .then((_) => loadLiveBudgets())
+              .then((_) { if (ref.mounted) loadLiveBudgets(); })
               .catchError((_) {});
         }
       } else {
@@ -351,8 +420,43 @@ class BudgetNotifier extends Notifier<BudgetState> {
       budgets: updatedBudgets,
       activeBannerAlert: triggeredAlert ?? state.activeBannerAlert,
     );
+    LocalCacheService().save(
+      'budgets_list',
+      updatedBudgets.map((b) => b.toJson()).toList(),
+    );
 
     return triggeredAlert;
+  }
+
+  /// Reverts/deducts an expense from relevant budgets when an expense is deleted or reduced.
+  void revertExpense({
+    String? budgetId,
+    required String category,
+    required double amount,
+  }) {
+    if (amount <= 0) return;
+
+    final updatedBudgets = <BudgetItem>[];
+
+    for (final budget in state.budgets) {
+      final isTarget = (budgetId != null && budget.id == budgetId) ||
+          (budgetId == null && _isCategoryMatch(budget.category, category));
+      if (isTarget) {
+        final newSpent = (budget.spent - amount).clamp(0.0, double.infinity);
+        final updatedBudget = budget.copyWith(
+          spent: newSpent,
+        );
+        updatedBudgets.add(updatedBudget);
+      } else {
+        updatedBudgets.add(budget);
+      }
+    }
+
+    state = state.copyWith(budgets: updatedBudgets);
+    LocalCacheService().save(
+      'budgets_list',
+      updatedBudgets.map((b) => b.toJson()).toList(),
+    );
   }
 
   /// Recalculates all budget category totals directly from confirmed expenses list.
@@ -366,6 +470,10 @@ class BudgetNotifier extends Notifier<BudgetState> {
     }).toList();
 
     state = state.copyWith(budgets: updatedBudgets);
+    LocalCacheService().save(
+      'budgets_list',
+      updatedBudgets.map((b) => b.toJson()).toList(),
+    );
   }
 
   /// Flexible category matcher (e.g. 'Food & Dining' matches 'Food', 'Groceries' matches 'Groceries')

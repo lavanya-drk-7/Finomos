@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:finomos/core/services/cache_service.dart';
 import 'package:finomos/features/income_tracking/presentation/income_tracking_screen.dart';
 import 'package:finomos/features/expense_tracking/presentation/expense_tracking_screen.dart';
 
@@ -10,7 +11,27 @@ void main() {
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        LocalCacheService().remove('income_entries');
+        LocalCacheService().remove('deleted_income_ids');
+      });
+      LocalCacheService().remove('deleted_income_ids');
+
+      LocalCacheService().save('income_entries', {
+        'entries': [
+          {
+            'id': 'inc_test_1',
+            'amount': 85000.0,
+            'source': 'Tech Corp',
+            'category': 'Salary',
+            'date': '2026-11-04',
+            'paymentMode': 'SBI Bank',
+            'frequency': 'Monthly',
+            'documentName': 'salary_slip_aug_2025.pdf',
+          }
+        ]
+      });
 
       await tester.pumpWidget(
         const ProviderScope(child: MaterialApp(home: IncomeTrackingScreen())),
@@ -22,7 +43,7 @@ void main() {
       expect(find.text('Edit Details'), findsNothing);
       expect(find.text('Delete'), findsNothing);
       // Tab 0 transactions must have '+' before amount, and must NOT show uploaded document badges
-      expect(find.text('+₹85,000'), findsOneWidget);
+      expect(find.text('+₹85,000'), findsWidgets);
       expect(find.text('salary_slip_aug_2025.pdf'), findsNothing);
 
       // Verify TabBar has Income Sources
@@ -115,7 +136,27 @@ void main() {
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
       tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        LocalCacheService().remove('expenses_entries');
+      });
+
+      LocalCacheService().remove('deleted_expense_ids');
+      LocalCacheService().save('expenses_entries', {
+        'entries': [
+          {
+            'id': 'exp_test_1',
+            'amount': 22000.0,
+            'description': 'Apartment Rent',
+            'category': 'Rent',
+            'date': '2026-11-04',
+            'paymentMode': 'HDFC Bank',
+            'priority': 'P1 - Survival',
+            'status': 'Payment Success',
+            'documentName': 'rent_agreement_koramangala.pdf',
+          }
+        ]
+      });
 
       await tester.pumpWidget(
         const ProviderScope(child: MaterialApp(home: ExpenseTrackingScreen())),
@@ -127,7 +168,7 @@ void main() {
       expect(find.text('Edit Details'), findsNothing);
       expect(find.text('Delete'), findsNothing);
       // Tab 0 transactions must have '-' before amount, and must NOT show uploaded document badges
-      expect(find.text('-₹22,000'), findsOneWidget);
+      expect(find.text('-₹22,000'), findsWidgets);
       expect(find.text('rent_agreement_koramangala.pdf'), findsNothing);
 
       // Verify TabBar has Expense Sources

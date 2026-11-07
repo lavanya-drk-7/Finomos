@@ -15,12 +15,56 @@ import '../../grow/providers/grow_provider.dart';
 import '../../plan/providers/plan_provider.dart';
 import '../../comply/providers/comply_provider.dart';
 import '../../transaction_detection/presentation/widgets/in_app_transaction_alert_banner.dart';
+import '../../notifications/providers/notification_provider.dart';
+import '../../transaction_detection/services/sms_sync_service.dart';
+import '../../document_vault/providers/document_provider.dart';
+import '../../auth_kyc/providers/auth_kyc_provider.dart';
+import '../../../core/constants/feature_flags.dart';
+import '../../../core/services/cache_service.dart';
+import '../../../core/utils/phone_utils.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshAllData();
+    });
+  }
+
+  Future<void> _refreshAllData() async {
+    final activeMobile = PhoneUtils.sanitize(
+      ref.read(authKycProvider).user.mobileNumber.isNotEmpty
+          ? ref.read(authKycProvider).user.mobileNumber
+          : (LocalCacheService().get('user_mobile_number')?.toString() ??
+             (LocalCacheService().get('auth_session') as Map?)?['phone']?.toString() ?? ''),
+    );
+    await Future.wait([
+      ref.read(incomeProvider.notifier).loadLiveIncomeData(),
+      ref.read(expenseProvider.notifier).loadLiveExpenses(),
+      ref.read(budgetProvider.notifier).loadLiveBudgets(),
+      ref.read(notificationsProvider.notifier).loadLiveNotifications(userMobile: activeMobile),
+      ref.read(documentVaultProvider.notifier).loadLiveVaultData(),
+      ref.read(bankAggregationProvider.notifier).loadInitialData(),
+    ]);
+
+    // Check and sync financial SMS in background if user has allowed SMS tracking
+    final bool isSmsAllowed = activeMobile.isNotEmpty &&
+        LocalCacheService().get('sms_allowed_$activeMobile') == true;
+    if (isSmsAllowed) {
+      SmsSyncService().syncDeviceSms(ref: ref, userMobile: activeMobile);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final incomeState = ref.watch(incomeProvider);
     final expenseState = ref.watch(expenseProvider);
     final budgetState = ref.watch(budgetProvider);
@@ -30,17 +74,27 @@ class DashboardScreen extends ConsumerWidget {
     final growState = ref.watch(growProvider);
     final planState = ref.watch(planProvider);
     final complyState = ref.watch(complyProvider);
+    final notifState = ref.watch(notificationsProvider);
+    final notifCount = notifState.unreadCount > 0 ? notifState.unreadCount : notifState.notifications.length;
 
-    final totalEarn = incomeState.totalMonthlyIncome > 0
-        ? incomeState.totalMonthlyIncome
-        : incomeState.entries.fold(0.0, (sum, e) => sum + e.amount);
-    final totalSpend = expenseState.totalExpenses;
+    final bool hasNoAccounts = bankState.bankAccounts.isEmpty && bankState.totalLiquidCash <= 0;
+
+    final totalEarn = hasNoAccounts
+        ? 0.0
+        : (incomeState.summaryData != null
+            ? incomeState.summaryData!.totalMonthlyIncome
+            : incomeState.entries.fold(0.0, (sum, e) => sum + e.amount));
+    final totalSpend = hasNoAccounts
+        ? 0.0
+        : (expenseState.summaryData != null
+            ? expenseState.summaryData!.totalMonthlyExpenses
+            : expenseState.expenses.fold(0.0, (sum, e) => sum + e.amount));
     final spendRatio = totalEarn > 0
         ? ((totalSpend / totalEarn) * 100).toStringAsFixed(1)
-        : '39.9';
+        : '0.0';
     final borrowDti = totalEarn > 0
         ? ((borrowState.totalMonthlyEmi / totalEarn) * 100).toStringAsFixed(1)
-        : '18.9';
+        : '0.0';
     final planGoalsTotal = planState.goals.fold(
       0.0,
       (s, g) => s + g.currentCorpus,
@@ -53,7 +107,7 @@ class DashboardScreen extends ConsumerWidget {
       0.0,
       (sum, a) => sum + a.availableBalance,
     );
-    final totalLiquidCash = bankState.totalCashPosition;
+    final totalLiquidCash = bankState.totalLiquidCash;
 
     return Scaffold(
       endDrawerEnableOpenDragGesture: false,
@@ -71,11 +125,23 @@ class DashboardScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.notifications_none_outlined,
-              color: Color(0xFF0066FF),
+            icon: Badge(
+              isLabelVisible: notifCount > 0,
+              label: Text(
+                notifCount > 99 ? '99+' : notifCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: const Color(0xFFEF4444),
+              child: const Icon(
+                Icons.notifications_none_outlined,
+                color: Color(0xFF0066FF),
+              ),
             ),
-            tooltip: 'Notifications',
+            tooltip: 'Notifications ($notifCount)',
             onPressed: () => context.push('/notifications'),
           ),
           Builder(
@@ -89,8 +155,13 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+        child: RefreshIndicator(
+          onRefresh: _refreshAllData,
+          color: const Color(0xFF0066FF),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -113,19 +184,16 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // AI Personal CFO Banner Card
-              InkWell(
-                onTap: () => context.go('/cfo-ai'),
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0A2540), Color(0xFF0066FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
+              // AI Personal CFO Banner Card - Non-clickable showcase box
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0A2540), Color(0xFF0066FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF0066FF).withOpacity(0.3),
@@ -140,28 +208,35 @@ class DashboardScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF34D399),
-                                  shape: BoxShape.circle,
+                          Expanded(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF34D399),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                '${bankState.bankAccounts.length} Accounts Synced',
-                                style: const TextStyle(
-                                  color: Color(0xFFE2E8F0),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    '${bankState.bankAccounts.length} Accounts Synced',
+                                    style: const TextStyle(
+                                      color: Color(0xFFE2E8F0),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -344,21 +419,24 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ),
               const SizedBox(height: 20),
 
               // 7 Financial Pillars Section Title
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text(
-                    '7 Financial Pillars',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0A2540),
+                  Expanded(
+                    child: Text(
+                      '7 Financial Pillars',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0A2540),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  SizedBox(width: 8),
                   Text(
                     'Enterprise PFOS',
                     style: TextStyle(
@@ -387,7 +465,9 @@ class DashboardScreen extends ConsumerWidget {
                     color: const Color(0xFF10B981),
                     route: '/income-tracking',
                     amount: _formatRupees(totalEarn),
-                    percentage: '+12.4%',
+                    percentage: (incomeState.forecastData?.compoundingRate.isNotEmpty == true)
+                        ? incomeState.forecastData!.compoundingRate
+                        : '+12.4%',
                     badgeColor: const Color(0xFF10B981),
                     percentageIcon: Icons.trending_up,
                   ),
@@ -399,7 +479,7 @@ class DashboardScreen extends ConsumerWidget {
                     color: const Color(0xFFEF4444),
                     route: '/expense-tracking',
                     amount: _formatRupees(totalSpend),
-                    percentage: '$spendRatio%',
+                    percentage: (totalEarn > 0 && totalSpend > 0) ? '$spendRatio%' : '0.0%',
                     badgeColor: const Color(0xFFEF4444),
                     percentageIcon: Icons.trending_down,
                     isPositiveTrend: false,
@@ -411,7 +491,7 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.pie_chart_outline,
                     color: const Color(0xFFF59E0B),
                     route: '/budget-management',
-                    amount: _formatRupees(budgetState.totalRemaining),
+                    amount: _formatRupees(budgetState.totalBudget),
                     percentage: budgetState.totalOverspent > 0
                         ? 'Exceeded'
                         : '${budgetState.overallUsagePercentage.toStringAsFixed(0)}% Used',
@@ -428,7 +508,7 @@ class DashboardScreen extends ConsumerWidget {
                   _buildPillarTile(
                     context,
                     title: '4. BANK FEEDS',
-                    subtitle: 'Linked Accounts',
+                    subtitle: '${bankState.bankAccounts.length} Linked Accounts',
                     icon: Icons.account_balance,
                     color: const Color(0xFF0284C7),
                     route: '/bank-aggregation',
@@ -437,83 +517,89 @@ class DashboardScreen extends ConsumerWidget {
                     badgeColor: const Color(0xFF0284C7),
                     percentageIcon: Icons.account_balance_wallet,
                   ),
-                  _buildPillarTile(
-                    context,
-                    title: '5. PROTECT',
-                    subtitle: 'Emergency & Insurance',
-                    icon: Icons.security,
-                    color: const Color(0xFF0066FF),
-                    route: '/protect',
-                    amount: _formatRupees(
-                      protectState.emergencyFund.currentAmount,
+                  if (AppFeatureFlags.showProtectModule)
+                    _buildPillarTile(
+                      context,
+                      title: '5. PROTECT',
+                      subtitle: 'Emergency & Insurance',
+                      icon: Icons.security,
+                      color: const Color(0xFF0066FF),
+                      route: '/protect',
+                      amount: _formatRupees(
+                        protectState.emergencyFund.currentAmount,
+                      ),
+                      percentage:
+                          '${protectState.emergencyFund.readinessScore.toStringAsFixed(0)}%',
+                      badgeColor: const Color(0xFF0066FF),
+                      percentageIcon: Icons.shield,
                     ),
-                    percentage:
-                        '${protectState.emergencyFund.readinessScore.toStringAsFixed(0)}%',
-                    badgeColor: const Color(0xFF0066FF),
-                    percentageIcon: Icons.shield,
-                  ),
-                  _buildPillarTile(
-                    context,
-                    title: '6. BORROW',
-                    subtitle: 'Debt & Repayment',
-                    icon: Icons.credit_score,
-                    color: const Color(0xFFF59E0B),
-                    route: '/borrow',
-                    amount: _formatRupees(borrowState.totalDebtOutstanding),
-                    percentage: '$borrowDti%',
-                    badgeColor: const Color(0xFFF59E0B),
-                    percentageIcon: Icons.percent,
-                  ),
-                  _buildPillarTile(
-                    context,
-                    title: '7. GROW',
-                    subtitle: 'Investments & Wealth',
-                    icon: Icons.auto_graph,
-                    color: const Color(0xFF8B5CF6),
-                    route: '/grow',
-                    amount: _formatRupees(growState.portfolioValue),
-                    percentage: '+${growState.xirr.toStringAsFixed(1)}%',
-                    badgeColor: const Color(0xFF8B5CF6),
-                    percentageIcon: Icons.auto_graph,
-                  ),
-                  _buildPillarTile(
-                    context,
-                    title: '8. PLAN',
-                    subtitle: 'Goals & FIRE Calculator',
-                    icon: Icons.flag,
-                    color: const Color(0xFFEC4899),
-                    route: '/plan',
-                    amount: _formatRupees(planGoalsTotal),
-                    percentage:
-                        '${planState.retirementPlan.fireReadinessScore.toStringAsFixed(0)}%',
-                    badgeColor: const Color(0xFFEC4899),
-                    percentageIcon: Icons.flag,
-                  ),
-                  _buildPillarTile(
-                    context,
-                    title: '9. COMPLY',
-                    subtitle: 'Tax & ITR Preparation',
-                    icon: Icons.assignment_turned_in,
-                    color: const Color(0xFF0A2540),
-                    route: '/comply',
-                    amount: _formatRupees(complyDeductions),
-                    percentage:
-                        '${complyState.itrReadinessScore.toStringAsFixed(0)}%',
-                    badgeColor: const Color(0xFF0A2540),
-                    percentageIcon: Icons.verified,
-                  ),
-                  _buildPillarTile(
-                    context,
-                    title: 'ADVISORS',
-                    subtitle: 'CA & Expert Network',
-                    icon: Icons.handshake,
-                    color: const Color(0xFF0284C7),
-                    route: '/advisor-ecosystem',
-                    amount: '50+ Experts',
-                    percentage: '98.5%',
-                    badgeColor: const Color(0xFF0284C7),
-                    percentageIcon: Icons.star,
-                  ),
+                  if (AppFeatureFlags.showBorrowModule)
+                    _buildPillarTile(
+                      context,
+                      title: '6. BORROW',
+                      subtitle: 'Debt & Repayment',
+                      icon: Icons.credit_score,
+                      color: const Color(0xFFF59E0B),
+                      route: '/borrow',
+                      amount: _formatRupees(borrowState.totalDebtOutstanding),
+                      percentage: '$borrowDti%',
+                      badgeColor: const Color(0xFFF59E0B),
+                      percentageIcon: Icons.percent,
+                    ),
+                  if (AppFeatureFlags.showGrowModule)
+                    _buildPillarTile(
+                      context,
+                      title: '7. GROW',
+                      subtitle: 'Investments & Wealth',
+                      icon: Icons.auto_graph,
+                      color: const Color(0xFF8B5CF6),
+                      route: '/grow',
+                      amount: _formatRupees(growState.portfolioValue),
+                      percentage: '+${growState.xirr.toStringAsFixed(1)}%',
+                      badgeColor: const Color(0xFF8B5CF6),
+                      percentageIcon: Icons.auto_graph,
+                    ),
+                  if (AppFeatureFlags.showPlanModule)
+                    _buildPillarTile(
+                      context,
+                      title: '8. PLAN',
+                      subtitle: 'Goals & FIRE Calculator',
+                      icon: Icons.flag,
+                      color: const Color(0xFFEC4899),
+                      route: '/plan',
+                      amount: _formatRupees(planGoalsTotal),
+                      percentage:
+                          '${planState.retirementPlan.fireReadinessScore.toStringAsFixed(0)}%',
+                      badgeColor: const Color(0xFFEC4899),
+                      percentageIcon: Icons.flag,
+                    ),
+                  if (AppFeatureFlags.showComplyModule)
+                    _buildPillarTile(
+                      context,
+                      title: '9. COMPLY',
+                      subtitle: 'Tax & ITR Preparation',
+                      icon: Icons.assignment_turned_in,
+                      color: const Color(0xFF0A2540),
+                      route: '/comply',
+                      amount: _formatRupees(complyDeductions),
+                      percentage:
+                          '${complyState.itrReadinessScore.toStringAsFixed(0)}%',
+                      badgeColor: const Color(0xFF0A2540),
+                      percentageIcon: Icons.verified,
+                    ),
+                  if (AppFeatureFlags.showAdvisorsModule)
+                    _buildPillarTile(
+                      context,
+                      title: 'ADVISORS',
+                      subtitle: 'CA & Expert Network',
+                      icon: Icons.handshake,
+                      color: const Color(0xFF0284C7),
+                      route: '/advisor-ecosystem',
+                      amount: '50+ Experts',
+                      percentage: '98.5%',
+                      badgeColor: const Color(0xFF0284C7),
+                      percentageIcon: Icons.star,
+                    ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -567,13 +653,14 @@ class DashboardScreen extends ConsumerWidget {
                           '/document-vault',
                           const Color(0xFF8B5CF6),
                         ),
-                        _buildNavModule(
-                          context,
-                          Icons.help_outline,
-                          'Help & Support',
-                          '/help-support',
-                          const Color(0xFF0284C7),
-                        ),
+                        if (AppFeatureFlags.showHelpSupportModule)
+                          _buildNavModule(
+                            context,
+                            Icons.help_outline,
+                            'Help & Support',
+                            '/help-support',
+                            const Color(0xFF0284C7),
+                          ),
                       ],
                     ),
                   ],
@@ -583,6 +670,7 @@ class DashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -715,12 +803,16 @@ class DashboardScreen extends ConsumerWidget {
                     color: effectiveBadgeColor,
                   ),
                   const SizedBox(width: 3),
-                  Text(
-                    percentage,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: effectiveBadgeColor,
+                  Flexible(
+                    child: Text(
+                      percentage,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: effectiveBadgeColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

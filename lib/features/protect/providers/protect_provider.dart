@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
 import '../domain/protect_models.dart';
 
 class ProtectState {
@@ -24,46 +25,31 @@ class ProtectState {
 class ProtectNotifier extends Notifier<ProtectState> {
   @override
   ProtectState build() {
+    final bankState = ref.watch(bankAggregationProvider);
+    final policies = bankState.insurancePolicies;
+
+    final mappedPolicies = policies.map((p) => InsurancePolicy(
+      id: p.id,
+      title: '${p.provider} (${p.policyType})',
+      category: p.policyType.contains('Health') ? 'Health' : (p.policyType.contains('Life') ? 'Life' : 'General'),
+      coverageAmount: p.coverageAmount,
+      recommendedCoverage: p.coverageAmount * 1.25,
+      premiumAmount: p.premiumAmount,
+      expiryDate: DateTime.now().add(const Duration(days: 365)),
+      status: 'Active',
+    )).toList();
+
+    final liquidReserves = bankState.totalLiquidCash + bankState.totalBankCash;
+
     return ProtectState(
       emergencyFund: EmergencyFund(
-        currentAmount: 425000,
-        targetAmount: 500000,
-        monthlyEssentialExpenses: 50000,
-        runwayMonths: 8.5,
-        readinessScore: 85.0,
+        currentAmount: liquidReserves,
+        targetAmount: liquidReserves > 0 ? liquidReserves * 1.5 : 0.0,
+        monthlyEssentialExpenses: 0,
+        runwayMonths: liquidReserves > 0 ? (liquidReserves / 30000) : 0.0,
+        readinessScore: liquidReserves > 0 ? 80.0 : 0.0,
       ),
-      policies: [
-        InsurancePolicy(
-          id: 'p1',
-          title: 'HDFC ERGO Optima Secure',
-          category: 'Health',
-          coverageAmount: 1000000,
-          recommendedCoverage: 2000000,
-          premiumAmount: 18500,
-          expiryDate: DateTime.now().add(const Duration(days: 145)),
-          status: 'Active (Gap ₹10L)',
-        ),
-        InsurancePolicy(
-          id: 'p2',
-          title: 'Max Life Smart Term Plan',
-          category: 'Life',
-          coverageAmount: 15000000,
-          recommendedCoverage: 20000000,
-          premiumAmount: 24000,
-          expiryDate: DateTime.now().add(const Duration(days: 88)),
-          status: 'Active (Optimal)',
-        ),
-        InsurancePolicy(
-          id: 'p3',
-          title: 'Tata AIG Comprehensive Car',
-          category: 'Vehicle',
-          coverageAmount: 650000,
-          recommendedCoverage: 650000,
-          premiumAmount: 12500,
-          expiryDate: DateTime.now().add(const Duration(days: 22)),
-          status: 'Renewal Due Soon',
-        ),
-      ],
+      policies: mappedPolicies,
     );
   }
 }

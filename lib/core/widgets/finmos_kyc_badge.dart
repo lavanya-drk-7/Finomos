@@ -61,12 +61,15 @@ class FinmosKycBadge extends ConsumerWidget {
         children: [
           Icon(icon, size: isCompact ? 12 : 14, color: color),
           const SizedBox(width: 4),
-          Text(
-            displayText,
-            style: TextStyle(
-              fontSize: isCompact ? 10 : 11,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Flexible(
+            child: Text(
+              displayText,
+              style: TextStyle(
+                fontSize: isCompact ? 10 : 11,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (isInteractive && !isCompact) ...[

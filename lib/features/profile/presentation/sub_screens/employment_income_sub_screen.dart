@@ -176,7 +176,10 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
     super.dispose();
   }
 
-  void _saveDetails() {
+  bool _isSaving = false;
+
+  Future<void> _saveDetails() async {
+    setState(() => _isSaving = true);
     final current = ref.read(profileProvider).employmentInfo;
     final updated = current.copyWith(
       employmentType: selectedEmpType,
@@ -189,14 +192,21 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
       monthlyIncome: monthlyIncomeCtrl.text.trim(),
     );
 
-    ref.read(profileProvider.notifier).updateEmploymentInfo(updated);
+    final success =
+        await ref.read(profileProvider.notifier).updateEmploymentInfo(updated);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Employment & income details updated!'),
-        backgroundColor: Color(0xFF10B981),
-      ),
-    );
+    if (mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success
+              ? 'Employment & income details updated & synced!'
+              : 'Details saved locally (sync pending)'),
+          backgroundColor:
+              success ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+        ),
+      );
+    }
   }
 
   @override
@@ -215,7 +225,7 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -228,18 +238,31 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Color(0xFF0066FF)),
-            onPressed: _saveDetails,
-          ),
+          _isSaving
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0066FF)),
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.check, color: Color(0xFF0066FF)),
+                  onPressed: _saveDetails,
+                ),
           const SizedBox(width: 8),
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        physics: const BouncingScrollPhysics(),
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -267,6 +290,7 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedEmpType,
                   decoration: const InputDecoration(
                     labelText: 'Employment Type',
@@ -274,7 +298,7 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
                     border: OutlineInputBorder(),
                   ),
                   items: empTypes
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: (val) {
                     if (val != null) {
@@ -328,6 +352,7 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   value: selectedSource,
                   decoration: const InputDecoration(
                     labelText: 'Primary Source of Income',
@@ -335,7 +360,7 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
                     border: OutlineInputBorder(),
                   ),
                   items: config.incomeSources
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => selectedSource = val);
@@ -384,7 +409,8 @@ class _EmploymentIncomeSubScreenState extends ConsumerState<EmploymentIncomeSubS
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 

@@ -8,6 +8,10 @@ import '../../../core/widgets/finmos_kyc_badge.dart';
 import '../../../core/widgets/bank_logo.dart';
 import '../domain/profile_models.dart';
 import '../providers/profile_provider.dart';
+import '../../bank_aggregation/providers/bank_aggregation_provider.dart';
+import '../../income_tracking/providers/income_provider.dart';
+import '../../expense_tracking/providers/expense_provider.dart';
+import '../../../core/constants/feature_flags.dart';
 
 /// Full Profile Dashboard for Finomos - Personal Financial Operating System (PFOS)
 /// and AI Personal CFO Platform.
@@ -426,6 +430,9 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
 
   void _showEditAddressDialog(BuildContext context, AddressInfo info) {
     final resCtrl = TextEditingController(text: info.residentialAddress);
+    final cityCtrl = TextEditingController(text: info.city);
+    final stateCtrl = TextEditingController(text: info.state);
+    final pinCtrl = TextEditingController(text: info.pinCode);
     final permCtrl = TextEditingController(text: info.permanentAddress);
 
     showModalBottomSheet(
@@ -462,6 +469,30 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                   decoration: const InputDecoration(labelText: 'Residential Address', prefixIcon: Icon(Icons.home_outlined)),
                 ),
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: cityCtrl,
+                        decoration: const InputDecoration(labelText: 'City', prefixIcon: Icon(Icons.location_city_outlined)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: pinCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'PIN Code', prefixIcon: Icon(Icons.pin_drop_outlined)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: stateCtrl,
+                  decoration: const InputDecoration(labelText: 'State', prefixIcon: Icon(Icons.map_outlined)),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: permCtrl,
                   maxLines: 2,
@@ -476,16 +507,18 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () {
-                      ref.read(profileProvider.notifier).updateAddressInfo(
-                            info.copyWith(
-                              residentialAddress: resCtrl.text.trim(),
-                              permanentAddress: permCtrl.text.trim(),
-                            ),
-                          );
+                    onPressed: () async {
+                      final updated = info.copyWith(
+                        residentialAddress: resCtrl.text.trim(),
+                        city: cityCtrl.text.trim().isNotEmpty ? cityCtrl.text.trim() : info.city,
+                        state: stateCtrl.text.trim().isNotEmpty ? stateCtrl.text.trim() : info.state,
+                        pinCode: pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : info.pinCode,
+                        permanentAddress: permCtrl.text.trim(),
+                      );
+                      ref.read(profileProvider.notifier).updateAddressInfo(updated);
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Address details updated!'), backgroundColor: Color(0xFF10B981)),
+                        const SnackBar(content: Text('Address details updated successfully!'), backgroundColor: Color(0xFF10B981)),
                       );
                     },
                     child: const Text('Save Address', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -520,7 +553,7 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -534,8 +567,10 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
         ],
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +580,7 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             const SizedBox(height: 16),
 
             // Hero Executive Digital Twin & Profile Card
-            _buildExecutiveHeroCard(context, personal, employment),
+            _buildExecutiveHeroCard(context, personal, employment, profileData),
             const SizedBox(height: 16),
 
             // Horizontal Filter Navigation Pills
@@ -592,6 +627,7 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             _buildPlatformGovernanceFooter(context),
             const SizedBox(height: 24),
           ],
+        ),
         ),
       ),
     );
@@ -651,7 +687,25 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
     );
   }
 
-  Widget _buildExecutiveHeroCard(BuildContext context, PersonalInfo personal, EmploymentIncomeInfo employment) {
+  Widget _buildExecutiveHeroCard(BuildContext context, PersonalInfo personal, EmploymentIncomeInfo employment, ProfileStateData profileData) {
+    final bankAccounts = ref.watch(bankAggregationProvider).bankAccounts;
+    final totalBal = bankAccounts.fold<double>(0.0, (sum, a) => sum + a.availableBalance);
+    final netWorthDisplay = totalBal > 0
+        ? (totalBal >= 100000 ? '₹ ${(totalBal / 100000).toStringAsFixed(1)} Lakh' : '₹ ${totalBal.toStringAsFixed(0)}')
+        : (employment.annualIncome.isNotEmpty ? employment.annualIncome : '₹ 0');
+    final monthlyExpense = ref.watch(expenseProvider).totalExpenses;
+    final runwayDisplay = (monthlyExpense > 0 && totalBal > 0)
+        ? '${(totalBal / monthlyExpense).toStringAsFixed(1)} Months'
+        : '0.0 Months';
+    final goalsDisplay = '${profileData.householdStructure.familyGoalsCount} Linked';
+
+    final displayName = personal.fullName.isNotEmpty
+        ? personal.fullName
+        : (personal.email.isNotEmpty ? personal.email.split('@').first : 'Finomos User');
+    final displayContact = personal.email.isNotEmpty
+        ? personal.email
+        : (personal.mobileNumber.isNotEmpty ? personal.mobileNumber : 'Finomos Platform User');
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -682,12 +736,12 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      personal.fullName,
+                      displayName,
                       style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      personal.email,
+                      displayContact,
                       style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 8),
@@ -704,7 +758,7 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                             border: Border.all(color: const Color(0xFFCBD5E1)),
                           ),
                           child: Text(
-                            'PAN: ${personal.panNumber}',
+                            personal.panNumber.isNotEmpty ? 'PAN: ${personal.panNumber}' : 'PAN: Not Linked',
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
                           ),
                         ),
@@ -715,7 +769,7 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            employment.employmentType,
+                            employment.employmentType.isNotEmpty ? employment.employmentType : 'Employment: Unset',
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0066FF)),
                           ),
                         ),
@@ -746,52 +800,51 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const Icon(Icons.psychology_rounded, color: Color(0xFF38BDF8), size: 20),
+                    const SizedBox(width: 8),
                     const Expanded(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.psychology_rounded, color: Color(0xFF38BDF8), size: 20),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'AI Financial Health Score',
-                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  'Multi-Pillar Readiness Index',
-                                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
+                          Text(
+                            'AI Financial Health Score',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Multi-Pillar Readiness Index',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.22),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF10B981)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle, size: 12, color: Color(0xFF34D399)),
-                          SizedBox(width: 4),
-                          Text(
-                            '88 / 100 • Excellent',
-                            style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 10.5),
-                          ),
-                        ],
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.22),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF10B981)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 12, color: Color(0xFF34D399)),
+                            SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                '88 / 100 • Excellent',
+                                style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 10.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -854,9 +907,9 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
           // Key Metrics Grid
           Row(
             children: [
-              _buildMiniMetric(Icons.account_balance_wallet_outlined, 'Est. Net Worth', '₹ 48.5 Lakh'),
-              _buildMiniMetric(Icons.savings_outlined, 'Emergency Runway', '6.2 Months'),
-              _buildMiniMetric(Icons.family_restroom_outlined, 'Active Goals', '4 Linked'),
+              _buildMiniMetric(Icons.account_balance_wallet_outlined, 'Est. Net Worth', netWorthDisplay),
+              _buildMiniMetric(Icons.savings_outlined, 'Emergency Runway', runwayDisplay),
+              _buildMiniMetric(Icons.family_restroom_outlined, 'Active Goals', goalsDisplay),
             ],
           ),
         ],
@@ -961,29 +1014,29 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
         children: [
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Full Name', personal.fullName)),
-              Expanded(child: _buildInfoRow('Date of Birth', personal.dob)),
+              Expanded(child: _buildInfoRow('Full Name', personal.fullName.isNotEmpty ? personal.fullName : 'Not Specified')),
+              Expanded(child: _buildInfoRow('Date of Birth', personal.dob.isNotEmpty ? personal.dob : 'Not Specified')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Gender', personal.gender)),
-              Expanded(child: _buildInfoRow('Marital Status', personal.maritalStatus)),
+              Expanded(child: _buildInfoRow('Gender', personal.gender.isNotEmpty ? personal.gender : 'Not Specified')),
+              Expanded(child: _buildInfoRow('Marital Status', personal.maritalStatus.isNotEmpty ? personal.maritalStatus : 'Not Specified')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('PAN Number', personal.panNumber)),
-              Expanded(child: _buildInfoRow('Aadhaar (Masked)', personal.aadhaarNumber)),
+              Expanded(child: _buildInfoRow('PAN Number', personal.panNumber.isNotEmpty ? personal.panNumber : 'Not Linked')),
+              Expanded(child: _buildInfoRow('Aadhaar (Masked)', personal.aadhaarNumber.isNotEmpty ? personal.aadhaarNumber : 'Not Linked')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Nationality', personal.nationality)),
-              Expanded(child: _buildInfoRow('Regulatory Status', 'PAN Linked • Aadhaar KYC Verified')),
+              Expanded(child: _buildInfoRow('Nationality', personal.nationality.isNotEmpty ? personal.nationality : 'Indian')),
+              Expanded(child: _buildInfoRow('Regulatory Status', personal.panNumber.isNotEmpty ? 'PAN Linked • Verified' : 'KYC Verification Pending')),
             ],
           ),
         ],
@@ -1002,29 +1055,29 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
         children: [
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Occupation / Type', employment.employmentType)),
-              Expanded(child: _buildInfoRow('Designation', employment.designation)),
+              Expanded(child: _buildInfoRow('Occupation / Type', employment.employmentType.isNotEmpty ? employment.employmentType : 'Unset')),
+              Expanded(child: _buildInfoRow('Designation', employment.designation.isNotEmpty ? employment.designation : 'Not Specified')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Company / Employer', employment.companyName)),
-              Expanded(child: _buildInfoRow('Work Experience', employment.workExperience)),
+              Expanded(child: _buildInfoRow('Company / Employer', employment.companyName.isNotEmpty ? employment.companyName : 'Not Specified')),
+              Expanded(child: _buildInfoRow('Work Experience', employment.workExperience.isNotEmpty ? employment.workExperience : 'Not Specified')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Income Stream Type', employment.sourceOfIncome)),
-              Expanded(child: _buildInfoRow('Annual CTC / Income', employment.annualIncome)),
+              Expanded(child: _buildInfoRow('Income Stream Type', employment.sourceOfIncome.isNotEmpty ? employment.sourceOfIncome : 'Salary')),
+              Expanded(child: _buildInfoRow('Annual CTC / Income', employment.annualIncome.isNotEmpty ? employment.annualIncome : 'Not Specified')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInfoRow('Monthly Take-Home', employment.monthlyIncome)),
-              Expanded(child: _buildInfoRow('Income Stability', '94% (Stable • Salary Credit)')),
+              Expanded(child: _buildInfoRow('Monthly Take-Home', employment.monthlyIncome.isNotEmpty ? employment.monthlyIncome : 'Not Specified')),
+              Expanded(child: _buildInfoRow('Income Stability', employment.annualIncome.isNotEmpty ? 'Active' : 'Unconfigured')),
             ],
           ),
         ],
@@ -1045,10 +1098,14 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Household Members & Dependents',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)),
+              const Expanded(
+                child: Text(
+                  'Household Members & Dependents',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () => _showAddFamilyMemberDialog(context),
                 icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF0066FF)),
@@ -1058,8 +1115,18 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             ],
           ),
           const SizedBox(height: 8),
-          Column(
-            children: profileData.familyMembers.map((member) {
+          if (profileData.familyMembers.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              alignment: Alignment.center,
+              child: const Text(
+                'No family members added yet. Tap "Add Member" to add.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            )
+          else
+            Column(
+              children: profileData.familyMembers.map((member) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1140,13 +1207,16 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Joint Family Finances', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0A2540))),
-                  Text('Consolidates family income & cash flow in AI CFO', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
-                ],
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Joint Family Finances', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+                    Text('Consolidates family income & cash flow in AI CFO', style: TextStyle(fontSize: 10, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Switch(
                 value: profileData.householdStructure.jointFinancesEnabled,
                 activeThumbColor: const Color(0xFF0066FF),
@@ -1233,9 +1303,9 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoRow('Residential Address', address.residentialAddress),
+              _buildInfoRow('Residential Address', address.residentialAddress.isNotEmpty ? address.residentialAddress : 'Not Added'),
               const SizedBox(height: 12),
-              _buildInfoRow('Permanent Address', address.permanentAddress),
+              _buildInfoRow('Permanent Address', address.permanentAddress.isNotEmpty ? address.permanentAddress : 'Not Added'),
             ],
           ),
         ),
@@ -1248,6 +1318,11 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
   // --------------------------------------------------------------------------
 
   Widget _buildSevenPillarsExecutiveSection(BuildContext context) {
+    final incomeSum = ref.watch(incomeProvider).totalMonthlyIncome;
+    final expenseSum = ref.watch(expenseProvider).totalExpenses;
+    final bankAccounts = ref.watch(bankAggregationProvider).bankAccounts;
+    final totalBal = bankAccounts.fold<double>(0.0, (sum, a) => sum + a.availableBalance);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1303,9 +1378,9 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             name: 'EARN',
             subtitle: 'Income Management (Salaried + Freelance + Passive)',
             metricLabel: 'Monthly Inflow',
-            metricValue: '₹ 80,000 / mo',
-            status: 'Stable (94/100)',
-            statusColor: const Color(0xFF10B981),
+            metricValue: incomeSum > 0 ? '₹ ${incomeSum.toStringAsFixed(0)} / mo' : 'Track inflows in Income',
+            status: incomeSum > 0 ? 'Active' : 'Setup Required',
+            statusColor: incomeSum > 0 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
             icon: Icons.trending_up_rounded,
           ),
 
@@ -1314,72 +1389,77 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             number: '2',
             name: 'SPEND',
             subtitle: 'Expenses, Subscriptions & Prioritization Matrix',
-            metricLabel: 'Needs vs Wants',
-            metricValue: '58% Needs • 28% Wants',
-            status: 'P1 Ring-Fenced',
+            metricLabel: 'Tracked Outflow',
+            metricValue: expenseSum > 0 ? '₹ ${expenseSum.toStringAsFixed(0)} / mo' : 'Track outlays in Expenses',
+            status: expenseSum > 0 ? 'Active' : 'Setup Required',
             statusColor: const Color(0xFF0066FF),
             icon: Icons.shopping_bag_outlined,
           ),
 
           // Pillar 3: PROTECT
-          _buildPillarTile(
-            number: '3',
-            name: 'PROTECT',
-            subtitle: 'Emergency Reserve & Insurance Gap Analysis',
-            metricLabel: 'Emergency Runway',
-            metricValue: '6.2 Months (₹3,00,000)',
-            status: '0 Critical Gaps',
-            statusColor: const Color(0xFF10B981),
-            icon: Icons.health_and_safety_outlined,
-          ),
+          if (AppFeatureFlags.showProtectModule)
+            _buildPillarTile(
+              number: '3',
+              name: 'PROTECT',
+              subtitle: 'Emergency Reserve & Insurance Gap Analysis',
+              metricLabel: 'Emergency Reserve',
+              metricValue: totalBal > 0 ? '₹ ${totalBal.toStringAsFixed(0)}' : '₹ 0 Allocated',
+              status: totalBal > 0 ? 'Protected' : 'Pending',
+              statusColor: const Color(0xFF10B981),
+              icon: Icons.health_and_safety_outlined,
+            ),
 
           // Pillar 4: BORROW
-          _buildPillarTile(
-            number: '4',
-            name: 'BORROW',
-            subtitle: 'Debt Management & Avalanche Repayment',
-            metricLabel: 'Debt-to-Income',
-            metricValue: '22% (Safe < 40%)',
-            status: '₹23K EMI • On Time',
-            statusColor: const Color(0xFF0284C7),
-            icon: Icons.credit_score_outlined,
-          ),
+          if (AppFeatureFlags.showBorrowModule)
+            _buildPillarTile(
+              number: '4',
+              name: 'BORROW',
+              subtitle: 'Debt Management & Avalanche Repayment',
+              metricLabel: 'Debt Status',
+              metricValue: 'No Active Alerts',
+              status: 'On Time',
+              statusColor: const Color(0xFF0284C7),
+              icon: Icons.credit_score_outlined,
+            ),
 
           // Pillar 5: GROW
-          _buildPillarTile(
-            number: '5',
-            name: 'GROW',
-            subtitle: 'Investments, Mutual Funds & Net Worth Tracker',
-            metricLabel: 'Net Worth',
-            metricValue: '₹ 48.5 Lakh (15.4% XIRR)',
-            status: 'Balanced Allocation',
-            statusColor: const Color(0xFF8B5CF6),
-            icon: Icons.auto_graph_rounded,
-          ),
+          if (AppFeatureFlags.showGrowModule)
+            _buildPillarTile(
+              number: '5',
+              name: 'GROW',
+              subtitle: 'Investments, Mutual Funds & Net Worth Tracker',
+              metricLabel: 'Liquid Portfolio',
+              metricValue: totalBal > 0 ? '₹ ${totalBal.toStringAsFixed(0)}' : '₹ 0 Available',
+              status: totalBal > 0 ? 'Linked' : 'Not Connected',
+              statusColor: const Color(0xFF8B5CF6),
+              icon: Icons.auto_graph_rounded,
+            ),
 
           // Pillar 6: PLAN
-          _buildPillarTile(
-            number: '6',
-            name: 'PLAN',
-            subtitle: 'Goals, Retirement Corpus & FIRE Engine',
-            metricLabel: 'Target Corpus',
-            metricValue: '₹ 3.5 Cr (FIRE Year 2042)',
-            status: '74% On Track',
-            statusColor: const Color(0xFFF59E0B),
-            icon: Icons.flag_outlined,
-          ),
+          if (AppFeatureFlags.showPlanModule)
+            _buildPillarTile(
+              number: '6',
+              name: 'PLAN',
+              subtitle: 'Goals, Retirement Corpus & FIRE Engine',
+              metricLabel: 'Target Corpus',
+              metricValue: '₹ 3.5 Cr (FIRE Year 2042)',
+              status: '74% On Track',
+              statusColor: const Color(0xFFF59E0B),
+              icon: Icons.flag_outlined,
+            ),
 
           // Pillar 7: COMPLY
-          _buildPillarTile(
-            number: '7',
-            name: 'COMPLY',
-            subtitle: 'Tax Management & ITR Preparation Center',
-            metricLabel: 'Regime Choice',
-            metricValue: 'New Regime (Saves ₹25K)',
-            status: '96% ITR Ready',
-            statusColor: const Color(0xFF10B981),
-            icon: Icons.receipt_long_outlined,
-          ),
+          if (AppFeatureFlags.showComplyModule)
+            _buildPillarTile(
+              number: '7',
+              name: 'COMPLY',
+              subtitle: 'Tax Management & ITR Preparation Center',
+              metricLabel: 'Regime Choice',
+              metricValue: 'New Regime (Saves ₹25K)',
+              status: '96% ITR Ready',
+              statusColor: const Color(0xFF10B981),
+              icon: Icons.receipt_long_outlined,
+            ),
         ],
       ),
     );
@@ -1457,36 +1537,60 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
   // --------------------------------------------------------------------------
 
   Widget _buildAccountAggregationSection(BuildContext context) {
+    final bankState = ref.watch(bankAggregationProvider);
+    final bankAccounts = bankState.bankAccounts;
+    final creditCards = bankState.creditCards;
+    final upiAccounts = bankState.upiAccounts;
+
     return _buildSectionCard(
       title: 'Financial Account Aggregation',
       subtitle: 'Bank accounts, credit cards, UPI, loans & portfolios',
       badgeText: 'Module 2',
       child: Column(
         children: [
-          _buildLinkedAccountItem(
-            institution: 'HDFC Bank (Primary Savings)',
-            details: 'A/C: ••••••••4587 • Balance: ₹1,42,500',
-            icon: Icons.account_balance,
-            status: 'Connected',
-          ),
-          _buildLinkedAccountItem(
-            institution: 'ICICI Bank (Salary Account)',
-            details: 'A/C: ••••••••8921 • Balance: ₹85,200',
-            icon: Icons.account_balance,
-            status: 'Connected',
-          ),
-          _buildLinkedAccountItem(
-            institution: 'HDFC Regalia Credit Card',
-            details: 'Limit: ₹5,00,000 • Due: ₹18,200 (Due 15th)',
-            icon: Icons.credit_card,
-            status: 'Active',
-          ),
-          _buildLinkedAccountItem(
-            institution: 'UPI Handles (Google Pay & PhonePe)',
-            details: 'sireesha@okhdfcbank • sireesha@ybl',
-            icon: Icons.qr_code_2,
-            status: 'Mandates Active',
-          ),
+          if (bankAccounts.isEmpty && creditCards.isEmpty && upiAccounts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_outlined, color: Color(0xFF64748B), size: 20),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'No financial accounts connected yet.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/bank-aggregation'),
+                    child: const Text('Connect Bank'),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            for (final acc in bankAccounts)
+              _buildLinkedAccountItem(
+                institution: '${acc.bankName} (${acc.accountType})',
+                details: 'A/C: ${acc.maskedAccountNumber} • Balance: ₹${acc.availableBalance.toStringAsFixed(0)}',
+                icon: Icons.account_balance,
+                status: 'Connected',
+              ),
+            for (final card in creditCards)
+              _buildLinkedAccountItem(
+                institution: card.cardName,
+                details: 'Limit: ₹${card.creditLimit.toStringAsFixed(0)} • Due: ₹${card.outstandingBalance.toStringAsFixed(0)}',
+                icon: Icons.credit_card,
+                status: 'Active',
+              ),
+            for (final upi in upiAccounts)
+              _buildLinkedAccountItem(
+                institution: 'UPI (${upi.vpa})',
+                details: 'Bank: ${upi.bankName} • Status: ${upi.status}',
+                icon: Icons.qr_code_2,
+                status: 'Active',
+              ),
+          ],
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1688,13 +1792,16 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Two-Factor Authentication (2FA)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540))),
-                      Text('Extra layer of security using biometric / authenticator', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                    ],
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Two-Factor Authentication (2FA)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+                        Text('Extra layer of security using biometric / authenticator', style: TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Switch(
                     value: security.is2FAEnabled,
                     activeThumbColor: const Color(0xFF0066FF),
@@ -1815,9 +1922,12 @@ class _ProfileManagementScreenState extends ConsumerState<ProfileManagementScree
             children: [
               Icon(Icons.verified_user, color: Color(0xFF0066FF), size: 20),
               SizedBox(width: 8),
-              Text(
-                'Personal Financial Operating System Active',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)),
+              Expanded(
+                child: Text(
+                  'Personal Financial Operating System Active',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

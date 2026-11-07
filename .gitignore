@@ -46,3 +46,10 @@ app.*.map.json
 
 # Root screenshot dumps
 /*.png
+
+# Keystore & Android signing properties
+android/key.properties
+key.properties
+**/key.properties
+*.jks
+*.keystore

@@ -41,7 +41,7 @@ class _BorrowScreenState extends ConsumerState<BorrowScreen> with SingleTickerPr
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -117,7 +117,10 @@ class _BorrowScreenState extends ConsumerState<BorrowScreen> with SingleTickerPr
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total Outstanding Liabilities', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const Expanded(
+                    child: Text('Total Outstanding Liabilities', style: TextStyle(color: Colors.white70, fontSize: 13), overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -160,7 +163,10 @@ class _BorrowScreenState extends ConsumerState<BorrowScreen> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(loan.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0A2540))),
+                    Expanded(
+                      child: Text(loan.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -175,19 +181,24 @@ class _BorrowScreenState extends ConsumerState<BorrowScreen> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Outstanding Balance', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        Text('₹${(loan.principalOutstanding / 100000).toStringAsFixed(2)} L', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Outstanding Balance', style: TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                          Text('₹${(loan.principalOutstanding / 100000).toStringAsFixed(2)} L', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('Monthly EMI', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        Text('₹${loan.monthlyEmi.toInt()}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                      ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('Monthly EMI', style: TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                          Text('₹${loan.monthlyEmi.toInt()}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF10B981)), overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
                   ],
                 ),

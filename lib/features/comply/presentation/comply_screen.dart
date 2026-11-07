@@ -120,7 +120,10 @@ class _ComplyScreenState extends ConsumerState<ComplyScreen> with SingleTickerPr
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Optimal Tax Regime Recommendation', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  const Expanded(
+                    child: Text('Optimal Tax Regime Recommendation', style: TextStyle(color: Colors.white70, fontSize: 12), overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
@@ -153,7 +156,8 @@ class _ComplyScreenState extends ConsumerState<ComplyScreen> with SingleTickerPr
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(d.section, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0A2540))),
+                    Expanded(child: Text(d.section, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 8),
                     Text('₹${d.utilized.toInt()} / ₹${d.limit.toInt()}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981))),
                   ],
                 ),

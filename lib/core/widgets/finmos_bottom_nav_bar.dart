@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../constants/feature_flags.dart';
 
 class FinmosBottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -13,18 +14,20 @@ class FinmosBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final validIndex = currentIndex.clamp(0, 3);
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 10,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
       child: BottomNavigationBar(
         currentIndex: validIndex,
         selectedItemColor: const Color(0xFF0066FF),
@@ -43,35 +46,59 @@ class FinmosBottomNavBar extends StatelessWidget {
               context.go('/cfo-ai');
               break;
             case 2:
-              context.go('/grow');
+              if (AppFeatureFlags.showGrowModule) {
+                context.go('/grow');
+              } else {
+                context.go('/budget-management');
+              }
               break;
             case 3:
-              context.go('/comply');
+              if (AppFeatureFlags.showComplyModule) {
+                context.go('/comply');
+              } else {
+                context.go('/document-vault');
+              }
               break;
           }
         },
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_rounded),
             activeIcon: Icon(Icons.home_rounded, color: Color(0xFF0066FF)),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.psychology_outlined),
             activeIcon: Icon(Icons.psychology, color: Color(0xFF0066FF)),
             label: 'AI CFO',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_graph_outlined),
-            activeIcon: Icon(Icons.auto_graph, color: Color(0xFF0066FF)),
-            label: 'Grow',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_turned_in_outlined),
-            activeIcon: Icon(Icons.assignment_turned_in, color: Color(0xFF0066FF)),
-            label: 'Comply',
-          ),
+          if (AppFeatureFlags.showGrowModule)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.auto_graph_outlined),
+              activeIcon: Icon(Icons.auto_graph, color: Color(0xFF0066FF)),
+              label: 'Grow',
+            )
+          else
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.pie_chart_outline),
+              activeIcon: Icon(Icons.pie_chart, color: Color(0xFF0066FF)),
+              label: 'Budget',
+            ),
+          if (AppFeatureFlags.showComplyModule)
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_turned_in_outlined),
+              activeIcon:
+                  Icon(Icons.assignment_turned_in, color: Color(0xFF0066FF)),
+              label: 'Comply',
+            )
+          else
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.folder_open_outlined),
+              activeIcon: Icon(Icons.folder_open, color: Color(0xFF0066FF)),
+              label: 'Vault',
+            ),
         ],
+      ),
       ),
     );
   }

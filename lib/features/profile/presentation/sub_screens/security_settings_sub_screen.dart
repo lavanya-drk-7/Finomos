@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/finmos_bottom_nav_bar.dart';
 import '../../providers/profile_provider.dart';
+import '../../../auth_kyc/providers/auth_kyc_provider.dart';
+import '../../../../core/utils/phone_utils.dart';
 
 class SecuritySettingsSubScreen extends ConsumerStatefulWidget {
   const SecuritySettingsSubScreen({super.key});
@@ -31,11 +33,15 @@ class _SecuritySettingsSubScreenState
   bool biometricLock = true;
   bool loginActivityAlerts = true;
 
-  static const List<String> twoFaMethodsList = [
-    'SMS OTP (+91 98765 43210)',
-    'Authenticator App (Google/Authy)',
-    'Email Verification OTP',
-  ];
+  List<String> get twoFaMethodsList {
+    final phone = ref.watch(authKycProvider).user.mobileNumber;
+    final displayPhone = PhoneUtils.formatWithCountryCode(phone);
+    return [
+      'SMS OTP (${displayPhone.isNotEmpty ? displayPhone : "+91 Mobile"})',
+      'Authenticator App (Google/Authy)',
+      'Email Verification OTP',
+    ];
+  }
 
   static const List<String> questionsList1 = [
     'What was the name of your first pet?',
@@ -49,7 +55,9 @@ class _SecuritySettingsSubScreenState
     'What high school did you attend?',
   ];
 
-  String selected2faMethod = twoFaMethodsList.first;
+  String? _selected2faMethod;
+  String get selected2faMethod => _selected2faMethod ?? twoFaMethodsList.first;
+  set selected2faMethod(String val) => _selected2faMethod = val;
   String selectedQuestion1 = questionsList1.first;
   String selectedQuestion2 = questionsList2.first;
 
@@ -286,13 +294,19 @@ class _SecuritySettingsSubScreenState
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    '+91 98765 43210',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0066FF),
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final phone = ref.watch(authKycProvider).user.mobileNumber;
+                      final displayPhone = PhoneUtils.formatWithCountryCode(phone);
+                      return Text(
+                        displayPhone.isNotEmpty ? displayPhone : '+91 Registered Mobile',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0066FF),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -335,9 +349,9 @@ class _SecuritySettingsSubScreenState
                       GestureDetector(
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'New 6-digit OTP code sent to +91 98765 43210!',
+                                () { final p = PhoneUtils.formatWithCountryCode(ref.read(authKycProvider).user.mobileNumber); return 'New 6-digit OTP code sent to ${p.isNotEmpty ? p : "your registered mobile"}!'; }(),
                               ),
                               backgroundColor: Color(0xFF0066FF),
                             ),
@@ -378,7 +392,7 @@ class _SecuritySettingsSubScreenState
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (deleteOtpCtrl.text.trim().length != 6) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -391,18 +405,19 @@ class _SecuritySettingsSubScreenState
                               return;
                             }
                             Navigator.pop(modalCtx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Account deletion request verified! Account marked for permanent deletion.',
+                            final res = await ref.read(profileProvider.notifier).deleteAccount();
+                            final msg = res?['message'] ??
+                                'Account deactivation and DPDP Act 2023 right to erasure processed successfully. User session terminated.';
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(msg),
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  duration: const Duration(seconds: 4),
                                 ),
-                                backgroundColor: Color(0xFFEF4444),
-                              ),
-                            );
-                            if (context.canPop()) {
-                              context.pop();
-                            } else {
-                              context.go('/profile');
+                              );
+                              ref.read(authKycProvider.notifier).reset();
+                              context.go('/login');
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -564,7 +579,7 @@ class _SecuritySettingsSubScreenState
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/profile-management');
             }
           },
         ),
@@ -578,7 +593,9 @@ class _SecuritySettingsSubScreenState
         ),
       ),
       bottomNavigationBar: const FinmosBottomNavBar(currentIndex: 4),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(profileProvider.notifier).loadProfile(force: true),
+        child: ListView(
         padding: const EdgeInsets.all(16),
         physics: const BouncingScrollPhysics(),
         children: [
@@ -1108,9 +1125,15 @@ class _SecuritySettingsSubScreenState
                       ),
                     ),
                     Switch(
-                      value: biometricLock,
+                      value: security.biometricEnabled,
                       activeColor: const Color(0xFF0066FF),
-                      onChanged: (val) => setState(() => biometricLock = val),
+                      onChanged: (val) {
+                        setState(() => biometricLock = val);
+                        ref.read(profileProvider.notifier).updateSecuritySettings(
+                              twoFactorEnabled: security.is2FAEnabled,
+                              biometricEnabled: val,
+                            );
+                      },
                     ),
                   ],
                 ),
@@ -1310,6 +1333,7 @@ class _SecuritySettingsSubScreenState
           ),
           const SizedBox(height: 24),
         ],
+        ),
       ),
     );
   }

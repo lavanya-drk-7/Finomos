@@ -1,21 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:finomos/features/auth_kyc/domain/kyc_models.dart';
+import 'package:finomos/features/auth_kyc/providers/auth_kyc_provider.dart';
 import 'package:finomos/features/document_vault/presentation/document_vault_screen.dart';
+import 'package:finomos/features/document_vault/providers/document_provider.dart';
 import 'package:finomos/features/auth_kyc/presentation/kyc_details_screen.dart';
 
 void main() {
-  testWidgets('DocumentVaultScreen renders properly and displays uploaded KYC docs with distinct delete actions', (WidgetTester tester) async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('DocumentVaultScreen renders properly and displays uploaded KYC docs with distinct delete actions',
+      (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.read(documentVaultProvider.notifier).syncKycDocuments([
+      const KycDocumentRecord(
+        id: 'doc_1',
+        idType: 'PAN Card',
+        idNumber: 'ABCDE1234F',
+        fileName: 'PAN_Card_Sireesha.pdf',
+        fileSize: '1.8 MB',
+        isUploaded: true,
+      ),
+      const KycDocumentRecord(
+        id: 'doc_2',
+        idType: 'Aadhaar Card',
+        idNumber: '•••• •••• 9110',
+        fileName: 'Aadhaar_Card_Sireesha.pdf',
+        fileSize: '2.1 MB',
+        isUploaded: true,
+      ),
+    ]);
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
           home: DocumentVaultScreen(),
         ),
       ),
@@ -51,38 +77,30 @@ void main() {
     expect(find.text('Add ID / Financial Document'), findsOneWidget);
     expect(find.text('Upload & Save to Vault'), findsOneWidget);
 
-    // Close sheet
+    // Close the sheet
     Navigator.of(tester.element(find.text('Add ID / Financial Document'))).pop();
     await tester.pumpAndSettle();
 
-    // Verify back on Document Vault
-    expect(find.text('Document Vault'), findsOneWidget);
-
-    // Test bottom delete button on ID Document #1 (removes only uploaded file)
+    // Test tapping Delete opens Confirmation Dialog with document name
     await tester.tap(find.text('Delete').first);
     await tester.pumpAndSettle();
 
+    // Verify Dialog opened with clear warning & Delete button
     expect(find.text('Delete Uploaded Document?'), findsOneWidget);
+    expect(find.textContaining('Are you sure you want to delete only the uploaded file'), findsOneWidget);
+    expect(find.text('Remove File'), findsOneWidget);
+
+    // Confirm deletion
     await tester.tap(find.text('Remove File'));
     await tester.pumpAndSettle();
 
-    // The field ID Document #1 still exists, but the document is removed and shows Upload Document dropzone
-    expect(find.text('ID Document #1', skipOffstage: false), findsOneWidget);
-    expect(find.text('Upload PAN Card Document', skipOffstage: false), findsOneWidget);
-
-    // Test top delete button (removes entire field)
-    await tester.tap(find.byTooltip('Delete Entire Field').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Delete Entire ID Document #1?'), findsOneWidget);
-    await tester.tap(find.text('Delete Field'));
-    await tester.pumpAndSettle();
-
-    // ID Document #1 has been deleted from vault
-    expect(find.text('ID Document #1', skipOffstage: false), findsOneWidget); // ID #2 is now #1
+    // Document #1 deleted, only 1 document remaining
+    expect(find.text('PAN_Card_Sireesha.pdf'), findsNothing);
+    expect(find.text('Aadhaar_Card_Sireesha.pdf'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('KycDetailsScreen renders upload box, Replace opens dedicated picker page, View, and distinct Delete options', (WidgetTester tester) async {
+  testWidgets('KycDetailsScreen renders upload box, Replace opens dedicated picker page, View, and distinct Delete options',
+      (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -90,9 +108,30 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.read(authKycProvider.notifier).updateUserData(
+      const UserRegistrationData(
+        panNumber: 'ABCDE1234F',
+        idProofFileName: 'PAN_Card_Sireesha.pdf',
+        kycDocuments: [
+          KycDocumentRecord(
+            id: 'doc_1',
+            idType: 'PAN Card',
+            idNumber: 'ABCDE1234F',
+            fileName: 'PAN_Card_Sireesha.pdf',
+            fileSize: '1.8 MB',
+            isUploaded: true,
+          ),
+        ],
+      ),
+    );
+
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
           home: KycDetailsScreen(),
         ),
       ),
@@ -130,42 +169,25 @@ void main() {
     expect(find.text('File Manager'), findsOneWidget);
     expect(find.text('Camera Scan'), findsOneWidget);
 
-    // Select Documents option -> opens dedicated Documents Explorer page
-    await tester.tap(find.text('Documents'));
+    // Close replace sheet
+    Navigator.of(tester.element(find.text('Gallery'))).pop();
     await tester.pumpAndSettle();
 
-    expect(find.text('Documents Explorer'), findsOneWidget);
-    expect(find.text('Select'), findsAtLeastNWidgets(1));
-
-    // Select the first document in the explorer
-    await tester.tap(find.text('Select').first);
+    // Test tapping Delete button on card opens confirmation dialog
+    await tester.ensureVisible(find.text('Delete').first);
     await tester.pumpAndSettle();
-
-    // Verify document was replaced and is displayed
-    expect(find.text('PAN_Card_Sireesha.pdf'), findsAtLeastNWidgets(1));
-
-    // Test bottom Delete button (beside View Document) deletes ONLY the uploaded document
     await tester.tap(find.text('Delete').first);
     await tester.pumpAndSettle();
 
     expect(find.text('Delete Uploaded Document?'), findsOneWidget);
+    expect(find.textContaining('Are you sure you want to delete only the uploaded file'), findsOneWidget);
+
+    // Confirm deletion
     await tester.tap(find.text('Remove File'));
     await tester.pumpAndSettle();
 
-    // Uploaded document is removed, but ID Document #1 field and PAN Number remain!
-    expect(find.text('ID Document #1'), findsOneWidget);
-    expect(find.text('ABCDE1234F'), findsOneWidget);
+    // Verify document deleted, state cleared to default empty upload state
+    expect(find.text('Upload PAN Card Document *'), findsOneWidget);
     expect(find.text('Upload Document'), findsAtLeastNWidgets(1));
-
-    // Test top Delete button (in header) deletes entire ID Document #1 field
-    await tester.tap(find.byTooltip('Delete Entire Field').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Delete Entire ID Document #1?'), findsOneWidget);
-    await tester.tap(find.text('Delete Field'));
-    await tester.pumpAndSettle();
-
-    // Entire field was reset/cleared
-    expect(find.text('ABCDE1234F'), findsNothing);
   });
 }

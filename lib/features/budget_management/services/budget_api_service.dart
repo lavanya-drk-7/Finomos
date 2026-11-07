@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/budget_models.dart';
 
 class BudgetApiService {
@@ -14,7 +15,9 @@ class BudgetApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] is Map<String, dynamic>) {
-          return BudgetSummaryData.fromJson(body['data'] as Map<String, dynamic>);
+          final data = body['data'] as Map<String, dynamic>;
+          LocalCacheService().save('budgets_summary', data);
+          return BudgetSummaryData.fromJson(data);
         }
       }
     } catch (_) {}
@@ -41,9 +44,17 @@ class BudgetApiService {
       final response = await _client.get(url);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
-        if (body['success'] == true && body['data'] is Map<String, dynamic>) {
-          final rawBudgets = body['data']['budgets'];
+        if (body['success'] == true && body['data'] != null) {
+          dynamic rawBudgets;
+          if (body['data'] is Map<String, dynamic>) {
+            rawBudgets = body['data']['budgets'] ?? body['data']['items'];
+          } else if (body['data'] is List) {
+            rawBudgets = body['data'];
+          }
           if (rawBudgets is List) {
+            if (period == 'Monthly' && category == 'all' && status == 'all' && page == 1) {
+              LocalCacheService().save('budgets_list', rawBudgets);
+            }
             return rawBudgets
                 .whereType<Map<String, dynamic>>()
                 .map((b) => BudgetItem.fromJson(b))
@@ -266,6 +277,9 @@ class BudgetApiService {
   /// Update smart guardrail settings
   /// PATCH /api/v1/budgets/settings/guardrails
   Future<GuardrailSettings?> updateGuardrailSettings(GuardrailSettings settings) async {
+    // Persist synchronously to local cache
+    LocalCacheService().save('budget_guardrails', settings.toJson());
+
     try {
       final response = await _client.patch(
         ApiConstants.budgetGuardrailSettings,
@@ -274,11 +288,13 @@ class BudgetApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true && body['data'] is Map<String, dynamic>) {
-          return GuardrailSettings.fromJson(body['data'] as Map<String, dynamic>);
+          final updated = GuardrailSettings.fromJson(body['data'] as Map<String, dynamic>);
+          LocalCacheService().save('budget_guardrails', updated.toJson());
+          return updated;
         }
       }
     } catch (_) {}
-    return null;
+    return settings;
   }
 
   /// Rollover budgets to next period
@@ -328,5 +344,31 @@ class BudgetApiService {
     } catch (_) {}
     return false;
   }
-}
 
+  BudgetSummaryData? getCachedSummary() {
+    final cached = LocalCacheService().get('budgets_summary');
+    if (cached is Map<String, dynamic>) {
+      return BudgetSummaryData.fromJson(cached);
+    }
+    return null;
+  }
+
+  GuardrailSettings? getCachedGuardrails() {
+    final cached = LocalCacheService().get('budget_guardrails');
+    if (cached is Map<String, dynamic>) {
+      return GuardrailSettings.fromJson(cached);
+    }
+    return null;
+  }
+
+  List<BudgetItem>? getCachedBudgets() {
+    final cached = LocalCacheService().get('budgets_list');
+    if (cached is List) {
+      return cached
+          .whereType<Map<String, dynamic>>()
+          .map((b) => BudgetItem.fromJson(b))
+          .toList();
+    }
+    return null;
+  }
+}

@@ -13,6 +13,7 @@ import '../../features/auth_kyc/presentation/privacy_policy_screen.dart';
 import '../../features/auth_kyc/presentation/forgot_password_screen.dart';
 import '../../features/auth_kyc/presentation/profile_screen.dart';
 import '../../features/auth_kyc/presentation/kyc_status_screen.dart';
+import '../../features/auth_kyc/presentation/allow_sms_screen.dart';
 import '../../features/profile/presentation/profile_management_screen.dart';
 import '../../features/profile/presentation/sub_screens/personal_info_sub_screen.dart';
 import '../../features/profile/presentation/sub_screens/address_details_sub_screen.dart';
@@ -50,7 +51,13 @@ final GoRouter appRouter = GoRouter(
       title: const Text('Navigation Error'),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go('/profile'),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/dashboard');
+          }
+        },
       ),
     ),
     body: Center(
@@ -62,8 +69,8 @@ final GoRouter appRouter = GoRouter(
           Text('Page not found: ${state.uri}', style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => context.go('/profile'),
-            child: const Text('Back to Profile'),
+            onPressed: () => context.go('/dashboard'),
+            child: const Text('Back to Home'),
           ),
         ],
       ),
@@ -125,6 +132,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/kyc-status',
       builder: (BuildContext context, GoRouterState state) => const KycStatusScreen(),
+    ),
+    GoRoute(
+      path: '/allow-sms',
+      builder: (BuildContext context, GoRouterState state) => const AllowSmsScreen(),
     ),
     GoRoute(
       path: '/profile-management',

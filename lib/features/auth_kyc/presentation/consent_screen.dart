@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_kyc_provider.dart';
+import '../domain/auth_onboarding_models.dart';
 import 'flow_header.dart';
 
 class ConsentScreen extends ConsumerStatefulWidget {
@@ -62,6 +63,20 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       agreeTerms: true,
     );
     ref.read(authKycProvider.notifier).updateUserData(updated);
+
+    // Record statutory consent (POST /api/auth/onboarding/consent)
+    ref.read(authKycProvider.notifier).recordOnboardingConsent(
+          const OnboardingConsentRequest(
+            consentTypes: [
+              'ACCOUNT_AGGREGATOR',
+              'DPDP_ACT_2023',
+              'PRIVACY_POLICY',
+            ],
+            isAgreed: true,
+            version: 'v2.1',
+          ),
+        );
+
     ref.read(authKycProvider.notifier).updateStep(5);
     context.go('/privacy');
   }
@@ -127,12 +142,15 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                   child: const Icon(Icons.description_outlined, size: 20, color: Color(0xFF0066FF)),
                                 ),
                                 const SizedBox(width: 10),
-                                const Text(
-                                  'Terms & Conditions',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0A2540),
+                                const Expanded(
+                                  child: Text(
+                                    'Terms & Conditions',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0A2540),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -217,12 +235,15 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 10),
-                                    const Text(
-                                      'Consent Acceptance',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0A2540),
+                                    const Expanded(
+                                      child: Text(
+                                        'Consent Acceptance',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0A2540),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],

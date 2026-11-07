@@ -1,242 +1,110 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/cache_service.dart';
 import '../domain/bank_aggregation_models.dart';
+import '../services/bank_aggregation_api_service.dart';
 
 class BankAggregationNotifier extends Notifier<BankAggregationState> {
+  final BankAggregationApiService _apiService = BankAggregationApiService();
+
   @override
   BankAggregationState build() {
-    return const BankAggregationState(
-      bankAccounts: [
-        BankAccountItem(
-          id: 'bank_1',
-          bankName: 'State Bank of India',
-          accountType: 'Savings Account',
-          maskedAccountNumber: 'XXXXXX4821',
-          ifscCode: 'SBIN0001234',
-          accountHolder: 'Sireesha S',
-          currentBalance: 142850.00,
-          availableBalance: 142850.00,
-          lastSynced: '10 mins ago',
-          isConnected: true,
-        ),
-        BankAccountItem(
-          id: 'bank_2',
-          bankName: 'HDFC Bank',
-          accountType: 'Current Account',
-          maskedAccountNumber: 'XXXXXX6789',
-          ifscCode: 'HDFC0005678',
-          accountHolder: 'Sireesha S',
-          currentBalance: 75900.00,
-          availableBalance: 75900.00,
-          lastSynced: '25 mins ago',
-          isConnected: true,
-        ),
-      ],
-      upiAccounts: [
-        UpiAccountItem(
-          id: 'upi_1',
-          upiId: 'sireesha@oksbi',
-          provider: 'Google Pay',
-          linkedBank: 'State Bank of India',
-          isPrimary: true,
-          status: 'Active',
-        ),
-        UpiAccountItem(
-          id: 'upi_2',
-          upiId: 'sireesha@ybl',
-          provider: 'PhonePe',
-          linkedBank: 'HDFC Bank',
-          isPrimary: false,
-          status: 'Active',
-        ),
-        UpiAccountItem(
-          id: 'upi_3',
-          upiId: '9876543210@paytm',
-          provider: 'Paytm UPI',
-          linkedBank: 'State Bank of India',
-          isPrimary: false,
-          status: 'Active',
-        ),
-      ],
-      creditCards: [
-        CreditCardItem(
-          id: 'card_1',
-          cardName: 'HDFC Regalia Gold',
-          last4Digits: '4567',
-          creditLimit: 500000.00,
-          outstandingBalance: 28450.00,
-          availableCredit: 471550.00,
-          statementDueDate: '18 Nov 2026',
-          minimumDue: 1420.00,
-          rewardPoints: 14200,
-          cardHolderName: 'Sireesha Bandaru',
-          issuedBank: 'HDFC Bank',
-          cardType: 'Visa',
-          expiryDate: '10/28',
-        ),
-        CreditCardItem(
-          id: 'card_2',
-          cardName: 'ICICI Amazon Pay',
-          last4Digits: '8912',
-          creditLimit: 300000.00,
-          outstandingBalance: 14200.00,
-          availableCredit: 285800.00,
-          statementDueDate: '25 Nov 2026',
-          minimumDue: 800.00,
-          rewardPoints: 4850,
-          cardHolderName: 'Sireesha Bandaru',
-          issuedBank: 'ICICI Bank',
-          cardType: 'Mastercard',
-          expiryDate: '06/29',
-        ),
-      ],
-      loans: [
-        LoanAccountItem(
-          id: 'loan_1',
-          loanType: 'Home Loan',
-          lender: 'State Bank of India',
-          outstandingPrincipal: 2450000.00,
-          interestRate: 8.55,
-          monthlyEmi: 23450.00,
-          tenureRemainingMonths: 168,
-          nextDueDate: '05 Nov 2026',
-        ),
-        LoanAccountItem(
-          id: 'loan_2',
-          loanType: 'Vehicle Loan',
-          lender: 'HDFC Bank',
-          outstandingPrincipal: 385000.00,
-          interestRate: 8.90,
-          monthlyEmi: 11200.00,
-          tenureRemainingMonths: 38,
-          nextDueDate: '10 Nov 2026',
-        ),
-      ],
-      investments: [
-        InvestmentHoldingItem(
-          id: 'inv_1',
-          assetType: 'Mutual Funds',
-          institution: 'Mirae Asset & Parag Parikh Flexi Cap',
-          currentValue: 1240000.00,
-          investedValue: 950000.00,
-          returnPercentage: 30.5,
-          isPositive: true,
-        ),
-        InvestmentHoldingItem(
-          id: 'inv_2',
-          assetType: 'Equity Stocks & ETFs',
-          institution: 'Zerodha Kite Portfolio',
-          currentValue: 875000.00,
-          investedValue: 710000.00,
-          returnPercentage: 23.2,
-          isPositive: true,
-        ),
-        InvestmentHoldingItem(
-          id: 'inv_3',
-          assetType: 'Fixed Deposits',
-          institution: 'HDFC Bank & SBI (7.25% p.a.)',
-          currentValue: 500000.00,
-          investedValue: 475000.00,
-          returnPercentage: 5.3,
-          isPositive: true,
-        ),
-        InvestmentHoldingItem(
-          id: 'inv_4',
-          assetType: 'Sovereign Gold Bonds',
-          institution: 'RBI Gold Bond Series 2024',
-          currentValue: 235000.00,
-          investedValue: 198000.00,
-          returnPercentage: 18.7,
-          isPositive: true,
-        ),
-        InvestmentHoldingItem(
-          id: 'inv_5',
-          assetType: 'EPF & PPF (Retirement)',
-          institution: 'Employees Provident Fund Org.',
-          currentValue: 980000.00,
-          investedValue: 860000.00,
-          returnPercentage: 13.9,
-          isPositive: true,
-        ),
-      ],
-      insurancePolicies: [
-        InsurancePolicyItem(
-          id: 'ins_1',
-          policyType: 'Health Insurance',
-          policyNumberMasked: 'POL-XXXX-9842',
-          provider: 'HDFC ERGO Optima Secure',
-          coverageAmount: 1500000.00,
-          premiumAmount: 14500.00,
-          renewalDate: '14 Jul 2027',
-          nominee: 'Spouse',
-        ),
-        InsurancePolicyItem(
-          id: 'ins_2',
-          policyType: 'Term Life Insurance',
-          policyNumberMasked: 'POL-XXXX-4512',
-          provider: 'Tata AIA Life Sampoorna',
-          coverageAmount: 15000000.00,
-          premiumAmount: 18200.00,
-          renewalDate: '22 Sep 2027',
-          nominee: 'Spouse',
-        ),
-        InsurancePolicyItem(
-          id: 'ins_3',
-          policyType: 'Vehicle Comprehensive',
-          policyNumberMasked: 'POL-XXXX-1123',
-          provider: 'Maruti Insurance Broking',
-          coverageAmount: 750000.00,
-          premiumAmount: 8500.00,
-          renewalDate: '05 Jan 2027',
-          nominee: 'Self',
-        ),
-      ],
-      wallets: [
-        WalletAccountItem(
-          id: 'wal_1',
-          walletName: 'Amazon Pay Wallet',
-          balance: 2450.00,
-          status: 'Active',
-        ),
-        WalletAccountItem(
-          id: 'wal_2',
-          walletName: 'Paytm Wallet',
-          balance: 840.00,
-          status: 'Active',
-        ),
-      ],
-      consents: [
-        AggregatorConsentItem(
-          consentId: 'AA-908124567',
-          institution: 'State Bank of India',
-          consentType: 'Account & Transaction Access',
-          startDate: '01 Jan 2026',
-          expiryDate: '31 Dec 2027',
-          purpose: 'Real-time Net Worth & AI CFO Analytics',
-          dataShared: 'Balance, Profile, Transactions',
-          status: 'Active',
-        ),
-        AggregatorConsentItem(
-          consentId: 'AA-457812903',
-          institution: 'HDFC Bank Ltd',
-          consentType: 'Current Account & Card Access',
-          startDate: '15 Feb 2026',
-          expiryDate: '15 Feb 2027',
-          purpose: 'Cash Flow & Auto-Expense Categorization',
-          dataShared: 'Current Account Statement, Card Dues',
-          status: 'Active',
-        ),
-        AggregatorConsentItem(
-          consentId: 'AA-112233445',
-          institution: 'ICICI Bank',
-          consentType: 'Credit Card Due Tracking',
-          startDate: '10 Mar 2025',
-          expiryDate: '10 Mar 2026',
-          purpose: 'Credit Utilization Analysis',
-          dataShared: 'Card Statement & Limits',
-          status: 'Expired',
-        ),
-      ],
-      institutionDirectory: [
+    Future.microtask(() => loadInitialData());
+
+    final cachedCashEntries = LocalCacheService().get('user_liquid_cash_entries');
+    List<LiquidCashItem> initialCashEntries = [];
+    if (cachedCashEntries is List) {
+      initialCashEntries = cachedCashEntries
+          .whereType<Map>()
+          .map((e) => LiquidCashItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    final cachedLiquidCash = LocalCacheService().get('user_liquid_cash_amount');
+    final double initialLiquidCash = (cachedLiquidCash as num?)?.toDouble() ??
+        (initialCashEntries.isNotEmpty
+            ? initialCashEntries.fold(0.0, (s, c) => s + c.amount)
+            : 0.0);
+
+    final deletedBankIdsRaw = LocalCacheService().get('deleted_bank_account_ids');
+    final deletedBankIds = deletedBankIdsRaw is List ? deletedBankIdsRaw.cast<String>() : <String>[];
+    final cachedBankAccounts = LocalCacheService().get('bank_accounts');
+    List<BankAccountItem>? initialBankAccounts;
+    if (cachedBankAccounts is List) {
+      initialBankAccounts = cachedBankAccounts
+          .whereType<Map>()
+          .map((e) => BankAccountItem.fromJson(Map<String, dynamic>.from(e)))
+          .where((a) => !deletedBankIds.contains(a.id))
+          .toList();
+    }
+    final initialDeduped = initialBankAccounts != null
+        ? deduplicateAccounts(initialBankAccounts)
+        : const <BankAccountItem>[];
+
+    final cachedCards = LocalCacheService().get('bank_cards');
+    List<CreditCardItem>? initialCards;
+    if (cachedCards is List) {
+      initialCards = cachedCards
+          .whereType<Map>()
+          .map((e) => CreditCardItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final cachedLoans = LocalCacheService().get('bank_loans');
+    List<LoanAccountItem>? initialLoans;
+    if (cachedLoans is List) {
+      initialLoans = cachedLoans
+          .whereType<Map>()
+          .map((e) => LoanAccountItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final cachedInvestments = LocalCacheService().get('bank_investments');
+    List<InvestmentHoldingItem>? initialInvestments;
+    if (cachedInvestments is List) {
+      initialInvestments = cachedInvestments
+          .whereType<Map>()
+          .map((e) => InvestmentHoldingItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final cachedInsurance = LocalCacheService().get('bank_insurance');
+    List<InsurancePolicyItem>? initialInsurance;
+    if (cachedInsurance is List) {
+      initialInsurance = cachedInsurance
+          .whereType<Map>()
+          .map((e) => InsurancePolicyItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final cachedUpi = LocalCacheService().get('bank_upi');
+    List<UpiAccountItem>? initialUpi;
+    if (cachedUpi is List) {
+      initialUpi = cachedUpi
+          .whereType<Map>()
+          .map((e) => UpiAccountItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    final cachedWallets = LocalCacheService().get('bank_wallets');
+    List<WalletAccountItem>? initialWallets;
+    if (cachedWallets is List) {
+      initialWallets = cachedWallets
+          .whereType<Map>()
+          .map((e) => WalletAccountItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    return BankAggregationState(
+      cashEntries: initialCashEntries,
+      liquidCash: initialLiquidCash,
+      bankAccounts: initialDeduped,
+      upiAccounts: initialUpi ?? const [],
+      creditCards: initialCards ?? const [],
+      loans: initialLoans ?? const [],
+      investments: initialInvestments ?? const [],
+      insurancePolicies: initialInsurance ?? const [],
+      wallets: initialWallets ?? const [],
+      consents: const [],
+      institutionDirectory: const [
         InstitutionDirectoryItem(id: 'inst_1', name: 'State Bank of India', logoText: 'SBI', category: 'Banks'),
         InstitutionDirectoryItem(id: 'inst_2', name: 'HDFC Bank Ltd', logoText: 'HDFC', category: 'Banks'),
         InstitutionDirectoryItem(id: 'inst_3', name: 'ICICI Bank Ltd', logoText: 'ICICI', category: 'Banks'),
@@ -252,53 +120,7 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
         InstitutionDirectoryItem(id: 'inst_13', name: 'HDFC ERGO Health', logoText: 'ERGO', category: 'Insurance'),
         InstitutionDirectoryItem(id: 'inst_14', name: 'Tata AIA Life Insurance', logoText: 'AIA', category: 'Insurance'),
       ],
-      recentTransactions: [
-        AggregatorTransactionItem(
-          id: 'tx_1',
-          title: 'Salary Credit - TechCorp Global',
-          category: 'Income',
-          amount: 85000.00,
-          date: '01 Oct 2026',
-          institution: 'State Bank of India',
-          type: 'NetBanking',
-        ),
-        AggregatorTransactionItem(
-          id: 'tx_2',
-          title: 'Home Loan EMI Debit',
-          category: 'Debt EMI',
-          amount: -23450.00,
-          date: '05 Oct 2026',
-          institution: 'State Bank of India',
-          type: 'Standing Instruction',
-        ),
-        AggregatorTransactionItem(
-          id: 'tx_3',
-          title: 'Swiggy Food Delivery',
-          category: 'Food & Dining',
-          amount: -450.00,
-          date: '10 Oct 2026',
-          institution: 'SBI Debit Card',
-          type: 'Debit Card',
-        ),
-        AggregatorTransactionItem(
-          id: 'tx_4',
-          title: 'Amazon Shopping Festival',
-          category: 'Shopping',
-          amount: -2890.00,
-          date: '12 Oct 2026',
-          institution: 'ICICI Amazon Pay Card',
-          type: 'Credit Card',
-        ),
-        AggregatorTransactionItem(
-          id: 'tx_5',
-          title: 'SIP Auto-Debit Mirae Asset',
-          category: 'Investments',
-          amount: -5000.00,
-          date: '14 Oct 2026',
-          institution: 'HDFC Bank',
-          type: 'Auto-Debit',
-        ),
-      ],
+      recentTransactions: const [],
     );
   }
 
@@ -314,9 +136,628 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
     state = state.copyWith(searchQuery: query);
   }
 
+  /// 1. Fetch Consolidated Summary across 5 financial pillars
+  Future<void> fetchSummary() async {
+    try {
+      final summary = await _apiService.getSummary();
+      if (summary != null) {
+        state = state.copyWith(summary: summary);
+      }
+    } catch (_) {}
+  }
+
+  /// 2. Fetch linked bank accounts list from live API
+  Future<void> fetchAccounts() async {
+    try {
+      final deletedBankIdsRaw = LocalCacheService().get('deleted_bank_account_ids');
+      final deletedBankIds = deletedBankIdsRaw is List ? deletedBankIdsRaw.cast<String>() : <String>[];
+      final accounts = await _apiService.getAccounts(type: 'all');
+      if (accounts != null) {
+        final serverAccounts = accounts.where((a) => !deletedBankIds.contains(a.id)).toList();
+        
+        final Map<String, BankAccountItem> merged = {};
+        // Retain accounts from current active session that were adjusted or locally created
+        for (final cur in state.bankAccounts) {
+          if (!deletedBankIds.contains(cur.id)) {
+            merged[cur.id] = cur;
+          }
+        }
+
+        final Map<String, BankAccountItem> result = {};
+
+        for (final server in serverAccounts) {
+          final serverDigits = server.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+          final serverLast4 = serverDigits.length >= 4 ? serverDigits.substring(serverDigits.length - 4) : serverDigits;
+
+          // Find match by ID or by bank account number (last 4 digits)
+          String? matchingKey;
+          if (merged.containsKey(server.id)) {
+            matchingKey = server.id;
+          } else {
+            for (final entry in merged.entries) {
+              final loc = entry.value;
+              final locDigits = (loc.rawAccountNumber != null && loc.rawAccountNumber!.isNotEmpty)
+                  ? loc.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+                  : loc.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+              final locLast4 = locDigits.length >= 4 ? locDigits.substring(locDigits.length - 4) : locDigits;
+
+              final bool numberMatch = locLast4.isNotEmpty && serverLast4.isNotEmpty && locLast4 == serverLast4;
+              final bool nameMatch = loc.bankName.trim().toLowerCase() == server.bankName.trim().toLowerCase() ||
+                  loc.bankName.toLowerCase().contains(server.bankName.toLowerCase()) ||
+                  server.bankName.toLowerCase().contains(loc.bankName.toLowerCase());
+
+              if (numberMatch || (nameMatch && locLast4 == serverLast4)) {
+                matchingKey = entry.key;
+                break;
+              }
+            }
+          }
+
+          if (matchingKey != null) {
+            final existing = merged.remove(matchingKey)!;
+            // Preserve the updated dynamic balance if it was adjusted by income/expense or user edit
+            final bool wasAdjusted = existing.lastSynced == 'Just now' ||
+                existing.availableBalance != server.availableBalance ||
+                existing.currentBalance != server.currentBalance;
+            final activeAvail = wasAdjusted ? existing.availableBalance : server.availableBalance;
+            final activeCurr = wasAdjusted ? existing.currentBalance : server.currentBalance;
+
+            result[server.id] = server.copyWith(
+              id: server.id,
+              availableBalance: activeAvail,
+              currentBalance: activeCurr,
+              accountHolder: existing.accountHolder.isNotEmpty ? existing.accountHolder : server.accountHolder,
+              ifscCode: existing.ifscCode.isNotEmpty ? existing.ifscCode : server.ifscCode,
+              rawAccountNumber: existing.rawAccountNumber ?? server.rawAccountNumber,
+              lastSynced: wasAdjusted ? 'Just now' : server.lastSynced,
+            );
+          } else {
+            result[server.id] = server;
+          }
+        }
+
+        // Retain un-synced locally created and existing session accounts
+        for (final entry in merged.entries) {
+          if (!result.containsKey(entry.key)) {
+            result[entry.key] = entry.value;
+          }
+        }
+
+        final activeAccounts = deduplicateAccounts(result.values.toList());
+        state = state.copyWith(bankAccounts: activeAccounts);
+        LocalCacheService().save('bank_accounts', activeAccounts.map((a) => a.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch credit & debit cards from live API
+  Future<void> fetchCards() async {
+    try {
+      final res = await _apiService.getCards(type: 'all');
+      if (res != null) {
+        final allCards = [...res.creditCards, ...res.debitCards];
+        state = state.copyWith(
+          creditCards: allCards,
+          cardsSummary: res.summary,
+        );
+        LocalCacheService().save('bank_cards', allCards.map((c) => c.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch active loans from live API
+  Future<void> fetchLoans() async {
+    try {
+      final res = await _apiService.getLoans();
+      if (res != null) {
+        state = state.copyWith(
+          loans: res.loans,
+          loansSummary: res.summary,
+        );
+        LocalCacheService().save('bank_loans', res.loans.map((l) => l.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch investment holdings from live API
+  Future<void> fetchInvestments() async {
+    try {
+      final res = await _apiService.getInvestments();
+      if (res != null) {
+        state = state.copyWith(
+          investments: res.investments,
+          portfolioSummary: res.portfolioSummary,
+        );
+        LocalCacheService().save('bank_investments', res.investments.map((i) => i.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch insurance policies from live API
+  Future<void> fetchInsurancePolicies() async {
+    try {
+      final res = await _apiService.getInsurancePolicies();
+      if (res != null) {
+        state = state.copyWith(
+          insurancePolicies: res.policies,
+          insuranceSummary: res.summary,
+        );
+        LocalCacheService().save('bank_insurance', res.policies.map((p) => p.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch UPI accounts from live API
+  Future<void> fetchUpiAccounts() async {
+    try {
+      final res = await _apiService.getUpiAccounts();
+      if (res != null) {
+        state = state.copyWith(
+          upiAccounts: res.accounts,
+          primaryVpa: res.primaryVpa,
+        );
+        LocalCacheService().save('bank_upi', res.accounts.map((u) => u.toJson()).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch digital wallets from live API
+  Future<void> fetchWallets() async {
+    try {
+      final res = await _apiService.getWallets();
+      if (res != null) {
+        state = state.copyWith(
+          wallets: res.wallets,
+          totalWalletBalance: res.totalWalletBalance,
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch RBI Account Aggregator consents from live API
+  Future<void> fetchConsents() async {
+    try {
+      final res = await _apiService.getConsents();
+      if (res != null) {
+        state = state.copyWith(
+          consents: res.consents,
+          activeConsentsCount: res.activeConsentsCount,
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch aggregated transactions across all linked institutions from live API
+  Future<void> fetchAggregatedTransactions({int page = 1, int limit = 20}) async {
+    try {
+      final res = await _apiService.getAggregatedTransactions(page: page, limit: limit);
+      if (res != null) {
+        state = state.copyWith(
+          recentTransactions: res.transactions,
+          transactionAggregates: res.aggregates,
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Fetch supported institutions directory from live API
+  Future<void> fetchInstitutions() async {
+    try {
+      final res = await _apiService.getInstitutions();
+      if (res != null && res.institutions.isNotEmpty) {
+        state = state.copyWith(institutionDirectory: res.institutions);
+      }
+    } catch (_) {}
+  }
+
+  /// Initial loader combining all 5 financial pillars, consents, transactions and directory
+  Future<void> loadInitialData() async {
+    if (!ref.mounted) return;
+    state = state.copyWith(isLoading: true);
+    await Future.wait([
+      fetchSummary(),
+      fetchAccounts(),
+      fetchCards(),
+      fetchLoans(),
+      fetchInvestments(),
+      fetchInsurancePolicies(),
+      fetchUpiAccounts(),
+      fetchWallets(),
+      fetchConsents(),
+      fetchAggregatedTransactions(),
+      fetchInstitutions(),
+    ]);
+    if (!ref.mounted) return;
+    state = state.copyWith(isLoading: false);
+  }
+
+  /// 3. Lookup and validate IFSC branch details
+  Future<IfscBranchDetails?> lookupIfsc(String ifsc) async {
+    return await _apiService.lookupIfsc(ifsc);
+  }
+
+  /// 4. Sync single bank account balance
+  Future<SyncAccountBalanceResult?> syncAccountBalance(String accountId) async {
+    try {
+      final result = await _apiService.syncAccountBalance(accountId);
+      if (result != null) {
+        state = state.copyWith(
+          bankAccounts: state.bankAccounts.map((a) {
+            if (a.id == accountId) {
+              return a.copyWith(
+                currentBalance: result.currentBalance,
+                availableBalance: result.currentBalance,
+                lastSynced: 'Just now',
+                lastSyncedAt: result.lastSyncedAt,
+              );
+            }
+            return a;
+          }).toList(),
+        );
+        fetchSummary(); // Refresh summary in background
+      }
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 5. Link new bank account online with live backend & NPCI verification
+  Future<BankAccountItem?> linkAccountOnline(LinkBankAccountRequest req) async {
+    try {
+      final newAcc = await _apiService.linkBankAccount(req);
+      if (newAcc != null) {
+        final updated = deduplicateAccounts([newAcc, ...state.bankAccounts]);
+        state = state.copyWith(bankAccounts: updated);
+        LocalCacheService().save('bank_accounts', updated.map((a) => a.toJson()).toList());
+        await fetchSummary();
+        return newAcc;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// 6. Update bank account details online
+  Future<BankAccountItem?> updateAccountOnline(String id, UpdateBankAccountRequest req) async {
+    try {
+      final updated = await _apiService.updateBankAccount(id, req);
+      if (updated != null) {
+        state = state.copyWith(
+          bankAccounts: state.bankAccounts.map((a) => a.id == id ? updated : a).toList(),
+        );
+        await fetchSummary();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// 7. Unlink bank account online
+  Future<bool> unlinkAccountOnline(String id) async {
+    final updated = state.bankAccounts.where((a) => a.id != id).toList();
+    state = state.copyWith(bankAccounts: updated);
+    LocalCacheService().save('bank_accounts', updated.map((a) => a.toJson()).toList());
+    try {
+      final success = await _apiService.deleteBankAccount(id);
+      if (success) {
+        await fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  /// Cards Online Operations
+  Future<CreditCardItem?> linkCreditCardOnline(LinkCreditCardRequest req) async {
+    try {
+      final newCard = await _apiService.linkCreditCard(req);
+      if (newCard != null) {
+        final updated = [newCard, ...state.creditCards];
+        state = state.copyWith(creditCards: updated);
+        LocalCacheService().save('bank_cards', updated.map((c) => c.toJson()).toList());
+        fetchCards();
+        fetchSummary();
+        return newCard;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<CreditCardItem?> updateCreditCardOnline(String id, UpdateCreditCardRequest req) async {
+    try {
+      final updated = await _apiService.updateCard(id, req);
+      if (updated != null) {
+        state = state.copyWith(
+          creditCards: state.creditCards.map((c) => c.id == id ? updated : c).toList(),
+        );
+        fetchCards();
+        fetchSummary();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> unlinkCreditCardOnline(String id) async {
+    final updated = state.creditCards.where((c) => c.id != id).toList();
+    state = state.copyWith(creditCards: updated);
+    LocalCacheService().save('bank_cards', updated.map((c) => c.toJson()).toList());
+    try {
+      final success = await _apiService.deleteCard(id);
+      if (success) {
+        fetchCards();
+        fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  /// Loans Online Operations
+  Future<LoanAccountItem?> linkLoanOnline(LinkLoanRequest req) async {
+    try {
+      final newLoan = await _apiService.linkLoan(req);
+      if (newLoan != null) {
+        final updated = [newLoan, ...state.loans];
+        state = state.copyWith(loans: updated);
+        LocalCacheService().save('bank_loans', updated.map((l) => l.toJson()).toList());
+        fetchLoans();
+        fetchSummary();
+        return newLoan;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<LoanAccountItem?> updateLoanOnline(String id, UpdateLoanRequest req) async {
+    try {
+      final updated = await _apiService.updateLoan(id, req);
+      if (updated != null) {
+        state = state.copyWith(
+          loans: state.loans.map((l) => l.id == id ? updated : l).toList(),
+        );
+        fetchLoans();
+        fetchSummary();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> unlinkLoanOnline(String id) async {
+    final updated = state.loans.where((l) => l.id != id).toList();
+    state = state.copyWith(loans: updated);
+    LocalCacheService().save('bank_loans', updated.map((l) => l.toJson()).toList());
+    try {
+      final success = await _apiService.deleteLoan(id);
+      if (success) {
+        fetchLoans();
+        fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  /// Investments Online Operations
+  Future<InvestmentHoldingItem?> linkInvestmentOnline(LinkInvestmentRequest req) async {
+    try {
+      final newInv = await _apiService.linkInvestment(req);
+      if (newInv != null) {
+        state = state.copyWith(investments: [newInv, ...state.investments]);
+        fetchInvestments();
+        fetchSummary();
+        return newInv;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<InvestmentHoldingItem?> updateInvestmentOnline(String id, UpdateInvestmentRequest req) async {
+    try {
+      final updated = await _apiService.updateInvestment(id, req);
+      if (updated != null) {
+        state = state.copyWith(
+          investments: state.investments.map((i) => i.id == id ? updated : i).toList(),
+        );
+        fetchInvestments();
+        fetchSummary();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> unlinkInvestmentOnline(String id) async {
+    try {
+      final success = await _apiService.deleteInvestment(id);
+      if (success) {
+        state = state.copyWith(
+          investments: state.investments.where((i) => i.id != id).toList(),
+        );
+        fetchInvestments();
+        fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    deleteInvestmentHolding(id);
+    return true;
+  }
+
+  /// Insurance Online Operations
+  Future<InsurancePolicyItem?> linkInsurancePolicyOnline(LinkInsurancePolicyRequest req) async {
+    try {
+      final newPol = await _apiService.linkInsurancePolicy(req);
+      if (newPol != null) {
+        state = state.copyWith(insurancePolicies: [newPol, ...state.insurancePolicies]);
+        fetchInsurancePolicies();
+        fetchSummary();
+        return newPol;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<InsurancePolicyItem?> updateInsurancePolicyOnline(String id, UpdateInsurancePolicyRequest req) async {
+    try {
+      final updated = await _apiService.updateInsurancePolicy(id, req);
+      if (updated != null) {
+        state = state.copyWith(
+          insurancePolicies: state.insurancePolicies.map((p) => p.id == id ? updated : p).toList(),
+        );
+        fetchInsurancePolicies();
+        fetchSummary();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> unlinkInsurancePolicyOnline(String id) async {
+    try {
+      final success = await _apiService.deleteInsurancePolicy(id);
+      if (success) {
+        state = state.copyWith(
+          insurancePolicies: state.insurancePolicies.where((p) => p.id != id).toList(),
+        );
+        fetchInsurancePolicies();
+        fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    deleteInsurancePolicy(id);
+    return true;
+  }
+
+  /// UPI Accounts Online Operations
+  Future<UpiAccountItem?> linkUpiAccountOnline(LinkUpiAccountRequest req) async {
+    try {
+      final newUpi = await _apiService.linkUpiAccount(req);
+      if (newUpi != null) {
+        state = state.copyWith(upiAccounts: [newUpi, ...state.upiAccounts]);
+        fetchUpiAccounts();
+        fetchSummary();
+        return newUpi;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<UpiAccountItem?> setPrimaryUpiOnline(String id) async {
+    try {
+      final updated = await _apiService.setPrimaryUpiAccount(id);
+      if (updated != null) {
+        state = state.copyWith(
+          upiAccounts: state.upiAccounts.map((u) {
+            if (u.id == id) {
+              return updated;
+            }
+            return u.copyWith(isPrimary: false);
+          }).toList(),
+          primaryVpa: updated.upiId,
+        );
+        fetchUpiAccounts();
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> unlinkUpiAccountOnline(String id) async {
+    try {
+      final success = await _apiService.deleteUpiAccount(id);
+      if (success) {
+        state = state.copyWith(
+          upiAccounts: state.upiAccounts.where((u) => u.id != id).toList(),
+        );
+        fetchUpiAccounts();
+        fetchSummary();
+        return true;
+      }
+    } catch (_) {}
+    deleteUpiAccount(id);
+    return true;
+  }
+
+  /// Digital Wallets Online Operations
+  Future<WalletAccountItem?> linkWalletOnline(LinkWalletRequest req) async {
+    try {
+      final newWallet = await _apiService.linkWallet(req);
+      if (newWallet != null) {
+        state = state.copyWith(wallets: [newWallet, ...state.wallets]);
+        fetchWallets();
+        fetchSummary();
+        return newWallet;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Consents Online Operations
+  Future<InitiateConsentResponse?> initiateConsentOnline(InitiateConsentRequest req) async {
+    try {
+      final res = await _apiService.initiateConsent(req);
+      if (res != null && res.data != null) {
+        state = state.copyWith(
+          consents: [res.data!, ...state.consents],
+          activeConsentsCount: state.activeConsentsCount + 1,
+        );
+        fetchConsents();
+        return res;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<AggregatorConsentItem?> revokeConsentOnline(String consentId) async {
+    try {
+      final res = await _apiService.revokeConsent(consentId);
+      if (res != null) {
+        state = state.copyWith(
+          consents: state.consents.map((c) => c.id == consentId || c.consentHandle == consentId ? res : c).toList(),
+        );
+        fetchConsents();
+        return res;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<AggregatorConsentItem?> renewConsentOnline(String consentId, {int extensionDays = 365}) async {
+    try {
+      final res = await _apiService.renewConsent(consentId, extensionDays: extensionDays);
+      if (res != null) {
+        state = state.copyWith(
+          consents: state.consents.map((c) => c.id == consentId || c.consentHandle == consentId ? res : c).toList(),
+        );
+        fetchConsents();
+        return res;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// 8. Sync all accounts & pillars
   Future<void> syncAllAccounts() async {
     state = state.copyWith(isSyncing: true);
-    await Future.delayed(const Duration(milliseconds: 1400));
+    try {
+      await Future.wait([
+        _apiService.syncAllPillars(),
+        fetchAccounts(),
+        fetchCards(),
+        fetchLoans(),
+        fetchInvestments(),
+        fetchInsurancePolicies(),
+        fetchUpiAccounts(),
+        fetchWallets(),
+        fetchConsents(),
+        fetchAggregatedTransactions(),
+        fetchInstitutions(),
+        fetchSummary(),
+      ]);
+    } catch (_) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+    }
     final now = DateTime.now();
     final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     state = state.copyWith(
@@ -334,7 +775,7 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       accountType: accountType,
       maskedAccountNumber: 'XXXXXX$randomDigits',
       ifscCode: '${institution.logoText}000$randomDigits',
-      accountHolder: 'Sireesha S',
+      accountHolder: LocalCacheService().get('user_name')?.toString() ?? 'Account Holder',
       currentBalance: 35000.0 + (institution.name.hashCode.abs() % 40000),
       availableBalance: 35000.0 + (institution.name.hashCode.abs() % 40000),
       lastSynced: 'Just now',
@@ -363,15 +804,68 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
     required String bankName,
     required String accountType,
     required String maskedAccountNumber,
+    String? rawAccountNumber,
     required String ifscCode,
     required String accountHolder,
     required double currentBalance,
   }) {
+    final cleanDigits = (rawAccountNumber != null && rawAccountNumber.isNotEmpty)
+        ? rawAccountNumber.replaceAll(RegExp(r'\D'), '')
+        : maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+    final newLast4 = cleanDigits.length >= 4 ? cleanDigits.substring(cleanDigits.length - 4) : cleanDigits;
+
+    // Check if an existing bank account has the same account number - update it instead of adding extra field
+    final existingIndex = state.bankAccounts.indexWhere((a) {
+      final aDigits = (a.rawAccountNumber != null && a.rawAccountNumber!.isNotEmpty)
+          ? a.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : a.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final aLast4 = aDigits.length >= 4 ? aDigits.substring(aDigits.length - 4) : aDigits;
+      return newLast4.isNotEmpty && aLast4.isNotEmpty && (aLast4 == newLast4 || aDigits == cleanDigits);
+    });
+
+    if (existingIndex >= 0) {
+      final existing = state.bankAccounts[existingIndex];
+      final updatedAcc = existing.copyWith(
+        bankName: bankName.isNotEmpty ? bankName : existing.bankName,
+        accountType: accountType,
+        maskedAccountNumber: maskedAccountNumber,
+        rawAccountNumber: rawAccountNumber ?? existing.rawAccountNumber,
+        ifscCode: ifscCode.isNotEmpty ? ifscCode : existing.ifscCode,
+        accountHolder: accountHolder.isNotEmpty ? accountHolder : existing.accountHolder,
+        currentBalance: currentBalance,
+        availableBalance: currentBalance,
+        lastSynced: 'Just now',
+      );
+      final updatedList = List<BankAccountItem>.from(state.bankAccounts);
+      updatedList[existingIndex] = updatedAcc;
+      final deduplicated = deduplicateAccounts(updatedList);
+      state = state.copyWith(bankAccounts: deduplicated);
+      LocalCacheService().save('bank_accounts', deduplicated.map((a) => a.toJson()).toList());
+
+      if (cleanDigits.length >= 4 && ifscCode.trim().length >= 6) {
+        final reqType = accountType.toUpperCase().contains('CURRENT')
+            ? 'CURRENT'
+            : (accountType.toUpperCase().contains('SALARY') ? 'SALARY' : 'SAVINGS');
+        _apiService.updateBankAccount(
+          existing.id,
+          UpdateBankAccountRequest(
+            nickname: '$bankName $accountType',
+            accountType: reqType,
+          ),
+        ).then((_) {
+          fetchAccounts();
+          fetchSummary();
+        }).catchError((_) {});
+      }
+      return;
+    }
+
     final newAccount = BankAccountItem(
       id: 'bank_${DateTime.now().millisecondsSinceEpoch}',
       bankName: bankName,
       accountType: accountType,
       maskedAccountNumber: maskedAccountNumber,
+      rawAccountNumber: rawAccountNumber,
       ifscCode: ifscCode,
       accountHolder: accountHolder,
       currentBalance: currentBalance,
@@ -391,10 +885,33 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       status: 'Active',
     );
 
+    final updated = deduplicateAccounts([...state.bankAccounts, newAccount]);
     state = state.copyWith(
-      bankAccounts: [...state.bankAccounts, newAccount],
+      bankAccounts: updated,
       consents: [newConsent, ...state.consents],
     );
+    LocalCacheService().save('bank_accounts', updated.map((a) => a.toJson()).toList());
+
+    // Asynchronously link via backend API if possible
+    if (cleanDigits.length >= 4 && ifscCode.trim().length >= 6) {
+      final reqType = accountType.toUpperCase().contains('CURRENT')
+          ? 'CURRENT'
+          : (accountType.toUpperCase().contains('SALARY') ? 'SALARY' : 'SAVINGS');
+      _apiService.linkBankAccount(LinkBankAccountRequest(
+        accountNumber: cleanDigits,
+        confirmAccountNumber: cleanDigits,
+        ifsc: ifscCode.trim(),
+        accountType: reqType,
+        openingBalance: currentBalance,
+        holderName: accountHolder,
+        nickname: '$bankName $accountType',
+      )).then((linked) {
+        if (linked != null) {
+          fetchAccounts();
+          fetchSummary();
+        }
+      }).catchError((_) {});
+    }
   }
 
   void addCreditCardItem({
@@ -438,6 +955,27 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       linkedAccount: linkedAccount,
     );
     state = state.copyWith(creditCards: [...state.creditCards, newCard]);
+
+    // Live backend linking in background
+    final cleanDigits = (cardNumber ?? last4Digits).replaceAll(RegExp(r'\D'), '');
+    final last4 = cleanDigits.length >= 4 ? cleanDigits.substring(cleanDigits.length - 4) : '8921';
+    _apiService.linkCreditCard(LinkCreditCardRequest(
+      cardType: isDebit ? 'Debit' : 'Credit',
+      issuingBank: issuedBank ?? (cardName.contains(' ') ? cardName.split(' ').first : 'Axis Bank'),
+      cardholderName: holderName ?? (LocalCacheService().get('user_name')?.toString() ?? 'Card Holder'),
+      network: cardType ?? 'Visa',
+      lastFourDigits: last4,
+      creditLimit: creditLimit > 0 ? creditLimit : 250000,
+      currentOutstanding: outstandingBalance,
+      billingCycleDate: '20th of month',
+      paymentDueDate: statementDueDate.isNotEmpty ? statementDueDate : '2026-12-10',
+      rewardPoints: rewardPoints,
+    )).then((c) {
+      if (c != null) {
+        fetchCards();
+        fetchSummary();
+      }
+    }).catchError((_) {});
   }
 
   void addCreditCard(String name, String last4, double limit, double outstanding) {
@@ -462,30 +1000,262 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       status: 'Active',
     );
     state = state.copyWith(upiAccounts: [...state.upiAccounts, newUpi]);
+    _apiService.linkUpiAccount(
+      LinkUpiAccountRequest(
+        vpa: upiId,
+        bankName: linkedBank,
+        appProvider: provider,
+        isPrimary: false,
+      ),
+    ).then((_) {
+      fetchUpiAccounts();
+      fetchSummary();
+    }).catchError((_) {});
+  }
+
+  /// Deduplicate bank accounts by account number digits, merging balances & metadata
+  static List<BankAccountItem> deduplicateAccounts(List<BankAccountItem> accounts) {
+    final Map<String, BankAccountItem> unique = {};
+    for (final acc in accounts) {
+      final digits = (acc.rawAccountNumber != null && acc.rawAccountNumber!.isNotEmpty)
+          ? acc.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : acc.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final last4 = digits.length >= 4 ? digits.substring(digits.length - 4) : digits;
+
+      // Key primarily by account number (last4 digits)
+      final key = last4.isNotEmpty
+          ? 'acc_num_$last4'
+          : 'acc_id_${acc.id}';
+
+      if (!unique.containsKey(key)) {
+        unique[key] = acc;
+      } else {
+        final existing = unique[key]!;
+        // Choose dynamic updated balance
+        final double finalAvail;
+        final double finalCurr;
+        if (acc.lastSynced == 'Just now') {
+          finalAvail = acc.availableBalance;
+          finalCurr = acc.currentBalance;
+        } else if (existing.lastSynced == 'Just now') {
+          finalAvail = existing.availableBalance;
+          finalCurr = existing.currentBalance;
+        } else {
+          finalAvail = acc.availableBalance != 0 ? acc.availableBalance : existing.availableBalance;
+          finalCurr = acc.currentBalance != 0 ? acc.currentBalance : existing.currentBalance;
+        }
+
+        final finalId = (existing.id.startsWith('bank_') && !acc.id.startsWith('bank_'))
+            ? acc.id
+            : (acc.id.startsWith('bank_') && !existing.id.startsWith('bank_') ? existing.id : acc.id);
+
+        unique[key] = acc.copyWith(
+          id: finalId,
+          availableBalance: finalAvail,
+          currentBalance: finalCurr,
+          accountHolder: acc.accountHolder.isNotEmpty ? acc.accountHolder : existing.accountHolder,
+          ifscCode: acc.ifscCode.isNotEmpty ? acc.ifscCode : existing.ifscCode,
+          bankName: acc.bankName.isNotEmpty ? acc.bankName : existing.bankName,
+          maskedAccountNumber: acc.maskedAccountNumber.isNotEmpty ? acc.maskedAccountNumber : existing.maskedAccountNumber,
+          rawAccountNumber: (acc.rawAccountNumber != null && acc.rawAccountNumber!.isNotEmpty)
+              ? acc.rawAccountNumber
+              : existing.rawAccountNumber,
+          lastSynced: 'Just now',
+        );
+      }
+    }
+    return unique.values.toList();
+  }
+
+  /// Find a connected bank account that matches the given account identifier string.
+  BankAccountItem? findAccountMatching(String bankAccountString) {
+    if (bankAccountString.trim().isEmpty) return null;
+    final query = bankAccountString.trim().toLowerCase();
+
+    // 1. Exact ID match
+    for (final acc in state.bankAccounts) {
+      if (acc.id.toLowerCase() == query) return acc;
+    }
+
+    // 2. Extract digits (e.g. "••••4587" or "**** 1123" -> "4587")
+    final digits = query.replaceAll(RegExp(r'\D'), '');
+    final last4 = digits.length >= 4 ? digits.substring(digits.length - 4) : digits;
+
+    if (last4.isNotEmpty) {
+      for (final acc in state.bankAccounts) {
+        final accDigits = (acc.rawAccountNumber != null && acc.rawAccountNumber!.isNotEmpty)
+            ? acc.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+            : acc.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+        final accLast4 = accDigits.length >= 4 ? accDigits.substring(accDigits.length - 4) : accDigits;
+
+        if (accLast4.isNotEmpty && (last4 == accLast4 || accDigits.endsWith(last4) || digits.endsWith(accLast4))) {
+          return acc;
+        }
+      }
+    }
+
+    // 3. Substring match on bank name
+    for (final acc in state.bankAccounts) {
+      final nameLower = acc.bankName.toLowerCase();
+      if (query.contains(nameLower) || nameLower.contains(query)) {
+        return acc;
+      }
+    }
+
+    return null;
+  }
+
+  /// Adjust account balance dynamically when income is credited (+delta) or expense is debited (-delta).
+  void adjustAccountBalance({
+    required String bankAccount,
+    required double delta,
+  }) {
+    if (delta == 0) return;
+
+    final targetAccount = findAccountMatching(bankAccount);
+    if (targetAccount != null) {
+      final newAvail = (targetAccount.availableBalance + delta).clamp(0.0, double.infinity);
+      final newCurr = (targetAccount.currentBalance + delta).clamp(0.0, double.infinity);
+
+      final updatedAcc = targetAccount.copyWith(
+        availableBalance: newAvail,
+        currentBalance: newCurr,
+        lastSynced: 'Just now',
+      );
+
+      final targetDigits = (targetAccount.rawAccountNumber != null && targetAccount.rawAccountNumber!.isNotEmpty)
+          ? targetAccount.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : targetAccount.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final targetLast4 = targetDigits.length >= 4 ? targetDigits.substring(targetDigits.length - 4) : targetDigits;
+
+      final updatedAccounts = state.bankAccounts.map((a) {
+        final aDigits = (a.rawAccountNumber != null && a.rawAccountNumber!.isNotEmpty)
+            ? a.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+            : a.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+        final aLast4 = aDigits.length >= 4 ? aDigits.substring(aDigits.length - 4) : aDigits;
+
+        // If it matches ID OR the same bank account number digits, update to the new balance!
+        if (a.id == targetAccount.id || (targetLast4.isNotEmpty && aLast4.isNotEmpty && aLast4 == targetLast4)) {
+          return updatedAcc;
+        }
+        return a;
+      }).toList();
+
+      final deduplicated = deduplicateAccounts(updatedAccounts);
+      state = state.copyWith(bankAccounts: deduplicated);
+      LocalCacheService().save(
+        'bank_accounts',
+        deduplicated.map((a) => a.toJson()).toList(),
+      );
+      return;
+    }
+
+    // If Other / Cash
+    final lower = bankAccount.toLowerCase();
+    if (lower.contains('cash') || lower.contains('wallet')) {
+      final newCash = (state.liquidCash + delta).clamp(0.0, double.infinity);
+      state = state.copyWith(liquidCash: newCash);
+      LocalCacheService().save('user_liquid_cash_amount', newCash);
+    } else if (state.bankAccounts.isNotEmpty) {
+      // If only 1 account exists or fallback
+      final firstAcc = state.bankAccounts.first;
+      final newAvail = (firstAcc.availableBalance + delta).clamp(0.0, double.infinity);
+      final newCurr = (firstAcc.currentBalance + delta).clamp(0.0, double.infinity);
+
+      final updatedAcc = firstAcc.copyWith(
+        availableBalance: newAvail,
+        currentBalance: newCurr,
+        lastSynced: 'Just now',
+      );
+
+      final updatedAccounts = state.bankAccounts.map((a) {
+        return a.id == firstAcc.id ? updatedAcc : a;
+      }).toList();
+
+      final deduplicated = deduplicateAccounts(updatedAccounts);
+      state = state.copyWith(bankAccounts: deduplicated);
+      LocalCacheService().save(
+        'bank_accounts',
+        deduplicated.map((a) => a.toJson()).toList(),
+      );
+    }
   }
 
   void updateBankAccount(BankAccountItem updated) {
-    state = state.copyWith(
-      bankAccounts: state.bankAccounts.map((a) => a.id == updated.id ? updated : a).toList(),
-    );
+    final upDigits = (updated.rawAccountNumber != null && updated.rawAccountNumber!.isNotEmpty)
+        ? updated.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+        : updated.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+    final upLast4 = upDigits.length >= 4 ? upDigits.substring(upDigits.length - 4) : upDigits;
+
+    final updatedList = state.bankAccounts.map((a) {
+      if (a.id == updated.id) return updated;
+      final aDigits = (a.rawAccountNumber != null && a.rawAccountNumber!.isNotEmpty)
+          ? a.rawAccountNumber!.replaceAll(RegExp(r'\D'), '')
+          : a.maskedAccountNumber.replaceAll(RegExp(r'\D'), '');
+      final aLast4 = aDigits.length >= 4 ? aDigits.substring(aDigits.length - 4) : aDigits;
+      if (aLast4.isNotEmpty && upLast4.isNotEmpty && aLast4 == upLast4) {
+        return updated;
+      }
+      return a;
+    }).toList();
+    final deduplicated = deduplicateAccounts(updatedList);
+    state = state.copyWith(bankAccounts: deduplicated);
+    LocalCacheService().save('bank_accounts', deduplicated.map((a) => a.toJson()).toList());
+    final reqType = updated.accountType.toUpperCase().contains('CURRENT')
+        ? 'CURRENT'
+        : (updated.accountType.toUpperCase().contains('SALARY') ? 'SALARY' : 'SAVINGS');
+    _apiService.updateBankAccount(
+      updated.id,
+      UpdateBankAccountRequest(
+        nickname: updated.nickname ?? '${updated.bankName} ${updated.accountType}',
+        accountType: reqType,
+      ),
+    ).then((_) {
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void deleteBankAccount(String id) {
-    state = state.copyWith(
-      bankAccounts: state.bankAccounts.where((a) => a.id != id).toList(),
-    );
+    final deletedBankIdsRaw = LocalCacheService().get('deleted_bank_account_ids');
+    final deletedBankIds = deletedBankIdsRaw is List ? deletedBankIdsRaw.cast<String>() : <String>[];
+    if (!deletedBankIds.contains(id)) {
+      deletedBankIds.add(id);
+      LocalCacheService().save('deleted_bank_account_ids', deletedBankIds);
+    }
+    final updated = state.bankAccounts.where((a) => a.id != id).toList();
+    state = state.copyWith(bankAccounts: updated);
+    LocalCacheService().save('bank_accounts', updated.map((a) => a.toJson()).toList());
+    _apiService.deleteBankAccount(id).then((_) {
+      fetchAccounts();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void updateCreditCard(CreditCardItem updated) {
     state = state.copyWith(
       creditCards: state.creditCards.map((c) => c.id == updated.id ? updated : c).toList(),
     );
+    _apiService.updateCard(
+      updated.id,
+      UpdateCreditCardRequest(
+        creditLimit: updated.creditLimit,
+        currentOutstanding: updated.outstandingBalance,
+        cardNickname: updated.cardName,
+      ),
+    ).then((_) {
+      fetchCards();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void deleteCreditCard(String id) {
-    state = state.copyWith(
-      creditCards: state.creditCards.where((c) => c.id != id).toList(),
-    );
+    final updated = state.creditCards.where((c) => c.id != id).toList();
+    state = state.copyWith(creditCards: updated);
+    LocalCacheService().save('bank_cards', updated.map((c) => c.toJson()).toList());
+    _apiService.deleteCard(id).then((_) {
+      fetchCards();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void updateUpiAccount(UpiAccountItem updated) {
@@ -495,9 +1265,13 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
   }
 
   void deleteUpiAccount(String id) {
-    state = state.copyWith(
-      upiAccounts: state.upiAccounts.where((u) => u.id != id).toList(),
-    );
+    final updated = state.upiAccounts.where((u) => u.id != id).toList();
+    state = state.copyWith(upiAccounts: updated);
+    LocalCacheService().save('bank_upi', updated.map((u) => u.toJson()).toList());
+    _apiService.deleteUpiAccount(id).then((_) {
+      fetchUpiAccounts();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void addLoanAccount({
@@ -520,18 +1294,50 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       nextDueDate: nextDueDate,
     );
     state = state.copyWith(loans: [...state.loans, newLoan]);
+
+    _apiService.linkLoan(LinkLoanRequest(
+      lenderName: lender,
+      loanType: loanType,
+      accountNumber: 'HL-${lender.replaceAll(' ', '')}-${DateTime.now().millisecondsSinceEpoch % 1000000}',
+      sanctionedAmount: outstandingPrincipal * 1.25,
+      outstandingPrincipal: outstandingPrincipal,
+      interestRate: interestRate,
+      monthlyEmi: monthlyEmi,
+      totalTenureMonths: (tenureRemainingMonths * 1.2).toInt(),
+      remainingTenureMonths: tenureRemainingMonths,
+      nextEmiDate: nextDueDate,
+    )).then((l) {
+      if (l != null) {
+        fetchLoans();
+        fetchSummary();
+      }
+    }).catchError((_) {});
   }
 
   void updateLoanAccount(LoanAccountItem updated) {
     state = state.copyWith(
       loans: state.loans.map((l) => l.id == updated.id ? updated : l).toList(),
     );
+    _apiService.updateLoan(
+      updated.id,
+      UpdateLoanRequest(
+        outstandingPrincipal: updated.outstandingPrincipal,
+        remainingTenureMonths: updated.tenureRemainingMonths,
+      ),
+    ).then((_) {
+      fetchLoans();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void deleteLoanAccount(String id) {
-    state = state.copyWith(
-      loans: state.loans.where((l) => l.id != id).toList(),
-    );
+    final updated = state.loans.where((l) => l.id != id).toList();
+    state = state.copyWith(loans: updated);
+    LocalCacheService().save('bank_loans', updated.map((l) => l.toJson()).toList());
+    _apiService.deleteLoan(id).then((_) {
+      fetchLoans();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void addInvestmentHolding({
@@ -552,18 +1358,47 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       isPositive: isPositive,
     );
     state = state.copyWith(investments: [...state.investments, newInv]);
+
+    final safePrice = (investedValue > 0) ? (investedValue / 1000) : 100.0;
+    _apiService.linkInvestment(LinkInvestmentRequest(
+      assetType: assetType.toUpperCase().replaceAll(' ', '_'),
+      name: '$institution $assetType Holding',
+      symbolOrFolio: 'FOLIO-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      platform: institution,
+      quantity: 1000,
+      buyNavOrPrice: safePrice,
+      currentNavOrPrice: safePrice * (1 + (returnPercentage / 100)),
+    )).then((inv) {
+      if (inv != null) {
+        fetchInvestments();
+        fetchSummary();
+      }
+    }).catchError((_) {});
   }
 
   void updateInvestmentHolding(InvestmentHoldingItem updated) {
     state = state.copyWith(
       investments: state.investments.map((i) => i.id == updated.id ? updated : i).toList(),
     );
+    _apiService.updateInvestment(
+      updated.id,
+      UpdateInvestmentRequest(
+        currentNavOrPrice: updated.currentNavOrPrice ?? (updated.currentValue / (updated.quantity ?? 1)),
+      ),
+    ).then((_) {
+      fetchInvestments();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void deleteInvestmentHolding(String id) {
-    state = state.copyWith(
-      investments: state.investments.where((i) => i.id != id).toList(),
-    );
+    final updated = state.investments.where((i) => i.id != id).toList();
+    state = state.copyWith(investments: updated);
+    LocalCacheService().save('bank_investments', updated.map((i) => i.toJson()).toList());
+    _apiService.deleteInvestment(id).then((_) {
+      fetchInvestments();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void addInsurancePolicy({
@@ -586,59 +1421,221 @@ class BankAggregationNotifier extends Notifier<BankAggregationState> {
       nominee: nominee,
     );
     state = state.copyWith(insurancePolicies: [...state.insurancePolicies, newPolicy]);
+    final insTypeReq = policyType.toUpperCase().contains('HEALTH')
+        ? 'HEALTH'
+        : (policyType.toUpperCase().contains('CAR') || policyType.toUpperCase().contains('VEHICLE') ? 'CAR' : 'LIFE');
+    _apiService.linkInsurancePolicy(
+      LinkInsurancePolicyRequest(
+        insuranceType: insTypeReq,
+        policyName: '$provider $policyType',
+        policyNumber: policyNumberMasked,
+        providerName: provider,
+        sumInsured: coverageAmount,
+        annualPremium: premiumAmount,
+        renewalDate: renewalDate,
+        nomineeName: nominee,
+      ),
+    ).then((_) {
+      fetchInsurancePolicies();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void updateInsurancePolicy(InsurancePolicyItem updated) {
     state = state.copyWith(
       insurancePolicies: state.insurancePolicies.map((p) => p.id == updated.id ? updated : p).toList(),
     );
+    _apiService.updateInsurancePolicy(
+      updated.id,
+      UpdateInsurancePolicyRequest(
+        sumInsured: updated.coverageAmount,
+        annualPremium: updated.premiumAmount,
+      ),
+    ).then((_) {
+      fetchInsurancePolicies();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void deleteInsurancePolicy(String id) {
-    state = state.copyWith(
-      insurancePolicies: state.insurancePolicies.where((p) => p.id != id).toList(),
+    final updated = state.insurancePolicies.where((p) => p.id != id).toList();
+    state = state.copyWith(insurancePolicies: updated);
+    LocalCacheService().save('bank_insurance', updated.map((p) => p.toJson()).toList());
+    _apiService.deleteInsurancePolicy(id).then((_) {
+      fetchInsurancePolicies();
+      fetchSummary();
+    }).catchError((_) {});
+  }
+
+  void addWalletAccount({
+    required String walletName,
+    required String walletProvider,
+    required double balance,
+    required String linkedMobile,
+  }) {
+    final newWallet = WalletAccountItem(
+      id: 'wal_${DateTime.now().millisecondsSinceEpoch}',
+      walletName: walletName,
+      walletProvider: walletProvider,
+      balance: balance,
+      linkedMobile: linkedMobile,
+      isKycDone: true,
+      status: 'ACTIVE',
     );
+    state = state.copyWith(wallets: [...state.wallets, newWallet]);
+    _apiService.linkWallet(
+      LinkWalletRequest(
+        walletName: walletName,
+        walletProvider: walletProvider,
+        balance: balance,
+        linkedMobile: linkedMobile,
+      ),
+    ).then((_) {
+      fetchWallets();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void revokeConsent(String consentId) {
     final updated = state.consents.map((c) {
-      if (c.consentId == consentId) {
-        return AggregatorConsentItem(
-          consentId: c.consentId,
-          institution: c.institution,
-          consentType: c.consentType,
-          startDate: c.startDate,
-          expiryDate: c.expiryDate,
-          purpose: c.purpose,
-          dataShared: c.dataShared,
-          status: 'Revoked',
-        );
+      if (c.consentId == consentId || c.id == consentId) {
+        return c.copyWith(status: 'REVOKED');
       }
       return c;
     }).toList();
     state = state.copyWith(consents: updated);
+    _apiService.revokeConsent(consentId).then((_) {
+      fetchConsents();
+      fetchSummary();
+    }).catchError((_) {});
   }
 
   void renewConsent(String consentId) {
     final updated = state.consents.map((c) {
-      if (c.consentId == consentId) {
-        return AggregatorConsentItem(
-          consentId: c.consentId,
-          institution: c.institution,
-          consentType: c.consentType,
-          startDate: 'Renewed Today',
-          expiryDate: '1 Year from today',
-          purpose: c.purpose,
-          dataShared: c.dataShared,
-          status: 'Active',
+      if (c.consentId == consentId || c.id == consentId) {
+        return c.copyWith(
+          status: 'ACTIVE',
+          validTo: '2027-11-03T06:01:30.887Z',
         );
       }
       return c;
     }).toList();
     state = state.copyWith(consents: updated);
+    _apiService.renewConsent(consentId, extensionDays: 365).then((_) {
+      fetchConsents();
+      fetchSummary();
+    }).catchError((_) {});
+  }
+
+  // ---------------------------------------------------------------------------
+  // LIQUID CASH OPERATIONS
+  // ---------------------------------------------------------------------------
+
+  /// Add a liquid cash entry and persist
+  Future<void> addLiquidCash({
+    required String title,
+    required double amount,
+    String? notes,
+  }) async {
+    final now = DateTime.now();
+    final minuteStr = now.minute.toString().padLeft(2, '0');
+    final hourStr = (now.hour % 12 == 0 ? 12 : now.hour % 12).toString();
+    final ampm = now.hour >= 12 ? 'PM' : 'AM';
+    final formattedDate = 'Today, $hourStr:$minuteStr $ampm';
+
+    final newItem = LiquidCashItem(
+      id: 'cash_${now.millisecondsSinceEpoch}',
+      title: title.trim().isNotEmpty ? title.trim() : 'Physical Cash in Hand',
+      amount: amount,
+      lastUpdated: formattedDate,
+      notes: notes,
+    );
+
+    final updatedEntries = [newItem, ...state.cashEntries];
+    final newTotal = updatedEntries.fold(0.0, (s, c) => s + c.amount);
+
+    state = state.copyWith(
+      cashEntries: updatedEntries,
+      liquidCash: newTotal,
+    );
+
+    LocalCacheService().save(
+      'user_liquid_cash_entries',
+      updatedEntries.map((e) => e.toJson()).toList(),
+    );
+    LocalCacheService().save('user_liquid_cash_amount', newTotal);
+  }
+
+  /// Update existing liquid cash entry
+  Future<void> updateLiquidCash(
+    String id, {
+    required String title,
+    required double amount,
+    String? notes,
+  }) async {
+    final now = DateTime.now();
+    final minuteStr = now.minute.toString().padLeft(2, '0');
+    final hourStr = (now.hour % 12 == 0 ? 12 : now.hour % 12).toString();
+    final ampm = now.hour >= 12 ? 'PM' : 'AM';
+    final formattedDate = 'Today, $hourStr:$minuteStr $ampm';
+
+    final updatedEntries = state.cashEntries.map((e) {
+      if (e.id == id) {
+        return e.copyWith(
+          title: title.trim().isNotEmpty ? title.trim() : e.title,
+          amount: amount,
+          lastUpdated: formattedDate,
+          notes: notes,
+        );
+      }
+      return e;
+    }).toList();
+
+    final newTotal = updatedEntries.fold(0.0, (s, c) => s + c.amount);
+
+    state = state.copyWith(
+      cashEntries: updatedEntries,
+      liquidCash: newTotal,
+    );
+
+    LocalCacheService().save(
+      'user_liquid_cash_entries',
+      updatedEntries.map((e) => e.toJson()).toList(),
+    );
+    LocalCacheService().save('user_liquid_cash_amount', newTotal);
+  }
+
+  /// Delete liquid cash entry
+  Future<void> deleteLiquidCash(String id) async {
+    final updatedEntries = state.cashEntries.where((e) => e.id != id).toList();
+    final newTotal = updatedEntries.fold(0.0, (s, c) => s + c.amount);
+
+    state = state.copyWith(
+      cashEntries: updatedEntries,
+      liquidCash: newTotal,
+    );
+
+    LocalCacheService().save(
+      'user_liquid_cash_entries',
+      updatedEntries.map((e) => e.toJson()).toList(),
+    );
+    LocalCacheService().save('user_liquid_cash_amount', newTotal);
+  }
+
+  /// Set overall liquid cash amount directly
+  Future<void> setLiquidCash(double amount, {String? title}) async {
+    await addLiquidCash(
+      title: title ?? 'Physical Cash',
+      amount: amount,
+    );
   }
 }
 
 final bankAggregationProvider = NotifierProvider<BankAggregationNotifier, BankAggregationState>(() {
   return BankAggregationNotifier();
 });
+
+final bankAggregationApiServiceProvider = Provider<BankAggregationApiService>((ref) {
+  return BankAggregationApiService();
+});
+

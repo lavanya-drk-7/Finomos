@@ -263,7 +263,7 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/profile');
+              context.go('/dashboard');
             }
           },
         ),
@@ -401,17 +401,20 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                             separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
                             itemBuilder: (ctx, idx) {
                               final faq = filteredFaqs[idx];
-                              return ExpansionTile(
-                                tilePadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.help_outline, color: Color(0xFF0066FF), size: 20),
-                                title: Text(faq['question']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540))),
-                                subtitle: Text(faq['category']!, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12, left: 32, right: 12),
-                                    child: Text(faq['answer']!, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4)),
-                                  ),
-                                ],
+                              return Material(
+                                color: Colors.transparent,
+                                child: ExpansionTile(
+                                  tilePadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.help_outline, color: Color(0xFF0066FF), size: 20),
+                                  title: Text(faq['question']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0A2540))),
+                                  subtitle: Text(faq['category']!, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 12, left: 32, right: 12),
+                                      child: Text(faq['answer']!, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), height: 1.4)),
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           ),
@@ -434,7 +437,10 @@ class _HelpSupportScreenState extends ConsumerState<HelpSupportScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('My Support Tickets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540))),
+                        const Expanded(
+                          child: Text('My Support Tickets', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)), overflow: TextOverflow.ellipsis),
+                        ),
+                        const SizedBox(width: 8),
                         TextButton.icon(
                           onPressed: _showRaiseTicketSheet,
                           icon: const Icon(Icons.add, size: 16),

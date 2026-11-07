@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/finmos_logo.dart';
 import '../../auth_kyc/providers/auth_kyc_provider.dart';
+import '../../income_tracking/providers/income_provider.dart';
+import '../../expense_tracking/providers/expense_provider.dart';
+import '../../budget_management/providers/budget_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -44,19 +47,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     _controller.forward();
     _timelineController.forward();
 
-    // 3-second timeline after which navigate to login screen
+    // Pre-fetch live dynamic data from backend while 3-second splash animation is playing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(incomeProvider.notifier).loadLiveIncomeData();
+      ref.read(expenseProvider.notifier).loadLiveExpenses();
+      ref.read(budgetProvider.notifier).loadLiveBudgets();
+    });
+
+    // 3-second timeline after which navigate to next destination
     _navigationTimer = Timer(const Duration(seconds: 3), () {
-      _navigateToLogin();
+      _navigateNext();
     });
   }
 
-  void _navigateToLogin() {
+  void _navigateNext() {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _navigationTimer?.cancel();
-    ref.read(authKycProvider.notifier).setIsExistingUser(true);
-    ref.read(authKycProvider.notifier).updateStep(1);
-    context.go('/login');
+
+    final isSessionActive = ref.read(authKycProvider.notifier).isSessionActive();
+
+    if (isSessionActive) {
+      // Once logged in with OTP/password, stay fixed and open direct dashboard
+      context.go('/dashboard');
+    } else {
+      // Only when logged out, navigate to login page
+      ref.read(authKycProvider.notifier).setIsExistingUser(true);
+      ref.read(authKycProvider.notifier).updateStep(1);
+      context.go('/login');
+    }
   }
 
   @override
@@ -71,7 +90,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       body: GestureDetector(
-        onTap: _navigateToLogin,
+        onTap: _navigateNext,
         child: Container(
           width: double.infinity,
           height: double.infinity,

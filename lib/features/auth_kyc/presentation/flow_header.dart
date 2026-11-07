@@ -138,7 +138,7 @@ class FlowHeader extends ConsumerWidget {
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: 3,
-                width: MediaQuery.of(context).size.width * progress,
+                width: MediaQuery.of(context).size.width * progress.clamp(0.0, 1.0),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF0066FF), Color(0xFF10B981)],
@@ -187,7 +187,8 @@ class FlowHeader extends ConsumerWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
               ),
               const SizedBox(height: 12),
-              Expanded(
+              SizedBox(
+                height: 260,
                 child: ListView.separated(
                   itemCount: activeList.length,
                   separatorBuilder: (ctx, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
