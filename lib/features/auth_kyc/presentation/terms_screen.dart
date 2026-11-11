@@ -111,7 +111,29 @@ class _TermsScreenState extends ConsumerState<TermsScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'You are responsible for maintaining the confidentiality of your account credentials.',
+                          'You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          '4. Financial & Advisory Disclaimer',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Finomos provides personal financial management, budgeting, and AI CFO tools for personal organization and planning. AI insights and projections are for informational purposes and do not constitute formal investment, tax, or legal advice.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          '5. Account Termination & Data Deletion',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'You may terminate your account and request complete data deletion at any time directly through the app via Settings > Security & Privacy > Delete Account, or by writing to support@finomos.com.',
                           style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
                         ),
                         const SizedBox(height: 24),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/feature_flags.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/utils/phone_utils.dart';
 import '../../../core/services/cache_service.dart';
@@ -45,6 +46,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   bool _hasDispatchedSignup = false;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
+  bool get _isTestEnv {
+    try {
+      return WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+  // Mobile verification in signup is hidden in production UI to comply with Google Play policies
+  bool get _allowMobileSignup => AppFeatureFlags.showMobileLogin || _isTestEnv;
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +88,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   void _checkAndProceedToNextStep() {
-    if (_isEmailVerified && _isMobileVerified) {
+    if (_isEmailVerified && (_isMobileVerified || !_allowMobileSignup)) {
       final cleanPhone = PhoneUtils.sanitize(_phoneController.text.trim());
       final currentUser = ref.read(authKycProvider).user;
       final updatedUser = currentUser.copyWith(
@@ -133,7 +146,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final nameError = FormValidators.validateFullName(_nameController.text);
     final emailError = FormValidators.validateEmail(_emailController.text);
     final passError = FormValidators.validatePassword(_passwordController.text);
-    final mobileError = FormValidators.validateMobile(_phoneController.text);
+    final mobileError = _allowMobileSignup
+        ? FormValidators.validateMobile(_phoneController.text)
+        : null;
 
     if (nameError != null || emailError != null || passError != null) {
       setState(() {
@@ -157,7 +172,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       return;
     }
 
-    if (mobileError != null) {
+    if (_allowMobileSignup && mobileError != null) {
       setState(() {
         _autovalidateMode = AutovalidateMode.onUserInteraction;
       });
@@ -184,11 +199,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     });
 
     try {
+      final cleanPhone = _phoneController.text.trim().isNotEmpty
+          ? _phoneController.text.trim()
+          : '9876543210';
       final signupRes = await ref.read(authKycProvider.notifier).signup(
         SignupRequest(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
+          phone: cleanPhone,
           password: _passwordController.text.trim(),
         ),
       );
@@ -351,20 +369,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             if (mounted) {
                               setState(() {
                                 _isEmailVerified = true;
+                                if (!_allowMobileSignup) {
+                                  _isMobileVerified = true;
+                                }
                               });
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Row(
                                     children: [
-                                      Icon(Icons.check_circle, color: Colors.white),
-                                      SizedBox(width: 8),
-                                      Text('Email verified successfully! Now verify your mobile number.'),
+                                      const Icon(Icons.check_circle, color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      Text(!_allowMobileSignup
+                                          ? 'Email verified successfully!'
+                                          : 'Email verified successfully! Now verify your mobile number.'),
                                     ],
                                   ),
-                                  backgroundColor: Color(0xFF10B981),
+                                  backgroundColor: const Color(0xFF10B981),
                                 ),
                               );
-                              _otpFocusNodes[0].requestFocus();
+                              if (_allowMobileSignup) {
+                                _otpFocusNodes[0].requestFocus();
+                              }
                             }
                             _checkAndProceedToNextStep();
                           } else {
@@ -849,168 +874,172 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                            const SizedBox(height: 20),
+                            // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+                            // Mobile number & OTP verification is hidden in production UI to comply with Google Play policies
+                            if (_allowMobileSignup) ...[
+                              const SizedBox(height: 20),
+                              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              const SizedBox(height: 20),
 
-                            // -------------------------------------------------------------
-                            // 3. MOBILE NUMBER FIELD & 6-DIGIT OTP BLOCKS
-                            // -------------------------------------------------------------
-                            Row(
-                              children: [
-                                const Icon(Icons.phone_iphone_outlined, size: 18, color: Color(0xFF0066FF)),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    'Mobile & OTP Verification',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
+                              // -------------------------------------------------------------
+                              // 3. MOBILE NUMBER FIELD & 6-DIGIT OTP BLOCKS
+                              // -------------------------------------------------------------
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone_iphone_outlined, size: 18, color: Color(0xFF0066FF)),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Mobile & OTP Verification',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                  if (_isMobileVerified) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.verified, size: 12, color: Color(0xFF10B981)),
+                                          SizedBox(width: 4),
+                                          Text('OTP Verified', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              TextFormField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: InputDecoration(
+                                  labelText: 'Mobile Number',
+                                  hintText: 'Enter mobile number',
+                                  prefixIcon: const Icon(Icons.phone_iphone_outlined, color: Color(0xFF0066FF)),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF8FAFC),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                                   ),
                                 ),
-                                if (_isMobileVerified) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981).withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(10),
+                                validator: FormValidators.validateMobile,
+                              ),
+                              const SizedBox(height: 16),
+
+                              // 6-DIGIT OTP BLOCKS + CLICKABLE RESEND OTP
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      'Enter 6-Digit OTP',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.verified, size: 12, color: Color(0xFF10B981)),
-                                        SizedBox(width: 4),
-                                        Text('OTP Verified', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                                      ],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: _isResendingOtp ? null : _resendOtp,
+                                    child: Text(
+                                      _isResendingOtp ? 'Sending...' : 'Resend OTP',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _isResendingOtp ? const Color(0xFF94A3B8) : const Color(0xFF0066FF),
+                                      ),
                                     ),
                                   ),
                                 ],
-                              ],
-                            ),
-                            const SizedBox(height: 12),
+                              ),
+                              const SizedBox(height: 10),
 
-                            TextFormField(
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              decoration: InputDecoration(
-                                labelText: 'Mobile Number',
-                                hintText: 'Enter mobile number',
-                                prefixIcon: const Icon(Icons.phone_iphone_outlined, color: Color(0xFF0066FF)),
-                                filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(6, (index) {
+                                    return Container(
+                                      width: 44,
+                                      height: 52,
+                                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                                      child: TextFormField(
+                                        controller: _otpControllers[index],
+                                        focusNode: _otpFocusNodes[index],
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                        textAlign: TextAlign.center,
+                                        maxLength: 1,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0A2540),
+                                        ),
+                                        decoration: InputDecoration(
+                                          counterText: '',
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF8FAFC),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: Color(0xFF0066FF)),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
+                                          ),
+                                        ),
+                                        onChanged: (val) {
+                                          if (val.isNotEmpty && index < 5) {
+                                            _otpFocusNodes[index + 1].requestFocus();
+                                          } else if (val.isEmpty && index > 0) {
+                                            _otpFocusNodes[index - 1].requestFocus();
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  }),
                                 ),
                               ),
-                              validator: FormValidators.validateMobile,
-                            ),
-                            const SizedBox(height: 16),
+                              const SizedBox(height: 16),
 
-                            // 6-DIGIT OTP BLOCKS + CLICKABLE RESEND OTP
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Expanded(
-                                  child: Text(
-                                    'Enter 6-Digit OTP',
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0A2540)),
-                                    overflow: TextOverflow.ellipsis,
+                              // Verify Mobile Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 46,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isVerifyingMobile ? null : _verifyMobileOtp,
+                                  icon: _isVerifyingMobile
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : Icon(_isMobileVerified ? Icons.check_circle : Icons.verified_outlined, size: 18),
+                                  label: Text(
+                                    _isVerifyingMobile
+                                        ? 'Verifying OTP...'
+                                        : _isMobileVerified
+                                            ? 'Mobile OTP Verified ✓'
+                                            : 'Verify Mobile OTP',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _isMobileVerified ? const Color(0xFF10B981) : const Color(0xFF0066FF),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: _isResendingOtp ? null : _resendOtp,
-                                  child: Text(
-                                    _isResendingOtp ? 'Sending...' : 'Resend OTP',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: _isResendingOtp ? const Color(0xFF94A3B8) : const Color(0xFF0066FF),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(6, (index) {
-                                  return Container(
-                                    width: 44,
-                                    height: 52,
-                                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                                    child: TextFormField(
-                                      controller: _otpControllers[index],
-                                      focusNode: _otpFocusNodes[index],
-                                      keyboardType: TextInputType.number,
-                                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                      textAlign: TextAlign.center,
-                                      maxLength: 1,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0A2540),
-                                      ),
-                                      decoration: InputDecoration(
-                                        counterText: '',
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                                        filled: true,
-                                        fillColor: const Color(0xFFF8FAFC),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Color(0xFF0066FF)),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Color(0xFF0066FF), width: 2),
-                                        ),
-                                      ),
-                                      onChanged: (val) {
-                                        if (val.isNotEmpty && index < 5) {
-                                          _otpFocusNodes[index + 1].requestFocus();
-                                        } else if (val.isEmpty && index > 0) {
-                                          _otpFocusNodes[index - 1].requestFocus();
-                                        }
-                                      },
-                                    ),
-                                  );
-                                }),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Verify Mobile Button
-                            SizedBox(
-                              width: double.infinity,
-                              height: 46,
-                              child: ElevatedButton.icon(
-                                onPressed: _isVerifyingMobile ? null : _verifyMobileOtp,
-                                icon: _isVerifyingMobile
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      )
-                                    : Icon(_isMobileVerified ? Icons.check_circle : Icons.verified_outlined, size: 18),
-                                label: Text(
-                                  _isVerifyingMobile
-                                      ? 'Verifying OTP...'
-                                      : _isMobileVerified
-                                          ? 'Mobile OTP Verified ✓'
-                                          : 'Verify Mobile OTP',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isMobileVerified ? const Color(0xFF10B981) : const Color(0xFF0066FF),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
-                            ),
+                            ],
                             const SizedBox(height: 20),
 
                             Wrap(

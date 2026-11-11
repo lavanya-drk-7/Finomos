@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/feature_flags.dart';
 import '../../../core/widgets/finmos_logo.dart';
 import '../../income_tracking/domain/income_models.dart';
 import '../../income_tracking/providers/income_provider.dart';
@@ -793,6 +794,20 @@ class NotificationsScreen extends ConsumerWidget {
                     : (LocalCacheService().get('user_mobile_number')?.toString() ??
                        (LocalCacheService().get('auth_session') as Map?)?['phone']?.toString() ?? ''),
               );
+              // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+              // If SMS permissions are disabled, safely refresh notifications without prompting for SMS
+              if (!AppFeatureFlags.enableSmsPermissions) {
+                await ref.read(notificationsProvider.notifier).loadLiveNotifications(userMobile: activeMobile);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Notifications refreshed and up to date.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+                return;
+              }
               final bool isAllowed = activeMobile.isNotEmpty &&
                   LocalCacheService().get('sms_allowed_$activeMobile') == true;
               if (!isAllowed) {
@@ -863,7 +878,8 @@ class NotificationsScreen extends ConsumerWidget {
                   style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
               const SizedBox(height: 16),
 
-              if (activeMobile.isNotEmpty &&
+              if (AppFeatureFlags.showSmsTrackingPrompt &&
+                  activeMobile.isNotEmpty &&
                   LocalCacheService().get('sms_allowed_$activeMobile') != true) ...[
                 Container(
                   margin: const EdgeInsets.only(bottom: 16),

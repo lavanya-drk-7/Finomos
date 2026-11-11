@@ -106,7 +106,7 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'We collect personal information such as name, email, phone number, KYC documents and usage data.',
+                          'We collect personal information you provide directly, including your name, email address, phone number, financial transaction records you enter or link, and KYC verification documents.',
                           style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
                         ),
                         const SizedBox(height: 16),
@@ -117,18 +117,51 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Your data is used for identity verification, service delivery, security and compliance purposes.',
+                          'Your data is used solely to deliver Personal CFO financial insights, expense & income tracking, budget management, account security, and statutory KYC verification.',
                           style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
                         ),
                         const SizedBox(height: 16),
 
                         const Text(
-                          '3. Data Security',
+                          '3. Data Security & Encryption',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'We implement industry-standard security measures to protect your information.',
+                          'We implement bank-grade security measures including TLS 1.3 encryption in transit and AES-256 encryption at rest to protect your sensitive financial records.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          '4. No Third-Party Data Selling',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Finomos does NOT sell, rent, or trade your personal or financial data to third-party advertisers or data brokers under any circumstances.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          '5. Data Retention & Account Deletion',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'You have full control over your data. You may permanently delete your account and all associated personal and financial data directly in the app via Settings > Security & Privacy > Delete Account, or by writing to support@finomos.com. Upon request, all data is permanently purged.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          '6. Compliance & Grievance Contact',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0A2540)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'We comply with applicable data protection laws including the Digital Personal Data Protection (DPDP) Act. For any privacy queries or grievance redressal, contact our Data Protection Officer at support@finomos.com.',
                           style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
                         ),
                         const SizedBox(height: 24),

@@ -47,44 +47,31 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SMS_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "hasSmsPermission" -> {
-                    val granted = ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_SMS
-                    ) == PackageManager.PERMISSION_GRANTED
-                    result.success(granted)
+                    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+                    // Return false directly so runtime SMS permissions are not requested.
+                    // Original code preserved:
+                    // val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                    // result.success(granted)
+                    result.success(false)
                 }
                 "requestSmsPermission" -> {
-                    val granted = ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_SMS
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) {
-                        result.success(true)
-                    } else {
-                        pendingPermissionResult = result
-                        ActivityCompat.requestPermissions(
-                            this,
-                            arrayOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS),
-                            SMS_PERMISSION_REQ_CODE
-                        )
-                    }
+                    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+                    // Return false directly without requesting runtime SMS permissions.
+                    // Original code preserved:
+                    // val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                    // if (granted) { result.success(true) } else { pendingPermissionResult = result
+                    //   ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS), SMS_PERMISSION_REQ_CODE) }
+                    result.success(false)
                 }
                 "readInboxSms" -> {
-                    val granted = ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.READ_SMS
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (!granted) {
-                        result.error("PERMISSION_DENIED", "SMS read permission not granted", null)
-                        return@setMethodCallHandler
-                    }
-                    val limit = call.argument<Int>("limit") ?: 50
-                    try {
-                        val messages = fetchInboxSms(limit)
-                        result.success(messages)
-                    } catch (e: Exception) {
-                        result.error("SMS_READ_ERROR", e.message, null)
-                    }
+                    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+                    // Return empty list safely.
+                    // Original code preserved:
+                    // val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+                    // if (!granted) { result.error("PERMISSION_DENIED", "SMS read permission not granted", null); return@setMethodCallHandler }
+                    // val limit = call.argument<Int>("limit") ?: 50
+                    // try { val messages = fetchInboxSms(limit); result.success(messages) } catch (e: Exception) { result.error("SMS_READ_ERROR", e.message, null) }
+                    result.success(emptyList<Map<String, Any>>())
                 }
                 else -> result.notImplemented()
             }

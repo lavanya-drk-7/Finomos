@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/feature_flags.dart';
 import '../../../core/services/cache_service.dart';
 import '../../../core/utils/phone_utils.dart';
 import '../../auth_kyc/providers/auth_kyc_provider.dart';
@@ -86,6 +87,11 @@ class SmsSyncService {
 
   /// Check whether runtime SMS permission is granted on Android
   Future<bool> hasPermission() async {
+    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+    // If SMS permissions are disabled, return false immediately to prevent any policy-sensitive checks.
+    if (!AppFeatureFlags.enableSmsPermissions) {
+      return false;
+    }
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return false;
     }
@@ -99,6 +105,11 @@ class SmsSyncService {
 
   /// Request runtime SMS permission on Android
   Future<bool> requestPermission() async {
+    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+    // Return false without attempting native SMS permission request.
+    if (!AppFeatureFlags.enableSmsPermissions) {
+      return false;
+    }
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return false;
     }
@@ -112,6 +123,9 @@ class SmsSyncService {
 
   /// Read device SMS from Android native inbox
   Future<List<Map<String, dynamic>>> readDeviceSmsInbox({int limit = 60}) async {
+    if (!AppFeatureFlags.enableSmsPermissions) {
+      return [];
+    }
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return [];
     }
@@ -181,6 +195,13 @@ class SmsSyncService {
     int alreadyIngestedCount = 0;
     int failedCount = 0;
     final List<String> detectedIds = [];
+
+    // HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+    // If SMS permissions are disabled, return gracefully without triggering permission dialogs
+    if (!AppFeatureFlags.enableSmsPermissions) {
+      debugPrint('[SmsSyncService] SMS permissions hidden for Google Play compliance.');
+      return const SmsSyncResultSummary();
+    }
 
     // Ensure permission
     bool permitted = await hasPermission();

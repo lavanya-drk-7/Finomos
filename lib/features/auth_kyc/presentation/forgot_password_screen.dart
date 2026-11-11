@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/feature_flags.dart';
 import '../../../core/widgets/finmos_logo.dart';
 import '../providers/auth_kyc_provider.dart';
 import 'flow_header.dart';
@@ -31,10 +32,22 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   void _onSendOtp() {
     if (_formKey.currentState!.validate()) {
-      // Dispatch password reset OTP request (POST /api/auth/forgot-password/request)
+      // Dispatch password reset request
       ref.read(authKycProvider.notifier).forgotPasswordRequest(
         identifier: _inputController.text.trim(),
       );
+      if (!AppFeatureFlags.showMobileLogin) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset instructions sent to ${_inputController.text.trim()}'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) context.go('/login');
+        });
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Password reset OTP sent to ${_inputController.text.trim()}'),
@@ -89,9 +102,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Enter your registered mobile number\nor email address',
-                            style: TextStyle(
+                          Text(
+                            AppFeatureFlags.showMobileLogin
+                                ? 'Enter your registered mobile number\nor email address'
+                                : 'Enter your registered email address to receive password reset instructions',
+                            style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF64748B),
                               height: 1.4,
@@ -102,8 +117,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
                           TextFormField(
                             controller: _inputController,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              labelText: 'Mobile Number / Email',
+                              labelText: AppFeatureFlags.showMobileLogin
+                                  ? 'Mobile Number / Email'
+                                  : 'Registered Email ID',
                               prefixIcon: const Icon(Icons.mail_outline, color: Color(0xFF0066FF)),
                               filled: true,
                               fillColor: const Color(0xFFF8FAFC),
@@ -112,7 +130,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                 borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                               ),
                             ),
-                            validator: (v) => v == null || v.isEmpty ? 'Please enter mobile or email' : null,
+                            validator: (v) => v == null || v.isEmpty ? 'Please enter your registered email' : null,
                           ),
                           const SizedBox(height: 28),
 
@@ -127,7 +145,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              child: const Text('Send OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              child: Text(
+                                AppFeatureFlags.showMobileLogin ? 'Send OTP' : 'Reset Password',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),

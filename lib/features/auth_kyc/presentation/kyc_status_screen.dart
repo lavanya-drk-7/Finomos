@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/services/cache_service.dart';
-import '../../../core/utils/phone_utils.dart';
+// import '../../../core/services/cache_service.dart';
+// import '../../../core/utils/phone_utils.dart';
 import '../../../core/widgets/finmos_bottom_nav_bar.dart';
 import '../domain/kyc_models.dart';
 import '../providers/auth_kyc_provider.dart';
@@ -350,6 +350,9 @@ class KycStatusScreen extends ConsumerWidget {
                                 height: 52,
                                 child: ElevatedButton.icon(
                                   onPressed: () {
+                                    /* HIDE FOR GOOGLE PLAY POLICY COMPLIANCE:
+                                       Direct SMS permission onboarding prompt is hidden so reviewers and users
+                                       are never blocked by SMS permissions. Original code preserved below:
                                     final activeMobile = PhoneUtils.sanitize(
                                       ref.read(authKycProvider).user.mobileNumber.isNotEmpty
                                           ? ref.read(authKycProvider).user.mobileNumber
@@ -361,6 +364,8 @@ class KycStatusScreen extends ConsumerWidget {
                                     } else {
                                       context.go('/dashboard');
                                     }
+                                    */
+                                    context.go('/dashboard');
                                   },
                                   icon: const Icon(Icons.home, size: 20),
                                   label: const Text('Home Dashboard',
